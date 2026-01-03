@@ -2,42 +2,38 @@ import express from "express";
 import { Client } from "@line/bot-sdk";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+app.use(express.json());
 
-// LINE設定
 const client = new Client({
   channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
 });
 
-// JSON受信
-app.use(express.json());
+const PORT = process.env.PORT || 3000;
 
 // 動作確認用
 app.get("/", (req, res) => {
   res.send("Vera Sky Harmony Server is running");
 });
 
-// Webhook
+// LINE Webhook
 app.post("/webhook", async (req, res) => {
-  console.log("Webhook received:", JSON.stringify(req.body, null, 2));
+  try {
+    const events = req.body.events;
 
-  const events = req.body.events;
-
-  if (!events || events.length === 0) {
-    return res.status(200).send("No events");
-  }
-
-  for (const event of events) {
-    // テキストメッセージのみ処理
-    if (event.type === "message" && event.message.type === "text") {
-      await client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "こんにちは。Vera Sky Harmonyです✨\nメッセージありがとうございます。",
-      });
+    for (const event of events) {
+      if (event.type === "message" && event.message.type === "text") {
+        await client.replyMessage(event.replyToken, {
+          type: "text",
+          text: "こんにちは。Vera Sky Harmonyです。",
+        });
+      }
     }
-  }
 
-  res.status(200).send("OK");
+    res.status(200).send("OK");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error");
+  }
 });
 
 app.listen(PORT, () => {
