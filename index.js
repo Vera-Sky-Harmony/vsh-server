@@ -1,29 +1,33 @@
 import express from "express";
-import * as line from "@line/bot-sdk";
+import { Client, middleware } from "@line/bot-sdk";
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+/**
+ * 必須（RenderのEnvironment Variablesに設定済みのはず）
+ * - CHANNEL_SECRET
+ * - CHANNEL_ACCESS_TOKEN
+ */
+const CHANNEL_SECRET = process.env.CHANNEL_SECRET;
+const CHANNEL_ACCESS_TOKEN = process.env.CHANNEL_ACCESS_TOKEN;
 
-// ====== LINE 設定（Renderの環境変数）======
-const config = {
-  channelSecret: process.env.CHANNEL_SECRET,
-  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
-};
-
-if (!config.channelSecret || !config.channelAccessToken) {
-  console.error("Missing env vars: CHANNEL_SECRET / CHANNEL_ACCESS_TOKEN");
+if (!CHANNEL_SECRET || !CHANNEL_ACCESS_TOKEN) {
+  console.error("❌ Environment Variables are missing.");
+  console.error("Please set CHANNEL_SECRET and CHANNEL_ACCESS_TOKEN on Render.");
 }
 
-// 新SDK（@line/bot-sdk v9系）の Messaging API クライアント
-const client = new line.messagingApi.MessagingApiClient({
-  channelAccessToken: config.channelAccessToken,
-});
+const config = {
+  channelSecret: CHANNEL_SECRET,
+  channelAccessToken: CHANNEL_ACCESS_TOKEN,
+};
 
-// ====== メモリ保存（最初はこれでOK）======
-// userId ごとに状態を保持（サーバー再起動で消えます）
-const userStates = new Map();
-// 例：{ step: "name"|"flp"|"image"|"done", name:"", flp:"", imageMessageId:"", updatedAt: 1234567890 }
+const client = new Client(config);
 
+const app = express();
+const PORT = process.env.PORT || 10000;
+
+/**
+ * 登録フローの状態（簡易版：メモリ保存）
+ * ※Render無料枠は再起動/再デプロイでリセットされます（今はこれでOK）
+ */
 const STEP = {
   NONE: "none",
   NAME: "name",
@@ -32,10 +36,12 @@ const STEP = {
   DONE: "done",
 };
 
-// ====== 便利関数 ======
+// userIdごとの状態を保持
+const userState = new Map();
+
 function getState(userId) {
-  if (!userStates.has(userId)) {
-    userStates.set(userId, {
+  if (!userState.has(userId)) {
+    userState.set(userId, {
       step: STEP.NONE,
       name: "",
       flp: "",
@@ -43,12 +49,7 @@ function getState(userId) {
       updatedAt: Date.now(),
     });
   }
-  return userStates.get(userId);
-}
-
-function setStep(state, step) {
-  state.step = step;
-  state.updatedAt = Date.now();
+  return userState.get(userId);
 }
 
 function resetState(state) {
@@ -59,185 +60,230 @@ function resetState(state) {
   state.updatedAt = Date.now();
 }
 
+function setStep(state, step) {
+  state.step = step;
+  state.updatedAt = Date.now();
+}
+
+function splitLines(text) {
+  return (text || "")
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function isRegisterCommand(line) {
+  // 「登録」「登録希望」「登録します」など先頭が登録ならOK
+  return /^登録/u.test(line);
+}
+
 function looksLikeName(text) {
-  // 厳密でなくてOK（最初は緩め）
-  // 1〜30文字でOK、数字だけは除外
+  // 簡易チェック：数字だけはNG、1文字はNG
   if (!text) return false;
-  if (/^\d+$/u.test(text)) return false;
-  return text.length >= 1 && text.length <= 30;
+  if (text.length < 2) return false;
+  if (/^\d+$/.test(text)) return false;
+  return true;
 }
 
 function normalizeFLP(text) {
-  // 全角→半角などの厳密は後回し。まず数字抽出でOK
-  const digits = (text || "").replace(/[^\d]/g, "");
-  return digits;
+  // 数字だけ抽出
+  return (text || "").replace(/[^\d]/g, "");
 }
 
-function isValidFLPNumber(flpDigits) {
-  // FLP番号の桁数が確定していない場合に備え、まずは「6〜12桁」くらいを許容
-  // 必要なら後で「必ず9桁」などに変更できます
-  return flpDigits.length >= 6 && flpDigits.length <= 12;
+function isValidFLPNumber(flp) {
+  // FLP番号の桁数は運用により違うため、まずは「8桁以上」をOKに
+  // 必要なら 9桁固定等に変更できます
+  return /^\d{8,}$/.test(flp);
 }
 
-async function reply(replyToken, text) {
-  return client.replyMessage({
-    replyToken,
-    messages: [{ type: "text", text }],
+async function reply(replyToken, messageText) {
+  return client.replyMessage(replyToken, {
+    type: "text",
+    text: messageText,
   });
 }
 
-// ====== ルーティング ======
+/**
+ * ヘルスチェック（ブラウザでアクセスすると表示）
+ */
 app.get("/", (req, res) => {
   res.send("Vera Sky Harmony Server is running");
 });
 
-// Webhook（署名検証あり）
-app.post("/webhook", line.middleware(config), async (req, res) => {
+/**
+ * LINE Webhook
+ * middleware(config) が署名検証してくれます
+ */
+app.post("/webhook", middleware(config), async (req, res) => {
+  // まず200を返す（LINE側のタイムアウト回避）
+  res.status(200).send("OK");
+
   try {
-    console.log("Webhook received:", JSON.stringify(req.body));
+    // 全体ログ（必要最小限）
+    console.log("Webhook received:", {
+      destination: req.body?.destination,
+      eventsCount: Array.isArray(req.body?.events) ? req.body.events.length : 0,
+    });
+
     const events = req.body.events || [];
-    await Promise.all(events.map(handleEvent));
-    res.status(200).send("OK");
+    for (const event of events) {
+      await handleEvent(event);
+    }
   } catch (err) {
-    console.error("Webhook error:", err);
-    res.status(500).end();
+    console.error("❌ Webhook error:", err);
   }
 });
 
-// ====== 登録フロー本体 ======
 async function handleEvent(event) {
-  // userId が取れないイベントはスキップ
-  const userId = event?.source?.userId;
+  // イベントの最低限ログ
+  console.log("Event:", {
+    type: event.type,
+    messageType: event.message?.type,
+    userId: event.source?.userId,
+  });
+
+  // 返信できるイベントだけ処理
+  if (event.type !== "message" || !event.replyToken) return;
+
+  const userId = event.source?.userId;
   if (!userId) return;
-
-  // フォローイベント（友だち追加）など
-  if (event.type === "follow") {
-    const state = getState(userId);
-    resetState(state);
-    return reply(
-      event.replyToken,
-      "ようこそ Vera.Sky.Harmony へ！\n「登録」と送ると、登録の受付を開始します。"
-    );
-  }
-
-  // メッセージ以外は基本スキップ（必要なら後で拡張）
-  if (event.type !== "message") return;
 
   const state = getState(userId);
 
-  // ===== 画像（スクショ）受信 =====
+  // 画像メッセージ
   if (event.message.type === "image") {
     if (state.step !== STEP.IMAGE) {
-      // まだ画像の段階ではない
       return reply(
         event.replyToken,
-        "画像ありがとうございます。\nただいま画像を受け取る段階ではありません。\n先に「登録」と送るか、案内に従ってください。"
+        "画像ありがとうございます。ただいま画像を受け取る段階ではありません。\n先に「登録」と送るか、案内に従ってください。"
       );
     }
 
-    // 画像は message.id を保存（画像そのものは後で取得可能）
     state.imageMessageId = event.message.id;
     setStep(state, STEP.DONE);
 
-    // ここで「紹介者通知」へつなげる（次フェーズで実装）
+    console.log("✅ Image received:", { userId, imageMessageId: state.imageMessageId });
+
     return reply(
       event.replyToken,
-      "購入スクショを受け取りました。\nこれで【氏名・FLP番号・スクショ】の3点が揃いました。\n紹介者確認後、VSHを譲渡します。"
+      "画像を受け取りました。ありがとうございます。\n【登録情報が揃いました】\n・氏名\n・FLP番号\n・購入画面スクリーンショット\n\n紹介者が確認後、VSHを譲渡します。"
     );
   }
 
-  // ===== テキスト受信 =====
+  // テキストメッセージ
   if (event.message.type === "text") {
-    const text = (event.message.text || "").trim();
+    const rawText = (event.message.text || "").trim();
+    const lines = splitLines(rawText);
 
-    // --- 共通コマンド（いつでも効く）---
-    if (text === "キャンセル" || text === "中止" || text === "やめる") {
-      resetState(state);
-      return reply(event.replyToken, "受付を中止しました。\n再開する場合は「登録」と送ってください。");
-    }
+    // ログ（ここが重要：実際にどう届いているか）
+    console.log("Text received:", { userId, rawText, lines });
 
-    if (text === "状況" || text === "ステータス") {
-      const stepLabel =
-        state.step === STEP.NONE ? "未開始" :
-        state.step === STEP.NAME ? "氏名待ち" :
-        state.step === STEP.FLP ? "FLP番号待ち" :
-        state.step === STEP.IMAGE ? "スクショ待ち" :
-        state.step === STEP.DONE ? "完了" : "不明";
-      return reply(
-        event.replyToken,
-        `現在の状況：${stepLabel}\n` +
-        (state.name ? `氏名：${state.name}\n` : "") +
-        (state.flp ? `FLP番号：${state.flp}\n` : "") +
-        (state.imageMessageId ? `スクショ：受信済\n` : "")
-      );
-    }
+    let replyText = "";
 
-    if (text === "ヘルプ") {
-      return reply(
-        event.replyToken,
-        "使い方：\n" +
-        "・登録開始：登録\n" +
-        "・途中中止：キャンセル\n" +
-        "・現在状況：状況\n"
-      );
-    }
-
-    // --- フロー開始 ---
-    if (text === "登録") {
-      resetState(state);
-      setStep(state, STEP.NAME);
-      return reply(event.replyToken, "登録を開始します。\nまず【氏名】を送ってください。");
-    }
-
-    // --- ステップ別処理 ---
-    if (state.step === STEP.NONE) {
-      // まだ開始していない人には案内
-      return reply(event.replyToken, "「登録」と送ると、登録の受付を開始します。");
-    }
-
-    if (state.step === STEP.NAME) {
-      if (!looksLikeName(text)) {
-        return reply(event.replyToken, "氏名を確認できませんでした。\n例）山田 太郎\nもう一度【氏名】を送ってください。");
+    for (const lineText of lines) {
+      // --- いつでも効く共通コマンド ---
+      if (lineText === "キャンセル" || lineText === "中止" || lineText === "やめる") {
+        resetState(state);
+        replyText =
+          "受付を中止しました。\n再開する場合は「登録」と送ってください。";
+        continue;
       }
-      state.name = text;
-      setStep(state, STEP.FLP);
-      return reply(event.replyToken, "ありがとうございます。\n次に【FLP番号】を送ってください。");
-    }
 
-    if (state.step === STEP.FLP) {
-      const flpDigits = normalizeFLP(text);
-      if (!isValidFLPNumber(flpDigits)) {
-        return reply(event.replyToken, "FLP番号を確認できませんでした。\n数字で【FLP番号】を送ってください。");
+      if (lineText === "状況" || lineText === "ステータス") {
+        const stepLabel =
+          state.step === STEP.NONE ? "未開始" :
+          state.step === STEP.NAME ? "氏名待ち" :
+          state.step === STEP.FLP ? "FLP番号待ち" :
+          state.step === STEP.IMAGE ? "スクショ待ち" :
+          state.step === STEP.DONE ? "完了" : "不明";
+
+        replyText =
+          `現在の状況：${stepLabel}\n` +
+          (state.name ? `氏名：${state.name}\n` : "") +
+          (state.flp ? `FLP番号：${state.flp}\n` : "") +
+          (state.imageMessageId ? "スクショ：受信済\n" : "");
+        continue;
       }
-      state.flp = flpDigits;
-      setStep(state, STEP.IMAGE);
-      return reply(
-        event.replyToken,
-        "ありがとうございます。\n最後に【購入画面のスクリーンショット】を送ってください。"
-      );
+
+      if (lineText === "ヘルプ") {
+        replyText =
+          "使い方：\n" +
+          "①「登録」と送信（登録希望でもOK）\n" +
+          "② 氏名を送信\n" +
+          "③ FLP番号を送信\n" +
+          "④ 購入画面スクリーンショット（画像）を送信\n\n" +
+          "・中止：キャンセル\n" +
+          "・状況確認：状況";
+        continue;
+      }
+
+      // --- 登録コマンド（先頭が登録ならOK）---
+      if (isRegisterCommand(lineText)) {
+        resetState(state);
+        setStep(state, STEP.NAME);
+        replyText = "登録の受付を開始します。\nまず【氏名】を送ってください。";
+        continue;
+      }
+
+      // --- ステップ別処理 ---
+      if (state.step === STEP.NONE) {
+        replyText = "「登録」と送ると、登録の受付を開始します。（登録希望でもOK）";
+        continue;
+      }
+
+      if (state.step === STEP.NAME) {
+        if (!looksLikeName(lineText)) {
+          replyText =
+            "氏名を確認できませんでした。\n例）細井 信孝\nもう一度【氏名】を送ってください。";
+          continue;
+        }
+        state.name = lineText;
+        setStep(state, STEP.FLP);
+        replyText = "ありがとうございます。\n次に【FLP番号】を送ってください。";
+        continue;
+      }
+
+      if (state.step === STEP.FLP) {
+        const flpDigits = normalizeFLP(lineText);
+        if (!isValidFLPNumber(flpDigits)) {
+          replyText =
+            "FLP番号を確認できませんでした。\n数字で【FLP番号】を送ってください。\n例）203145165";
+          continue;
+        }
+        state.flp = flpDigits;
+        setStep(state, STEP.IMAGE);
+        replyText =
+          "ありがとうございます。\n最後に【購入画面のスクリーンショット】を画像で送ってください。";
+        continue;
+      }
+
+      if (state.step === STEP.IMAGE) {
+        replyText =
+          "いまは【購入画面のスクリーンショット】を画像として送ってください。";
+        continue;
+      }
+
+      if (state.step === STEP.DONE) {
+        replyText =
+          "登録情報は受け取り済みです。\n紹介者確認後、VSHを譲渡します。";
+        continue;
+      }
     }
 
-    if (state.step === STEP.IMAGE) {
-      // 画像待ちなのにテキストが来た場合
-      return reply(
-        event.replyToken,
-        "いまは【購入画面のスクリーンショット】を送ってください。\n（画像として送信してください）"
-      );
+    if (!replyText) {
+      replyText = "ありがとうございます。\n「登録」と送ると受付を開始します。";
     }
 
-    if (state.step === STEP.DONE) {
-      return reply(
-        event.replyToken,
-        "登録情報は受け取り済みです。\n紹介者確認後、VSHを譲渡します。"
-      );
-    }
+    return reply(event.replyToken, replyText);
   }
 
-  // その他タイプ（スタンプ等）
-  return reply(event.replyToken, "ありがとうございます。\nテキストまたは画像で送ってください。");
+  // その他（スタンプ等）
+  return reply(event.replyToken, "ありがとうございます。テキストか画像で送ってください。");
 }
 
+// Renderで起動
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`✅ Primary URL: https://vsh-server.onrender.com`);
 });
 
