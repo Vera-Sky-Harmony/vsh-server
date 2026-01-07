@@ -1,9 +1,14 @@
-use strict';
+'use strict';
 
-const express = require('express');
-const line = require('@line/bot-sdk');
-const fs = require('fs');
-const path = require('path');
+import express from 'express';
+import * as line from '@line/bot-sdk';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// ====== __dirname 互換（ESM） ======
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ====== 必須 ENV ======
 const config = {
@@ -11,19 +16,20 @@ const config = {
   channelSecret: process.env.CHANNEL_SECRET,
 };
 
-// ====== 紹介者情報（ENVで固定運用） ======
-const INTRODUCER_USER_ID = process.env.INTRODUCER_USER_ID || ''; // 紹介者へpush通知するuserId
+// ====== 紹介者情報（ENV） ======
+const INTRODUCER_USER_ID = process.env.INTRODUCER_USER_ID || '';
 const INTRODUCER_NAME = process.env.INTRODUCER_NAME || '紹介者';
 const INTRODUCER_FLP = process.env.INTRODUCER_FLP || '（未設定）';
 
 const PORT = process.env.PORT || 3000;
 
-// ====== コマンド（衝突しない） ======
-const CMD_WANT_REGISTER = '__WANT_REGISTER__'; // 「登録希望」ボタンが送る
-const CMD_REG_GUIDE    = '__REG_GUIDE__';     // 「3点をLINEで返信する」ボタンが送る
-const CMD_REG_START    = '__REG_START__';     // 受付開始（ユーザーが送る or ボタン化してもOK）
+// ====== コマンド（衝突しない）=====
+// Day7 リッチメッセージのボタンが送るテキストを、必ずこれにしてください
+const CMD_WANT_REGISTER = '__WANT_REGISTER__'; // 「登録希望」ボタン
+const CMD_REG_GUIDE    = '__REG_GUIDE__';     // 「3点をLINEで返信する」ボタン
+const CMD_REG_START    = '__REG_START__';     // 受付開始（案内で送らせる）
 
-// ====== 簡易ストレージ（JSON） ======
+// ====== 簡易ストレージ ======
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'users.json');
 
@@ -43,19 +49,14 @@ function getUser(db, userId) {
   if (!db[userId]) db[userId] = { state: 'idle', name: '', flp: '', lastImageId: '' };
   return db[userId];
 }
-
-// ====== 正規化（全角/半角、余計な空白、改行差を吸収） ======
 function normalizeText(s) {
   if (!s) return '';
-  // NFKCで "３"→"3" 等を寄せ、前後空白・改行を整理
   return s.normalize('NFKC').replace(/\r\n/g, '\n').trim();
 }
 
-// ====== LINE Client ======
 const client = new line.Client(config);
-
-// ====== App ======
 const app = express();
+
 app.get('/', (req, res) => res.status(200).send('OK'));
 
 app.post('/webhook', line.middleware(config), async (req, res) => {
@@ -71,9 +72,9 @@ app.post('/webhook', line.middleware(config), async (req, res) => {
 
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
 
-// ====== Main ======
 async function handleEvent(event) {
   if (event.type !== 'message') return null;
+
   const userId = event?.source?.userId || '';
   const db = readDb();
   const u = getUser(db, userId);
@@ -83,12 +84,12 @@ async function handleEvent(event) {
     const raw = event.message.text || '';
     const text = normalizeText(raw);
 
-    // ★ログ：実際にWebhookに届いている文字を確認（原因切り分けに必須）
+    // ★必須ログ：実際に届いている文字を確認
     console.log(`[INCOMING] userId=${userId} raw="${raw}" normalized="${text}" state=${u.state}`);
 
-    // 1) 「登録希望」ボタン：受付開始しない。紹介者通知＋3点送信のみ。
+    // 1) 「登録希望」：受付フローに入れない（通知＋3点送信のみ）
     if (text === CMD_WANT_REGISTER) {
-      u.state = 'idle'; // 受付フローに絶対入れない
+      u.state = 'idle';
       writeDb(db);
 
       await notifyIntroducerIfPossible({
@@ -100,7 +101,7 @@ async function handleEvent(event) {
 
       const registrantFlpLine = u.flp
         ? `③ 登録者のFLP番号：${u.flp}`
-        : `③ 登録者のFLP番号：未入力（この後、FLP番号を返信してください）`;
+        : `③ 登録者のFLP番号：未入力（FLP番号だけ先に返信してください）`;
 
       return client.replyMessage(event.replyToken, [{
         type: 'text',
@@ -109,12 +110,11 @@ async function handleEvent(event) {
           `① 紹介者氏名：${INTRODUCER_NAME}\n` +
           `② 紹介者のFLP番号：${INTRODUCER_FLP}\n` +
           `${registrantFlpLine}\n\n` +
-          `次のステップに進むには、\n` +
-          `「3点をLINEで返信する」ボタンから案内に従ってください。`
+          `※次のステップに進むには「3点をLINEで返信する」ボタンから案内に従ってください。`
       }]);
     }
 
-    // 2) 「3点をLINEで返信する」ボタン：案内のみ（開始はCMD_REG_START）
+    // 2) 「3点返信」：案内だけ
     if (text === CMD_REG_GUIDE) {
       u.state = 'idle';
       writeDb(db);
@@ -127,7 +127,7 @@ async function handleEvent(event) {
       }]);
     }
 
-    // 3) 受付開始（衝突しないコマンド）
+    // 3) 受付開始（衝突ゼロ）
     if (text === CMD_REG_START) {
       u.state = 'await_name';
       writeDb(db);
@@ -137,7 +137,7 @@ async function handleEvent(event) {
       }]);
     }
 
-    // 4) 状態機械：登録受付フロー
+    // 4) 状態機械
     if (u.state === 'await_name') {
       u.name = text;
       u.state = 'await_flp';
@@ -210,15 +210,11 @@ async function handleEvent(event) {
   return null;
 }
 
-// ====== 紹介者通知 ======
 async function notifyIntroducerIfPossible(payload) {
   if (!INTRODUCER_USER_ID) return;
 
   const { type, registrantUserId, registrantName, registrantFlp, screenshotId } = payload;
-
-  const head = type === 'completed'
-    ? '【登録情報が揃いました】'
-    : '【登録希望が届きました】';
+  const head = type === 'completed' ? '【登録情報が揃いました】' : '【登録希望が届きました】';
 
   const lines = [
     head,
@@ -240,4 +236,3 @@ async function notifyIntroducerIfPossible(payload) {
     console.error('pushMessage failed:', e);
   }
 }
- 
