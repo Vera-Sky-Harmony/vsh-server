@@ -1,4 +1,4 @@
-'use strict';
+use strict';
 
 const express = require('express');
 const line = require('@line/bot-sdk');
@@ -11,14 +11,17 @@ const config = {
   channelSecret: process.env.CHANNEL_SECRET,
 };
 
-// ====== 任意 ENV（設計に必要） ======
-// 紹介者（あなた）へ通知する先 userId（固定運用の場合）
-const INTRODUCER_USER_ID = process.env.INTRODUCER_USER_ID || ''; // 例: Uxxxxxxxx
+// ====== 紹介者情報（ENVで固定運用） ======
+const INTRODUCER_USER_ID = process.env.INTRODUCER_USER_ID || ''; // 紹介者へpush通知するuserId
 const INTRODUCER_NAME = process.env.INTRODUCER_NAME || '紹介者';
 const INTRODUCER_FLP = process.env.INTRODUCER_FLP || '（未設定）';
 
-// ポート
 const PORT = process.env.PORT || 3000;
+
+// ====== コマンド（衝突しない） ======
+const CMD_WANT_REGISTER = '__WANT_REGISTER__'; // 「登録希望」ボタンが送る
+const CMD_REG_GUIDE    = '__REG_GUIDE__';     // 「3点をLINEで返信する」ボタンが送る
+const CMD_REG_START    = '__REG_START__';     // 受付開始（ユーザーが送る or ボタン化してもOK）
 
 // ====== 簡易ストレージ（JSON） ======
 const DATA_DIR = path.join(__dirname, 'data');
@@ -30,11 +33,7 @@ function ensureDb() {
 }
 function readDb() {
   ensureDb();
-  try {
-    return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-  } catch (e) {
-    return {};
-  }
+  try { return JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch { return {}; }
 }
 function writeDb(db) {
   ensureDb();
@@ -45,13 +44,20 @@ function getUser(db, userId) {
   return db[userId];
 }
 
+// ====== 正規化（全角/半角、余計な空白、改行差を吸収） ======
+function normalizeText(s) {
+  if (!s) return '';
+  // NFKCで "３"→"3" 等を寄せ、前後空白・改行を整理
+  return s.normalize('NFKC').replace(/\r\n/g, '\n').trim();
+}
+
 // ====== LINE Client ======
 const client = new line.Client(config);
 
-// ====== アプリ ======
+// ====== App ======
 const app = express();
+app.get('/', (req, res) => res.status(200).send('OK'));
 
-// Webhook
 app.post('/webhook', line.middleware(config), async (req, res) => {
   try {
     const events = req.body.events || [];
@@ -63,128 +69,131 @@ app.post('/webhook', line.middleware(config), async (req, res) => {
   }
 });
 
-// ヘルスチェック
-app.get('/', (req, res) => res.status(200).send('OK'));
+app.listen(PORT, () => console.log(`Server running on ${PORT}`));
 
-app.listen(PORT, () => {
-  console.log(`Server running on ${PORT}`);
-});
-
-// ====== メインハンドラ ======
+// ====== Main ======
 async function handleEvent(event) {
   if (event.type !== 'message') return null;
-
-  const userId = event.source && event.source.userId ? event.source.userId : '';
+  const userId = event?.source?.userId || '';
   const db = readDb();
   const u = getUser(db, userId);
 
-  // --- テキストメッセージ ---
+  // ---- TEXT ----
   if (event.message.type === 'text') {
-    const text = (event.message.text || '').trim();
+    const raw = event.message.text || '';
+    const text = normalizeText(raw);
 
-    // ① Day7ボタン「登録希望」：登録受付フローに入れない（ここが最重要）
-    if (text === '登録希望') {
-      u.state = 'idle'; // 必ず受付フローを解除
+    // ★ログ：実際にWebhookに届いている文字を確認（原因切り分けに必須）
+    console.log(`[INCOMING] userId=${userId} raw="${raw}" normalized="${text}" state=${u.state}`);
+
+    // 1) 「登録希望」ボタン：受付開始しない。紹介者通知＋3点送信のみ。
+    if (text === CMD_WANT_REGISTER) {
+      u.state = 'idle'; // 受付フローに絶対入れない
       writeDb(db);
 
-      // 紹介者へ通知
       await notifyIntroducerIfPossible({
+        type: 'want_register',
         registrantUserId: userId,
         registrantName: u.name,
         registrantFlp: u.flp,
       });
 
-      // 登録者へ自動返信（設計通りの3点）
-      const registrantFlpLine = u.flp ? `③ 登録者のFLP番号：${u.flp}` : `③ 登録者のFLP番号：未入力（この後、FLP番号を返信してください）`;
+      const registrantFlpLine = u.flp
+        ? `③ 登録者のFLP番号：${u.flp}`
+        : `③ 登録者のFLP番号：未入力（この後、FLP番号を返信してください）`;
 
-      return client.replyMessage(event.replyToken, [
-        {
-          type: 'text',
-          text:
-            `【登録希望を受け付けました】\n` +
-            `以下を自動で共有します。\n\n` +
-            `① 紹介者氏名：${INTRODUCER_NAME}\n` +
-            `② 紹介者のFLP番号：${INTRODUCER_FLP}\n` +
-            `${registrantFlpLine}\n\n` +
-            `※次のステップに進むには「3点をLINEで返信する」ボタンから案内に従ってください。`,
-        },
-      ]);
+      return client.replyMessage(event.replyToken, [{
+        type: 'text',
+        text:
+          `【登録希望を受け付けました】\n\n` +
+          `① 紹介者氏名：${INTRODUCER_NAME}\n` +
+          `② 紹介者のFLP番号：${INTRODUCER_FLP}\n` +
+          `${registrantFlpLine}\n\n` +
+          `次のステップに進むには、\n` +
+          `「3点をLINEで返信する」ボタンから案内に従ってください。`
+      }]);
     }
 
-    // ② Day7ボタン「3点をLINEで返信する」：案内だけ（自動で受付開始しない）
-    if (text === '3点をLINEで返信する') {
-      // 受付開始は「登録」で開始（現状の思想に合わせる）
+    // 2) 「3点をLINEで返信する」ボタン：案内のみ（開始はCMD_REG_START）
+    if (text === CMD_REG_GUIDE) {
       u.state = 'idle';
       writeDb(db);
 
-      return client.replyMessage(event.replyToken, [
-        { type: 'text', text: '案内に従ってください。\n「登録」と送ると開始します。' },
-      ]);
+      return client.replyMessage(event.replyToken, [{
+        type: 'text',
+        text:
+          `案内に従ってください。\n` +
+          `開始するには「${CMD_REG_START}」と送ってください。`
+      }]);
     }
 
-    // ③ 受付開始キーワード
-    if (text === '登録') {
+    // 3) 受付開始（衝突しないコマンド）
+    if (text === CMD_REG_START) {
       u.state = 'await_name';
       writeDb(db);
-
-      return client.replyMessage(event.replyToken, [
-        { type: 'text', text: '【登録受付を開始します】\n① 氏名 を入力してください' },
-      ]);
+      return client.replyMessage(event.replyToken, [{
+        type: 'text',
+        text: '【登録受付を開始します】\n① 氏名 を入力してください'
+      }]);
     }
 
-    // ④ 状態機械：登録受付フロー
+    // 4) 状態機械：登録受付フロー
     if (u.state === 'await_name') {
       u.name = text;
       u.state = 'await_flp';
       writeDb(db);
-
-      return client.replyMessage(event.replyToken, [
-        { type: 'text', text: 'ありがとうございます。\n② FLP番号 を入力してください' },
-      ]);
+      return client.replyMessage(event.replyToken, [{
+        type: 'text',
+        text: 'ありがとうございます。\n② FLP番号 を入力してください'
+      }]);
     }
 
     if (u.state === 'await_flp') {
       u.flp = text;
       u.state = 'await_image';
       writeDb(db);
-
-      return client.replyMessage(event.replyToken, [
-        { type: 'text', text: '③ 最後に【購入画面のスクリーンショット】を画像で送ってください。' },
-      ]);
+      return client.replyMessage(event.replyToken, [{
+        type: 'text',
+        text: '③ 最後に【購入画面のスクリーンショット】を画像で送ってください。'
+      }]);
     }
 
-    // その他：何もしない（誤作動防止）
     writeDb(db);
     return null;
   }
 
-  // --- 画像メッセージ ---
+  // ---- IMAGE ----
   if (event.message.type === 'image') {
-    // 登録受付フロー中だけ反応
+    console.log(`[INCOMING_IMAGE] userId=${userId} state=${u.state} messageId=${event.message.id}`);
+
     if (u.state !== 'await_image') {
       writeDb(db);
-      return client.replyMessage(event.replyToken, [
-        { type: 'text', text: '画像を受信しました。\n登録受付を開始する場合は「登録」と送ってください。' },
-      ]);
+      return client.replyMessage(event.replyToken, [{
+        type: 'text',
+        text: `画像を受信しました。\n登録受付を開始する場合は「${CMD_REG_START}」と送ってください。`
+      }]);
     }
 
-    // スクショID（message.id）を保存
     u.lastImageId = event.message.id || '';
     u.state = 'completed';
     writeDb(db);
 
-    // 紹介者へ「登録情報が揃った」通知
     await notifyIntroducerIfPossible({
+      type: 'completed',
       registrantUserId: userId,
       registrantName: u.name,
       registrantFlp: u.flp,
       screenshotId: u.lastImageId,
-      completed: true,
     });
 
-    // 登録者へ完了メッセージ
     return client.replyMessage(event.replyToken, [
-      { type: 'text', text: '画像を受け取りました。ありがとうございます。\n【登録情報が揃いました】\n・氏名\n・FLP番号\n・購入画面スクリーンショット\n\n紹介者が確認後、VSHを譲渡します。' },
+      {
+        type: 'text',
+        text:
+          '画像を受け取りました。ありがとうございます。\n' +
+          '【登録情報が揃いました】\n・氏名\n・FLP番号\n・購入画面スクリーンショット\n\n' +
+          '紹介者が確認後、VSHを譲渡します。'
+      },
       {
         type: 'text',
         text:
@@ -192,30 +201,24 @@ async function handleEvent(event) {
           `氏名：${u.name}\n` +
           `FLP：${u.flp}\n` +
           `スクショID：${u.lastImageId}\n` +
-          `userId：${userId}`,
-      },
+          `userId：${userId}`
+      }
     ]);
   }
 
-  // その他メッセージタイプは無視
   writeDb(db);
   return null;
 }
 
 // ====== 紹介者通知 ======
 async function notifyIntroducerIfPossible(payload) {
-  // 固定紹介者userIdが設定されていないなら通知しない（落ちない設計）
   if (!INTRODUCER_USER_ID) return;
 
-  const {
-    registrantUserId,
-    registrantName = '',
-    registrantFlp = '',
-    screenshotId = '',
-    completed = false,
-  } = payload;
+  const { type, registrantUserId, registrantName, registrantFlp, screenshotId } = payload;
 
-  const head = completed ? '【登録情報が揃いました】' : '【登録希望が届きました】';
+  const head = type === 'completed'
+    ? '【登録情報が揃いました】'
+    : '【登録希望が届きました】';
 
   const lines = [
     head,
@@ -224,11 +227,11 @@ async function notifyIntroducerIfPossible(payload) {
     registrantFlp ? `登録者FLP：${registrantFlp}` : '登録者FLP：（未入力）',
   ];
 
-  if (completed) {
+  if (type === 'completed') {
     lines.push(screenshotId ? `スクショID：${screenshotId}` : 'スクショID：（不明）');
     lines.push('確認後、VSH譲渡を実施してください。');
   } else {
-    lines.push('登録者へ紹介者情報を自動送信しました。');
+    lines.push('登録者へ紹介者情報（氏名・FLP・登録者FLP）を自動送信しました。');
   }
 
   try {
@@ -237,3 +240,4 @@ async function notifyIntroducerIfPossible(payload) {
     console.error('pushMessage failed:', e);
   }
 }
+ 
