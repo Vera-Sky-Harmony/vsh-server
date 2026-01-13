@@ -4,24 +4,18 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// ====== __dirname (ESM) ======
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ====== 必須 ENV（Renderに設定） ======
+// ====== ENV ======
 const CHANNEL_ACCESS_TOKEN = process.env.CHANNEL_ACCESS_TOKEN;
 const CHANNEL_SECRET = process.env.CHANNEL_SECRET;
 
-// ====== 紹介者（固定） ======
 const INTRODUCER_NAME = process.env.INTRODUCER_NAME || '細井信孝';
 const INTRODUCER_FLP = process.env.INTRODUCER_FLP || '203145165';
+const INTRODUCER_USER_ID = process.env.INTRODUCER_USER_ID || '';
 
-// ====== 紹介者へ通知（任意） ======
-const INTRODUCER_USER_ID = process.env.INTRODUCER_USER_ID || ''; // Push通知先（紹介者）
-
-// ====== 管理API保護（任意だが推奨） ======
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || ''; // 未設定なら管理APIは403にします
-
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 const PORT = process.env.PORT || 3000;
 
 if (!CHANNEL_ACCESS_TOKEN || !CHANNEL_SECRET) {
@@ -41,12 +35,12 @@ const USERS_DB = path.join(DATA_DIR, 'users.json');
 const ADMIN_DB = path.join(DATA_DIR, 'admin.json');
 const GUIDE_TXT = path.join(DATA_DIR, 'fbo_guide.txt');
 
-// ====== トリガー（現状のボタン文言のまま動作） ======
+// ====== トリガー ======
 const TRIG_WANT_REGISTER = '登録希望';
 const TRIG_SEND_3PTS = '3点をLINEで返信する';
 const TRIG_START_REG = '登録';
 
-// ====== 初期ガイド（未作成時に自動生成） ======
+// ====== 初期ガイド ======
 const DEFAULT_GUIDE_TEXT = `フォーエバービジネスオーナー（FBO）登録手順
 
 １．最初にLINE画面の上段画像（黄色）の登録希望をタップして、以下を受け取ってください。
@@ -96,17 +90,13 @@ const DEFAULT_GUIDE_TEXT = `フォーエバービジネスオーナー（FBO）�
 １１．「次の画面へ」をタップ
 `;
 
-// ====== ユーティリティ ======
+// ====== Util ======
 function ensureFiles() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(USERS_DB)) fs.writeFileSync(USERS_DB, JSON.stringify({}, null, 2), 'utf8');
-  if (!fs.existsSync(ADMIN_DB)) {
-    const init = { flp_pool: [], flp_cursor: 0 }; // poolは配列、cursorは次に使う位置
-    fs.writeFileSync(ADMIN_DB, JSON.stringify(init, null, 2), 'utf8');
-  }
+  if (!fs.existsSync(ADMIN_DB)) fs.writeFileSync(ADMIN_DB, JSON.stringify({ flp_pool: [], flp_cursor: 0 }, null, 2), 'utf8');
   if (!fs.existsSync(GUIDE_TXT)) fs.writeFileSync(GUIDE_TXT, DEFAULT_GUIDE_TEXT, 'utf8');
 }
-
 function readJson(fp, fallback) {
   try {
     ensureFiles();
@@ -119,19 +109,10 @@ function writeJson(fp, obj) {
   ensureFiles();
   fs.writeFileSync(fp, JSON.stringify(obj, null, 2), 'utf8');
 }
-
 function normalizeText(s) {
   if (!s) return '';
   return s.normalize('NFKC').replace(/\r\n/g, '\n').trim();
 }
-
-function getBaseUrl(req) {
-  // Render behind proxy: X-Forwarded-Proto / Host
-  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  return `${proto}://${host}`;
-}
-
 function escapeHtml(s) {
   return String(s)
     .replaceAll('&', '&amp;')
@@ -140,32 +121,24 @@ function escapeHtml(s) {
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 }
-
-// ====== FLP番号プール（30個）管理 ======
 function loadAdmin() {
   return readJson(ADMIN_DB, { flp_pool: [], flp_cursor: 0 });
 }
 function saveAdmin(admin) {
   writeJson(ADMIN_DB, admin);
 }
-
 function allocateFlpForUser(userId) {
   const admin = loadAdmin();
   const pool = Array.isArray(admin.flp_pool) ? admin.flp_pool : [];
   const cursor = Number.isInteger(admin.flp_cursor) ? admin.flp_cursor : 0;
 
-  if (pool.length === 0 || cursor >= pool.length) {
-    return { ok: false, reason: 'POOL_EMPTY' };
-  }
+  if (pool.length === 0 || cursor >= pool.length) return { ok: false, reason: 'POOL_EMPTY' };
 
   const assigned = String(pool[cursor]).trim();
   admin.flp_cursor = cursor + 1;
   saveAdmin(admin);
-
   return { ok: true, flp: assigned, index: cursor + 1, poolSize: pool.length };
 }
-
-// ====== Users DB ======
 function loadUsers() {
   return readJson(USERS_DB, {});
 }
@@ -174,31 +147,36 @@ function saveUsers(users) {
 }
 function getUser(users, userId) {
   if (!users[userId]) {
-    users[userId] = {
-      state: 'idle',
-      name: '',
-      flp: '',
-      lastImageId: '',
-      assignedFlp: '', // ← ③ あなたのFLP番号（プール割当）
-      assignedAt: '',
-    };
+    users[userId] = { state: 'idle', name: '', flp: '', lastImageId: '', assignedFlp: '', assignedAt: '' };
   }
   return users[userId];
 }
-
-// ====== VHS（WEB）ガイド ======
 function loadGuideText() {
   ensureFiles();
   return fs.readFileSync(GUIDE_TXT, 'utf8');
 }
 
+async function notifyIntroducerIfPossible(text) {
+  if (!INTRODUCER_USER_ID) return;
+  try {
+    await client.pushMessage(INTRODUCER_USER_ID, [{ type: 'text', text }]);
+  } catch (e) {
+    console.error('pushMessage failed:', e);
+  }
+}
+
 // ====== Express ======
 const app = express();
-app.use(express.json({ limit: '2mb' }));
 
+/**
+ * ★重要：Webhook 署名検証のため、express.json() をWebhookより先に掛けない！
+ * ここが今回の「SignatureValidationFailed」の原因です。
+ */
+
+// health
 app.get('/', (_req, res) => res.status(200).send('OK'));
 
-// ---- VHS ガイドページ（誰でも閲覧可） ----
+// VHSページ（閲覧用）
 app.get('/vhs/fbo-guide', (req, res) => {
   const guide = loadGuideText();
   const assignedFlp = String(req.query.flp || '').trim();
@@ -234,47 +212,7 @@ app.get('/vhs/fbo-guide', (req, res) => {
   res.send(html);
 });
 
-// ---- 管理API（トークン必須） ----
-function requireAdmin(req, res, next) {
-  if (!ADMIN_TOKEN) return res.status(403).json({ ok: false, error: 'ADMIN_TOKEN not set' });
-  const token = req.headers['x-admin-token'] || req.query.token || '';
-  if (token !== ADMIN_TOKEN) return res.status(403).json({ ok: false, error: 'unauthorized' });
-  next();
-}
-
-// ガイド原稿を更新（テキスト）
-app.post('/admin/fbo-guide', requireAdmin, (req, res) => {
-  const text = typeof req.body?.text === 'string' ? req.body.text : '';
-  if (!text.trim()) return res.status(400).json({ ok: false, error: 'text required' });
-  ensureFiles();
-  fs.writeFileSync(GUIDE_TXT, text, 'utf8');
-  return res.json({ ok: true });
-});
-
-// FLP番号プール（30個など）を一括更新
-app.post('/admin/flp-pool', requireAdmin, (req, res) => {
-  const list = req.body?.flp_pool;
-  if (!Array.isArray(list)) return res.status(400).json({ ok: false, error: 'flp_pool array required' });
-
-  const cleaned = list
-    .map(x => String(x || '').trim())
-    .filter(x => x.length > 0);
-
-  const admin = loadAdmin();
-  admin.flp_pool = cleaned;
-  admin.flp_cursor = 0; // 再スタート
-  saveAdmin(admin);
-
-  return res.json({ ok: true, count: cleaned.length });
-});
-
-// 現在のプール状況を確認
-app.get('/admin/status', requireAdmin, (_req, res) => {
-  const admin = loadAdmin();
-  return res.json({ ok: true, flp_pool_count: admin.flp_pool?.length || 0, flp_cursor: admin.flp_cursor || 0 });
-});
-
-// ====== Webhook ======
+// ====== Webhook（必ず express.json より先！） ======
 app.post('/webhook', line.middleware(config), async (req, res) => {
   try {
     const events = req.body.events || [];
@@ -286,9 +224,48 @@ app.post('/webhook', line.middleware(config), async (req, res) => {
   }
 });
 
+// ====== ここから下は JSONパーサーOK（管理API用） ======
+app.use(express.json({ limit: '2mb' }));
+
+function requireAdmin(req, res, next) {
+  if (!ADMIN_TOKEN) return res.status(403).json({ ok: false, error: 'ADMIN_TOKEN not set' });
+  const token = req.headers['x-admin-token'] || req.query.token || '';
+  if (token !== ADMIN_TOKEN) return res.status(403).json({ ok: false, error: 'unauthorized' });
+  next();
+}
+
+// ガイド更新
+app.post('/admin/fbo-guide', requireAdmin, (req, res) => {
+  const text = typeof req.body?.text === 'string' ? req.body.text : '';
+  if (!text.trim()) return res.status(400).json({ ok: false, error: 'text required' });
+  ensureFiles();
+  fs.writeFileSync(GUIDE_TXT, text, 'utf8');
+  return res.json({ ok: true });
+});
+
+// FLPプール更新
+app.post('/admin/flp-pool', requireAdmin, (req, res) => {
+  const list = req.body?.flp_pool;
+  if (!Array.isArray(list)) return res.status(400).json({ ok: false, error: 'flp_pool array required' });
+
+  const cleaned = list.map(x => String(x || '').trim()).filter(x => x.length > 0);
+
+  const admin = loadAdmin();
+  admin.flp_pool = cleaned;
+  admin.flp_cursor = 0;
+  saveAdmin(admin);
+
+  return res.json({ ok: true, count: cleaned.length });
+});
+
+app.get('/admin/status', requireAdmin, (_req, res) => {
+  const admin = loadAdmin();
+  return res.json({ ok: true, flp_pool_count: admin.flp_pool?.length || 0, flp_cursor: admin.flp_cursor || 0 });
+});
+
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
 
-// ====== LINE 応答ロジック ======
+// ====== LINE Event Handler ======
 async function handleEvent(event) {
   if (event.type !== 'message') return null;
 
@@ -296,50 +273,40 @@ async function handleEvent(event) {
   const users = loadUsers();
   const u = getUser(users, userId);
 
-  // ---- TEXT ----
   if (event.message.type === 'text') {
     const raw = event.message.text || '';
     const text = normalizeText(raw);
 
     console.log(`[INCOMING] userId=${userId} raw="${raw}" normalized="${text}" state=${u.state}`);
 
-    // ========== Day7：登録希望 ==========
+    // Day7：登録希望
     if (text === TRIG_WANT_REGISTER) {
-      // 受付フローには絶対入れない
       u.state = 'idle';
 
-      // ③あなたのFLP番号：プールから割当（未割当なら割当を試みる）
       let assigned = u.assignedFlp;
-      let allocInfo = null;
-
       if (!assigned) {
         const alloc = allocateFlpForUser(userId);
         if (alloc.ok) {
           assigned = alloc.flp;
           u.assignedFlp = assigned;
           u.assignedAt = new Date().toISOString();
-          allocInfo = alloc;
         } else {
-          // プール空 → 指定アラートを表示して終了（3点は送れない）
           saveUsers(users);
-          const alertText =
-            `新規登録者のFLP番号が入力されていません。\n\n` +
-            `これから自動紹介を開始するために、\n` +
-            `30人分の新規登録者用FLP番号（Day8で詳しく説明する）を入力してください。\n\n` +
-            `FLP番号は、新規登録者がフォーエバー社に電話でスタートキットを注文して入手します。\n\n` +
-            `※ FLP番号が入力されるまで、自動紹介は開始されません。`;
-
-          // 紹介者へも通知
           await notifyIntroducerIfPossible(`【登録希望（プール未入力）】\n登録者userId：${userId}\nFLP番号プールが空のため割当不可`);
-
-          return client.replyMessage(event.replyToken, [{ type: 'text', text: alertText }])
-            .catch(err => console.error('replyMessage failed (pool empty):', err));
+          return client.replyMessage(event.replyToken, [{
+            type: 'text',
+            text:
+              `新規登録者のFLP番号が入力されていません。\n\n` +
+              `これから自動紹介を開始するために、\n` +
+              `30人分の新規登録者用FLP番号（Day8で詳しく説明する）を入力してください。\n\n` +
+              `FLP番号は、新規登録者がフォーエバー社に電話でスタートキットを注文して入手します。\n\n` +
+              `※ FLP番号が入力されるまで、自動紹介は開始されません。`
+          }]).catch(err => console.error('replyMessage failed (pool empty):', err));
         }
       }
 
       saveUsers(users);
 
-      // 要望①：指定文言（完全準拠）＋3点
       const msg1 =
         `（登録希望を受け付けました）\n` +
         `以下登録に必要な３点を送ります。\n` +
@@ -350,13 +317,8 @@ async function handleEvent(event) {
         `③\tあなたのFLP番号：${assigned}\n\n` +
         `登録が終わりましたら、上の画面（青色）の「３点をLINEで返信する」をタップし、案内に従ってください。`;
 
-      // 要望②：VHS（WEB）リンクを下段に表示（ボタン）
-      // ※ baseUrl は webhookリクエストからは取れないため、固定URLはENV推奨だが
-      //    ここでは Render の公開URLを推定できない場合があるので、ENV BASE_URL があれば使う
-      const BASE_URL = process.env.BASE_URL || ''; // 例: https://your-service.onrender.com
-      const guideUrl = BASE_URL
-        ? `${BASE_URL}/vhs/fbo-guide?flp=${encodeURIComponent(assigned)}`
-        : `https://（BASE_URL未設定）/vhs/fbo-guide?flp=${encodeURIComponent(assigned)}`;
+      const BASE_URL = process.env.BASE_URL || 'https://vsh-server.onrender.com';
+      const guideUrl = `${BASE_URL}/vhs/fbo-guide?flp=${encodeURIComponent(assigned)}`;
 
       const msg2 = {
         type: 'template',
@@ -365,99 +327,70 @@ async function handleEvent(event) {
           type: 'buttons',
           title: 'FBO登録手順（WEB）',
           text: '下のボタンから登録手順を開いてください。',
-          actions: [
-            { type: 'uri', label: '登録手順を見る', uri: guideUrl },
-          ],
+          actions: [{ type: 'uri', label: '登録手順を見る', uri: guideUrl }],
         },
       };
 
-      // 紹介者へ通知（登録希望＋割当FLP）
-      const note =
-        `【登録希望が届きました】\n` +
-        `登録者userId：${userId}\n` +
-        `割当FLP：${assigned}\n` +
-        (allocInfo ? `（プール ${allocInfo.index}/${allocInfo.poolSize} を使用）\n` : '');
-
-      await notifyIntroducerIfPossible(note);
+      await notifyIntroducerIfPossible(`【登録希望】\n登録者userId：${userId}\n割当FLP：${assigned}`);
 
       return client.replyMessage(event.replyToken, [{ type: 'text', text: msg1 }, msg2])
         .catch(err => console.error('replyMessage failed (want register):', err));
     }
 
-    // ========== Day7：3点をLINEで返信する ==========
+    // Day7：3点をLINEで返信する
     if (text === TRIG_SEND_3PTS) {
-      // ここは「登録」と送るまで受付開始しない（設計思想）
       u.state = 'idle';
       saveUsers(users);
-
-      const guide =
-        `案内に従ってください。\n` +
-        `「登録」と送ると開始します。`;
-
-      return client.replyMessage(event.replyToken, [{ type: 'text', text: guide }])
+      return client.replyMessage(event.replyToken, [{ type: 'text', text: `案内に従ってください。\n「登録」と送ると開始します。` }])
         .catch(err => console.error('replyMessage failed (3pts guide):', err));
     }
 
-    // ========== 受付開始（登録） ==========
+    // 受付開始
     if (text === TRIG_START_REG) {
       u.state = 'await_name';
       saveUsers(users);
-
-      return client.replyMessage(event.replyToken, [
-        { type: 'text', text: '【登録受付を開始します】\n① 氏名 を入力してください' },
-      ]).catch(err => console.error('replyMessage failed (start):', err));
+      return client.replyMessage(event.replyToken, [{ type: 'text', text: '【登録受付を開始します】\n① 氏名 を入力してください' }])
+        .catch(err => console.error('replyMessage failed (start):', err));
     }
 
-    // ========== 状態機械：氏名 → FLP → 画像 ==========
     if (u.state === 'await_name') {
       u.name = text;
       u.state = 'await_flp';
       saveUsers(users);
-
-      return client.replyMessage(event.replyToken, [
-        { type: 'text', text: 'ありがとうございます。\n② FLP番号 を入力してください' },
-      ]).catch(err => console.error('replyMessage failed (name):', err));
+      return client.replyMessage(event.replyToken, [{ type: 'text', text: 'ありがとうございます。\n② FLP番号 を入力してください' }])
+        .catch(err => console.error('replyMessage failed (name):', err));
     }
 
     if (u.state === 'await_flp') {
       u.flp = text;
       u.state = 'await_image';
       saveUsers(users);
-
-      return client.replyMessage(event.replyToken, [
-        { type: 'text', text: '③ 最後に【購入画面のスクリーンショット】を画像で送ってください。' },
-      ]).catch(err => console.error('replyMessage failed (flp):', err));
+      return client.replyMessage(event.replyToken, [{ type: 'text', text: '③ 最後に【購入画面のスクリーンショット】を画像で送ってください。' }])
+        .catch(err => console.error('replyMessage failed (flp):', err));
     }
 
     saveUsers(users);
     return null;
   }
 
-  // ---- IMAGE ----
   if (event.message.type === 'image') {
     console.log(`[INCOMING_IMAGE] userId=${userId} state=${u.state} messageId=${event.message.id}`);
 
     if (u.state !== 'await_image') {
       saveUsers(users);
-      return client.replyMessage(event.replyToken, [
-        { type: 'text', text: '画像を受信しました。\n登録受付を開始する場合は「登録」と送ってください。' },
-      ]).catch(err => console.error('replyMessage failed (image outside):', err));
+      return client.replyMessage(event.replyToken, [{
+        type: 'text',
+        text: '画像を受信しました。\n登録受付を開始する場合は「登録」と送ってください。'
+      }]).catch(err => console.error('replyMessage failed (image outside):', err));
     }
 
     u.lastImageId = event.message.id || '';
     u.state = 'completed';
     saveUsers(users);
 
-    // 紹介者へ通知（登録情報が揃った）
-    const note =
-      `【登録情報が揃いました】\n` +
-      `氏名：${u.name}\n` +
-      `FLP：${u.flp}\n` +
-      `スクショID：${u.lastImageId}\n` +
-      `userId：${userId}\n` +
-      `（確認後、VSHを譲渡してください）`;
-
-    await notifyIntroducerIfPossible(note);
+    await notifyIntroducerIfPossible(
+      `【登録情報が揃いました】\n氏名：${u.name}\nFLP：${u.flp}\nスクショID：${u.lastImageId}\nuserId：${userId}\n（確認後、VSHを譲渡してください）`
+    );
 
     return client.replyMessage(event.replyToken, [
       {
@@ -465,56 +398,16 @@ async function handleEvent(event) {
         text:
           '画像を受け取りました。ありがとうございます。\n' +
           '【登録情報が揃いました】\n・氏名\n・FLP番号\n・購入画面スクリーンショット\n\n' +
-          '紹介者が確認後、VSHを譲渡します。',
+          '紹介者が確認後、VSHを譲渡します。'
       },
       {
         type: 'text',
         text:
-          `【登録完了】\n` +
-          `氏名：${u.name}\n` +
-          `FLP：${u.flp}\n` +
-          `スクショID：${u.lastImageId}\n` +
-          `userId：${userId}`,
-      },
+          `【登録完了】\n氏名：${u.name}\nFLP：${u.flp}\nスクショID：${u.lastImageId}\nuserId：${userId}`
+      }
     ]).catch(err => console.error('replyMessage failed (completed):', err));
   }
 
   saveUsers(users);
   return null;
 }
-
-// ====== 紹介者通知（Push） ======
-async function notifyIntroducerIfPossible(text) {
-  if (!INTRODUCER_USER_ID) return;
-  try {
-    await client.pushMessage(INTRODUCER_USER_ID, [{ type: 'text', text }]);
-  } catch (e) {
-    console.error('pushMessage failed:', e);
-  }
-}
-
-/**
- * =========================
- * 使い方（最低限）
- * =========================
- * 1) Renderの環境変数に以下を設定
- *   - CHANNEL_ACCESS_TOKEN
- *   - CHANNEL_SECRET
- *   - INTRODUCER_NAME（例：細井信孝）
- *   - INTRODUCER_FLP（例：203145165）
- *   - INTRODUCER_USER_ID（紹介者へ通知したい場合）
- *   - BASE_URL（例：https://vsh-server.onrender.com）※VHSボタンURL生成に必要
- *   - ADMIN_TOKEN（管理APIを使うなら必須）
- *
- * 2) 30個のFLP番号を事前に入力（管理API）
- *   POST /admin/flp-pool
- *   Header: x-admin-token: <ADMIN_TOKEN>
- *   Body(JSON): {"flp_pool":["123...","124...","..."]}
- *
- * 3) VHS用WEB原稿の更新（いつでも可能）
- *   - 方法A：data/fbo_guide.txt を編集してデプロイ
- *   - 方法B（推奨）：管理APIで更新
- *     POST /admin/fbo-guide
- *     Header: x-admin-token: <ADMIN_TOKEN>
- *     Body(JSON): {"text":"...手順本文..."}
- */
