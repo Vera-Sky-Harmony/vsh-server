@@ -1,18 +1,12 @@
 // index.js (ESM / type: module 対応)
-// - LINE webhook (/webhook)
-// - Admin UI (/admin?token=...)
-// - assignedFlp 30件プール登録・割当・10日未返信で返却
-// - 「登録希望」押下(=テキスト受信)で3点を自動送信
-// - 「3点をLINEで返信する」押下で、氏名→FLP番号→購入スクショ の順で受付
-// 注意：永続DBは使わず JSON ファイル保存（簡易）
-// Render無料/一時FSだと再デプロイで消える可能性があります（運用時は永続化推奨）
+// 修正点：@line/bot-sdk を default import しない（ESMでは default export が無い）
+//        -> import { Client, middleware } from "@line/bot-sdk";
 
 import express from "express";
-import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import line from "@line/bot-sdk";
+import { Client, middleware } from "@line/bot-sdk";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,7 +30,7 @@ const config = {
   channelAccessToken: CHANNEL_ACCESS_TOKEN,
   channelSecret: CHANNEL_SECRET,
 };
-const client = new line.Client(config);
+const client = new Client(config);
 
 // ====== Storage (JSON file) ======
 const DATA_DIR = path.join(__dirname, "data");
@@ -99,7 +93,6 @@ function reclaimExpiredAssigned(store) {
     if (item.status === "assigned" && item.assignedAt) {
       const at = new Date(item.assignedAt).getTime();
       if (!Number.isNaN(at) && at < limit) {
-        // 10日経過しても完了していない→返却
         const u = store.users[item.assignedTo];
         const completed = u?.completedAt;
         if (!completed) {
@@ -115,14 +108,13 @@ function reclaimExpiredAssigned(store) {
 }
 
 function allocateAssignedFlp(store, userId) {
-  // 期限切れ返却
   reclaimExpiredAssigned(store);
 
-  // 既に割当済みならそれを返す
-  const existing = store.pool.find((x) => x.status === "assigned" && x.assignedTo === userId);
+  const existing = store.pool.find(
+    (x) => x.status === "assigned" && x.assignedTo === userId
+  );
   if (existing) return existing.flp;
 
-  // unused から先着順（配列順）で割当
   const next = store.pool.find((x) => x.status === "unused");
   if (!next) return null;
 
@@ -149,42 +141,21 @@ async function replyText(replyToken, text) {
   }
 }
 
-async function pushText(userId, text) {
-  try {
-    await client.pushMessage(userId, { type: "text", text });
-  } catch (e) {
-    console.error("pushText failed:", e?.message || e);
-  }
-}
-
 // ====== Express ======
 const app = express();
-
-// Render は reverse proxy のため
 app.set("trust proxy", 1);
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // Health
-app.get("/", (req, res) => {
-  res.type("text").send("VSH server is running.");
-});
-app.get("/health", (req, res) => {
-  res.json({ ok: true, time: nowISO() });
-});
+app.get("/", (req, res) => res.type("text").send("VSH server is running."));
+app.get("/health", (req, res) => res.json({ ok: true, time: nowISO() }));
 
 // ====== Admin UI ======
 app.get("/admin", (req, res) => {
-  // サーバが落ちていないか確認できるように明示
-  if (!ADMIN_TOKEN) {
-    res.status(500).type("text").send("ADMIN_TOKEN not set");
-    return;
-  }
+  if (!ADMIN_TOKEN) return res.status(500).type("text").send("ADMIN_TOKEN not set");
   const token = req.query.token;
-  if (token !== ADMIN_TOKEN) {
-    res.status(403).type("text").send("Forbidden");
-    return;
-  }
+  if (token !== ADMIN_TOKEN) return res.status(403).type("text").send("Forbidden");
 
   const store = loadStore();
   reclaimExpiredAssigned(store);
@@ -195,10 +166,8 @@ app.get("/admin", (req, res) => {
   const consumed = store.pool.filter((x) => x.status === "consumed").length;
 
   const html = `<!doctype html>
-<html lang="ja">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<html lang="ja"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>VSH Admin</title>
 <style>
 body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:24px;line-height:1.5}
@@ -207,12 +176,9 @@ h1{margin:0 0 10px}
 small{color:#555}
 textarea{width:100%;min-height:260px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;padding:10px;border-radius:10px;border:1px solid #ccc}
 button{padding:10px 14px;border:0;border-radius:10px;background:#111;color:#fff;font-weight:700;cursor:pointer}
-.row{display:flex;gap:16px;flex-wrap:wrap}
 .badge{display:inline-block;background:#f4f4f4;border:1px solid #e2e2e2;border-radius:999px;padding:4px 10px;margin-right:8px}
 .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
-</style>
-</head>
-<body>
+</style></head><body>
 <div class="card">
   <h1>VSH Admin</h1>
   <div>
@@ -221,23 +187,28 @@ button{padding:10px 14px;border:0;border-radius:10px;background:#111;color:#fff;
     <span class="badge">consumed: <b class="mono">${consumed}</b></span>
   </div>
 
-  <p><small>assignedFlp を改行区切りで貼り付け → 保存。運用上は「30件以上は不要」なので、上から30件のみ有効にします。</small></p>
-
+  <p><small>assignedFlp を改行区切りで貼り付け → 保存（上から30件のみ有効）</small></p>
   <form method="POST" action="/admin/pool?token=${encodeURIComponent(ADMIN_TOKEN)}">
-    <textarea name="assignedFlp" placeholder="例）123456789&#10;234567890&#10;...">${store.pool.map(x=>x.flp).join("\n")}</textarea>
-    <div style="margin-top:12px">
-      <button type="submit">保存する</button>
-    </div>
+    <textarea name="assignedFlp" placeholder="例）123456789&#10;234567890&#10;...">${store.pool
+      .map((x) => x.flp)
+      .join("\n")}</textarea>
+    <div style="margin-top:12px"><button type="submit">保存する</button></div>
   </form>
 
   <hr style="margin:18px 0; border:none; border-top:1px solid #eee"/>
-
   <h3>状態一覧（先頭）</h3>
-  <pre>${store.pool.slice(0, 40).map((x,i)=>`${String(i+1).padStart(2,"0")}. ${x.flp}  [${x.status}]  to=${x.assignedTo?mask(x.assignedTo):"-"}  at=${x.assignedAt||"-"}`).join("\n")}</pre>
+  <pre>${store.pool
+    .slice(0, 40)
+    .map(
+      (x, i) =>
+        `${String(i + 1).padStart(2, "0")}. ${x.flp}  [${x.status}]  to=${
+          x.assignedTo ? mask(x.assignedTo) : "-"
+        }  at=${x.assignedAt || "-"}`
+    )
+    .join("\n")}</pre>
 
-  <p><small>このURL：<span class="mono">${(BASE_URL || "").replace(/\/$/, "")}/admin?token=...</span></small></p>
-</div>
-</body></html>`;
+  <p><small>URL：<span class="mono">${(BASE_URL || "").replace(/\/$/, "")}/admin?token=...</span></small></p>
+</div></body></html>`;
 
   res.type("html").send(html);
 });
@@ -253,7 +224,6 @@ app.post("/admin/pool", (req, res) => {
     .map((s) => s.trim())
     .filter(Boolean);
 
-  // 重複除去し、上から30件のみ
   const uniq = [];
   const seen = new Set();
   for (const v of lines) {
@@ -265,9 +235,6 @@ app.post("/admin/pool", (req, res) => {
   }
 
   const store = loadStore();
-
-  // 既存で "consumed" を保持したい場合はここでマージするが、
-  // 今回は「30件運用」を最優先し、全面上書きします。
   store.pool = uniq.map((flp) => ({
     flp,
     status: "unused",
@@ -275,13 +242,12 @@ app.post("/admin/pool", (req, res) => {
     assignedAt: null,
     consumedAt: null,
   }));
-
   saveStore(store);
   res.redirect(`/admin?token=${encodeURIComponent(ADMIN_TOKEN)}`);
 });
 
 // ====== LINE Webhook ======
-app.post("/webhook", line.middleware(config), async (req, res) => {
+app.post("/webhook", middleware(config), async (req, res) => {
   try {
     const store = loadStore();
     const reclaimed = reclaimExpiredAssigned(store);
@@ -323,8 +289,9 @@ async function handleEvent(event) {
       u.completedAt = nowISO();
       u.step = null;
 
-      // 該当 assignedFlp を consumed に
-      const item = store.pool.find((x) => x.status === "assigned" && x.assignedTo === userId);
+      const item = store.pool.find(
+        (x) => x.status === "assigned" && x.assignedTo === userId
+      );
       if (item) {
         item.status = "consumed";
         item.consumedAt = nowISO();
@@ -341,15 +308,16 @@ async function handleEvent(event) {
           "\n・購入スクショ：受領\n\n紹介者へ通知しました。"
       );
 
-      // 紹介者へ通知（現状は ADMIN_USER_ID に通知）
       await notifyAdmin(
         `【3点受領】\nuserId=${userId}\n氏名=${u.name || "未入力"}\nFLP=${u.flp || "未入力"}\n購入スクショID=${u.receiptImageId}\nassignedFlp=${u.assignedFlp || "未割当"}`
       );
       return;
     }
 
-    // それ以外の画像は無視 or 案内
-    await replyText(event.replyToken, "画像を受け取りました。必要な場合は「3点をLINEで返信する」から案内に従って送ってください。");
+    await replyText(
+      event.replyToken,
+      "画像を受け取りました。必要な場合は「3点をLINEで返信する」から案内に従って送ってください。"
+    );
     return;
   }
 
@@ -370,13 +338,15 @@ async function handleEvent(event) {
     u.flp = text;
     u.step = "await_receipt";
     saveStore(store);
-    await replyText(event.replyToken, "ありがとうございます。\n③ 最後に【購入画面のスクリーンショット】を画像で送ってください。");
+    await replyText(
+      event.replyToken,
+      "ありがとうございます。\n③ 最後に【購入画面のスクリーンショット】を画像で送ってください。"
+    );
     return;
   }
 
-  // ====== ボタン押下テキスト ======
+  // ボタン押下テキスト
   if (text === "3点をLINEで返信する") {
-    // 受付開始
     u.step = "await_name";
     saveStore(store);
     await replyText(event.replyToken, "【登録受付を開始します】\n① 氏名 を入力してください");
@@ -384,21 +354,20 @@ async function handleEvent(event) {
   }
 
   if (text === "登録希望") {
-    // Day0-7配信条件：assignedFlp unused が30件あること（足りなければ受付停止）
     const unusedCount = getUnusedCount(store);
     if (unusedCount < 30) {
       saveStore(store);
       await replyText(event.replyToken, "現在、受付準備中です。紹介者へご連絡ください。");
-      await notifyAdmin(`【要対応】assignedFlp の未使用が30件未満です（unused=${unusedCount}）。/admin から30件入力してください。`);
+      await notifyAdmin(
+        `【要対応】assignedFlp の未使用が30件未満です（unused=${unusedCount}）。/admin から30件入力してください。`
+      );
       return;
     }
 
-    // 割当（1→2→3…の順）
     const assigned = allocateAssignedFlp(store, userId);
     u.assignedFlp = assigned;
     u.requestedAt = nowISO();
 
-    // 3点のどれか欠けたら紹介者へアラート
     const introName = u.introducerName || INTRODUCER_NAME;
     const introFlp = u.introducerFlp || INTRODUCER_FLP;
 
@@ -415,7 +384,6 @@ async function handleEvent(event) {
       return;
     }
 
-    // 新規登録者へ自動送信（希望された文面）
     const msg =
       "あなたが登録するのに必要な3点をお送りします。\n" +
       `① 紹介者の氏名：${introName}\n` +
@@ -425,13 +393,10 @@ async function handleEvent(event) {
       "登録が終わりましたら、青い画像の「3点をLINEで返信する」をタップして登録状況を送信してください。";
 
     await replyText(event.replyToken, msg);
-
-    // 紹介者（現状は ADMIN_USER_ID）へ通知
     await notifyAdmin(`【登録希望】\nuserId=${userId}\nassignedFlp=${assigned}\nunused残=${getUnusedCount(store)}`);
     return;
   }
 
-  // その他
   await replyText(event.replyToken, "案内に従ってください。\n・登録希望\n・3点をLINEで返信する");
 }
 
