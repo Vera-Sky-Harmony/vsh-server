@@ -1,259 +1,405 @@
-// src/index.js
-import express from "express";
-import { middleware, Client } from "@line/bot-sdk";
-import crypto from "crypto";
+/**
+ * VSH server - index.js (FULL REPLACE)
+ * 目的：
+ *  - LINE Webhook を確実に受信してログに出す
+ *  - 「登録希望」→ unused から1つ割当(assigned) → 登録者へ自動返信（3点＋手順URL）
+ *  - 「3点をLINEで返信する」→ 登録者から「氏名→FLP番号→画像」を順に受けるガイド
+ *  - 受信した3点を ADMIN_USER_ID へ push 通知（紹介者確認用）
+ *  - /admin でプール状態を確認・更新（スクショのUIに寄せた簡易管理画面）
+ */
 
-// =========================
-// Env
-// =========================
-const PORT = process.env.PORT || 10000;
+const express = require("express");
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
+const { Client, middleware } = require("@line/bot-sdk");
 
-const CHANNEL_SECRET = process.env.CHANNEL_SECRET || "";
-const CHANNEL_ACCESS_TOKEN = process.env.CHANNEL_ACCESS_TOKEN || "";
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
-const BASE_URL = process.env.BASE_URL || ""; // 例: https://vsh-server.onrender.com
-
-if (!CHANNEL_SECRET) console.warn("⚠️ CHANNEL_SECRET が未設定です");
-if (!CHANNEL_ACCESS_TOKEN) console.warn("⚠️ CHANNEL_ACCESS_TOKEN が未設定です");
-
-const lineConfig = {
-  channelSecret: CHANNEL_SECRET,
-  channelAccessToken: CHANNEL_ACCESS_TOKEN,
-};
-
-const client = new Client(lineConfig);
 const app = express();
 
-// 重要：/callback より前に express.json() を app.use しないこと！！
-// 署名検証が壊れます（SignatureValidationFailed の原因）
-
-// =========================
-// In-memory store
-// （Renderは再起動で消える可能性あり：まずは動作確認優先）
-// =========================
-const state = {
-  pool: [],            // 例: [361799161, ...] 30件
-  assignedByUser: {},  // userId -> { flp, assignedAt }
-  consumed: new Set(), // flp を消費済みにする場合に使用（今回は自動消費はしない）
+// =====================
+// 必須環境変数（RenderのEnvironmentに設定）
+// =====================
+const config = {
+  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
+  channelSecret: process.env.CHANNEL_SECRET,
 };
 
-// =========================
-// Helpers
-// =========================
-function nowISO() {
+const BASE_URL = process.env.BASE_URL || ""; // 例：https://vsh-server.onrender.com
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "change_me"; // /admin?token=...
+const INTRODUCER_NAME = process.env.INTRODUCER_NAME || "紹介者";
+const INTRODUCER_FLP = process.env.INTRODUCER_FLP || "000000000";
+const FBO_GUIDE_URL = process.env.FBO_GUIDE_URL || "https://example.com";
+const ADMIN_USER_ID = process.env.ADMIN_USER_ID || ""; // 例：Uxxxxxxxx（紹介者に通知したいLINEユーザーID）
+
+if (!config.channelAccessToken || !config.channelSecret) {
+  console.error("ENV missing: CHANNEL_ACCESS_TOKEN / CHANNEL_SECRET");
+}
+
+const client = new Client(config);
+
+// =====================
+// データ保存（簡易）
+// Renderで永続化が必要なら Persistent Disk を有効にして DATA_DIR を設定推奨
+// =====================
+const DATA_DIR = process.env.DATA_DIR || process.cwd();
+const DATA_FILE = path.join(DATA_DIR, "vsh-data.json");
+
+function loadData() {
+  try {
+    if (!fs.existsSync(DATA_FILE)) {
+      return {
+        pool: {
+          unused: [],
+          assigned: {}, // userId -> flp
+          consumed: {}, // userId -> flp
+        },
+        applicants: {}, // userId -> { step, name, flp, imageMessageId, assignedFlp, updatedAt }
+      };
+    }
+    return JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
+  } catch (e) {
+    console.error("loadData error:", e);
+    return {
+      pool: { unused: [], assigned: {}, consumed: {} },
+      applicants: {},
+    };
+  }
+}
+
+function saveData(data) {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf-8");
+  } catch (e) {
+    console.error("saveData error:", e);
+  }
+}
+
+function nowIso() {
   return new Date().toISOString();
 }
 
-function counts() {
-  const assignedCount = Object.keys(state.assignedByUser).length;
-  const consumedCount = state.consumed.size;
-  const unusedCount = Math.max(state.pool.length - assignedCount - consumedCount, 0);
-  return { unused: unusedCount, assigned: assignedCount, consumed: consumedCount };
+function pickFromUnused(data) {
+  // unused から先頭を1つ取り出す（スクショ仕様に合わせる）
+  const flp = data.pool.unused.shift();
+  return flp || null;
 }
 
-function getNextUnusedFlp() {
-  // poolの先頭から、まだ誰にも割当されてない & consumedでもない番号を探す
-  const assignedFlps = new Set(Object.values(state.assignedByUser).map(v => String(v.flp)));
-  for (const flp of state.pool) {
-    const s = String(flp).trim();
-    if (!assignedFlps.has(s) && !state.consumed.has(s)) return s;
-  }
-  return null;
+function maskToken(token) {
+  if (!token) return "";
+  if (token.length <= 6) return "***";
+  return token.slice(0, 3) + "***" + token.slice(-3);
 }
 
-function getUserIdFromEvent(ev) {
-  // 可能な限り userId を取る
-  return ev?.source?.userId || null;
-}
+// =====================
+// ルート
+// =====================
+app.get("/", (req, res) => {
+  res.status(200).send("VSH server is running");
+});
 
-async function replyText(replyToken, text) {
-  if (!replyToken) return;
-  await client.replyMessage(replyToken, { type: "text", text });
-}
+// 管理画面（スクショに寄せた簡易版）
+app.get("/admin", (req, res) => {
+  const token = req.query.token || "";
+  if (token !== ADMIN_TOKEN) return res.status(401).send("Unauthorized");
 
-// =========================
-// Admin UI (超簡易)
-// =========================
-function adminHtml() {
-  const { unused, assigned, consumed } = counts();
-  const assignedList = Object.entries(state.assignedByUser)
-    .map(([uid, v], idx) => `${String(idx + 1).padStart(2, "0")}. ${v.flp}  [assigned]  to:${uid.slice(0, 6)}…  at:${v.assignedAt}`)
-    .join("\n");
+  const data = loadData();
 
-  return `<!doctype html>
+  const unusedCount = data.pool.unused.length;
+  const assignedCount = Object.keys(data.pool.assigned).length;
+  const consumedCount = Object.keys(data.pool.consumed).length;
+
+  const unusedPreview = data.pool.unused.slice(0, 50).join("\n");
+
+  const html = `
+<!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>VSH Admin</title>
-<style>
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; padding:24px; max-width:900px; margin:0 auto;}
-  .pill{display:inline-block; padding:8px 12px; border:1px solid #ddd; border-radius:999px; margin-right:8px;}
-  textarea{width:100%; height:260px; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono"; font-size:14px;}
-  pre{background:#f7f7f7; padding:12px; border-radius:12px; overflow:auto;}
-  button{padding:10px 14px; border-radius:10px; border:1px solid #ddd; background:#111; color:#fff; cursor:pointer;}
-  .muted{color:#666; font-size:13px;}
-</style>
+  <meta charset="utf-8" />
+  <title>VSH Admin</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .pill { display:inline-block; padding: 8px 12px; border:1px solid #ddd; border-radius: 20px; margin-right: 10px; }
+    textarea { width: 520px; height: 420px; font-family: monospace; }
+    .note { color:#666; margin: 10px 0; }
+    button { padding: 8px 14px; }
+    .row { margin: 16px 0; }
+  </style>
 </head>
 <body>
   <h1>VSH Admin</h1>
-  <div>
-    <span class="pill">unused: <b>${unused}</b></span>
-    <span class="pill">assigned: <b>${assigned}</b></span>
-    <span class="pill">consumed: <b>${consumed}</b></span>
+  <div class="row">
+    <span class="pill">unused: <b>${unusedCount}</b></span>
+    <span class="pill">assigned: <b>${assignedCount}</b></span>
+    <span class="pill">consumed: <b>${consumedCount}</b></span>
   </div>
 
-  <p class="muted">assignedFlp を改行区切りで貼り付け → 保存（上から30件のみ有効）</p>
-  <form method="post" action="/admin/pool?token=${encodeURIComponent(ADMIN_TOKEN)}">
-    <textarea name="pool" placeholder="例) 123456789&#10;234567890&#10;...">${state.pool.join("\n")}</textarea>
-    <div style="margin-top:10px;">
-      <button type="submit">保存する</button>
+  <div class="note">unused を改行区切りで貼り付け → 保存（上から30件のみ有効）</div>
+
+  <form method="POST" action="/admin/pool?token=${encodeURIComponent(token)}">
+    <textarea name="unused">${unusedPreview}</textarea>
+    <div class="row">
+      <button type="submit">保存</button>
     </div>
   </form>
 
-  <h3 style="margin-top:24px;">状態一覧（先頭）</h3>
-  <pre>${assignedList || "(assigned なし)"}</pre>
+  <hr />
+  <h3>割当済み（assigned）</h3>
+  <pre>${Object.entries(data.pool.assigned)
+    .slice(0, 50)
+    .map(([uid, flp]) => `${uid} -> ${flp}`)
+    .join("\n")}</pre>
 
-  <p class="muted">URL: ${BASE_URL ? `${BASE_URL}/admin?token=...` : "BASE_URL 未設定"}</p>
+  <hr />
+  <h3>受信済み3点（applicants）</h3>
+  <pre>${Object.entries(data.applicants)
+    .slice(0, 50)
+    .map(([uid, a]) => `${uid} | step=${a.step} | name=${a.name || ""} | flp=${a.flp || ""} | assigned=${a.assignedFlp || ""} | updated=${a.updatedAt || ""}`)
+    .join("\n")}</pre>
 </body>
-</html>`;
-}
-
-// admin認証
-function requireAdmin(req, res, next) {
-  const t = req.query.token || "";
-  if (!ADMIN_TOKEN || t !== ADMIN_TOKEN) {
-    res.status(401).send("ADMIN_TOKEN not set / invalid");
-    return;
-  }
-  next();
-}
-
-// admin routes（ここは json/body 必要なので個別に付与）
-app.get("/admin", requireAdmin, (req, res) => {
-  res.setHeader("content-type", "text/html; charset=utf-8");
-  res.send(adminHtml());
+</html>
+  `;
+  res.status(200).send(html);
 });
 
-app.post(
-  "/admin/pool",
-  requireAdmin,
-  express.urlencoded({ extended: false }),
-  (req, res) => {
-    const raw = (req.body?.pool || "").toString();
-    const lines = raw
-      .split(/\r?\n/)
-      .map(s => s.trim())
-      .filter(Boolean)
-      .slice(0, 30);
+// admin: プール更新
+app.post("/admin/pool", express.urlencoded({ extended: true }), (req, res) => {
+  const token = req.query.token || "";
+  if (token !== ADMIN_TOKEN) return res.status(401).send("Unauthorized");
 
-    state.pool = lines;
-    // poolを更新したら、consumedセットの整合性は今回は触らない（必要なら後で）
-    res.redirect(`/admin?token=${encodeURIComponent(ADMIN_TOKEN)}`);
-  }
-);
+  const raw = (req.body.unused || "").toString();
+  const lines = raw
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 
-// health
-app.get("/", (req, res) => {
-  res.status(200).send("ok");
+  // 先頭30件だけ採用（あなたの画面の注意書き仕様）
+  const top30 = lines.slice(0, 30);
+
+  const data = loadData();
+  data.pool.unused = top30;
+  saveData(data);
+
+  res.redirect(`/admin?token=${encodeURIComponent(token)}`);
 });
 
-// =========================
+// =====================
 // LINE Webhook
-// =========================
-app.post("/callback", middleware(lineConfig), async (req, res) => {
+// =====================
+app.post("/callback", middleware(config), async (req, res) => {
   try {
-    const events = req.body?.events || [];
+    console.log("=== LINE WEBHOOK RECEIVED ===");
+    console.log("events length:", req.body?.events?.length ?? 0);
+
+    const events = req.body.events || [];
     await Promise.all(events.map(handleEvent));
+
     res.status(200).end();
-  } catch (e) {
-    console.error("handle webhook error:", e);
+  } catch (err) {
+    console.error("Webhook error:", err);
     res.status(500).end();
   }
 });
 
 async function handleEvent(event) {
-  // テキスト or ポストバックに対応
-  const userId = getUserIdFromEvent(event);
-  const replyToken = event.replyToken;
+  try {
+    // ログ（重要）
+    console.log("event.type:", event.type);
 
-  // 1) 「登録希望」→ 即 割当
-  const isRegisterHope =
-    (event.type === "message" &&
-      event.message?.type === "text" &&
-      normalize(event.message.text) === "登録希望") ||
-    (event.type === "postback" && normalize(event.postback?.data) === "register");
+    if (event.type !== "message") return null;
+    if (!event.message) return null;
 
-  if (isRegisterHope) {
-    if (!userId) {
-      await replyText(replyToken, "ユーザーIDが取得できませんでした。もう一度お試しください。");
-      return;
+    const userId = event.source && event.source.userId ? event.source.userId : "";
+    const data = loadData();
+
+    // ---- テキスト ----
+    if (event.message.type === "text") {
+      const text = (event.message.text || "").trim();
+      console.log("text:", text);
+
+      // ① 登録希望
+      if (text === "登録希望") {
+        // すでに割当済みなら同じFLPを使う
+        let assignedFlp = data.pool.assigned[userId] || null;
+
+        // 未割当なら unused から1つ引いて assigned へ
+        if (!assignedFlp) {
+          assignedFlp = pickFromUnused(data);
+          if (!assignedFlp) {
+            // プール枯渇
+            await client.replyMessage(event.replyToken, {
+              type: "text",
+              text: "現在、登録用の番号が不足しています。しばらくしてからもう一度お試しください。",
+            });
+            return null;
+          }
+          data.pool.assigned[userId] = assignedFlp;
+        }
+
+        // applicants 初期化（3点返信のステップ管理）
+        data.applicants[userId] = {
+          step: 0,
+          name: "",
+          flp: "",
+          imageMessageId: "",
+          assignedFlp,
+          updatedAt: nowIso(),
+        };
+
+        saveData(data);
+
+        const replyMessages = [
+          {
+            type: "text",
+            text:
+              "【登録受付を開始します】\n" +
+              "下の3点を確認してください。\n\n" +
+              `① 紹介者氏名：${INTRODUCER_NAME}\n` +
+              `② 紹介者FLP番号：${INTRODUCER_FLP}\n` +
+              `③ あなたのFLP番号：${assignedFlp}\n\n` +
+              "※このあと、FBO登録手順を送ります。",
+          },
+          {
+            type: "text",
+            text:
+              "【FBO登録手順】\n" +
+              "以下のページを開いて、手順どおりに登録を進めてください。\n" +
+              `${FBO_GUIDE_URL}`,
+          },
+        ];
+
+        console.log("assignedFlp:", assignedFlp, "unused now:", loadData().pool.unused.length);
+        return client.replyMessage(event.replyToken, replyMessages);
+      }
+
+      // ② 3点をLINEで返信する
+      if (text === "3点をLINEで返信する") {
+        if (!data.applicants[userId]) {
+          data.applicants[userId] = {
+            step: 0,
+            name: "",
+            flp: "",
+            imageMessageId: "",
+            assignedFlp: data.pool.assigned[userId] || "",
+            updatedAt: nowIso(),
+          };
+        }
+        data.applicants[userId].step = 1; // 次に氏名を待つ
+        data.applicants[userId].updatedAt = nowIso();
+        saveData(data);
+
+        return client.replyMessage(event.replyToken, {
+          type: "text",
+          text:
+            "ありがとうございます。\n" +
+            "まず【① 氏名】をテキストで送ってください。",
+        });
+      }
+
+      // 3点ステップ処理（氏名 → FLP番号）
+      if (data.applicants[userId]) {
+        const a = data.applicants[userId];
+
+        // step=1 なら「氏名」
+        if (a.step === 1) {
+          a.name = text;
+          a.step = 2;
+          a.updatedAt = nowIso();
+          saveData(data);
+
+          return client.replyMessage(event.replyToken, {
+            type: "text",
+            text: "ありがとうございます。次に【② FLP番号】を送ってください。",
+          });
+        }
+
+        // step=2 なら「FLP番号」
+        if (a.step === 2) {
+          a.flp = text;
+          a.step = 3; // 次に画像待ち
+          a.updatedAt = nowIso();
+          saveData(data);
+
+          return client.replyMessage(event.replyToken, {
+            type: "text",
+            text: "ありがとうございます。最後に【③ 購入画面のスクリーンショット】を画像で送ってください。",
+          });
+        }
+      }
+
+      // それ以外
+      return null;
     }
 
-    // すでに割当済みなら同じ番号を返す
-    const already = state.assignedByUser[userId];
-    if (already?.flp) {
-      await replyText(
-        replyToken,
-        `【あなたのFLP番号（割当済み）】\n${already.flp}\n\nこの番号を使って登録を進めてください。\n次に「3点をLINEで返信する」へ進み、\n①氏名 ②あなたのFLP番号 ③購入画面スクショ を送ってください。`
-      );
-      return;
+    // ---- 画像（購入スクショ）----
+    if (event.message.type === "image") {
+      console.log("image received");
+      if (!userId) return null;
+
+      if (!data.applicants[userId]) {
+        // いきなり画像が来た場合の案内
+        return client.replyMessage(event.replyToken, {
+          type: "text",
+          text:
+            "画像を受け取りました。\n" +
+            "念のため、先に【氏名】と【FLP番号】をテキストで送ってください。",
+        });
+      }
+
+      const a = data.applicants[userId];
+
+      // step=3（画像待ち）として扱う
+      a.imageMessageId = event.message.id || "";
+      a.step = 9; // 完了
+      a.updatedAt = nowIso();
+      saveData(data);
+
+      // 登録者へ返信
+      await client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "画像を受け取りました。ありがとうございます。\n紹介者が確認し、譲渡手続きへ進みます。",
+      });
+
+      // 管理者へ push 通知（紹介者確認用）
+      if (ADMIN_USER_ID) {
+        const assignedFlp = a.assignedFlp || data.pool.assigned[userId] || "";
+        const msg =
+          "【VSH 3点受信】\n" +
+          `userId: ${userId}\n` +
+          `氏名: ${a.name || "(未入力)"}\n` +
+          `FLP番号: ${a.flp || "(未入力)"}\n` +
+          `購入スクショ messageId: ${a.imageMessageId || "(不明)"}\n` +
+          `割当FLP(あなたのFLP番号): ${assignedFlp || "(未割当)"}\n` +
+          `受信時刻: ${a.updatedAt}`;
+
+        await client.pushMessage(ADMIN_USER_ID, { type: "text", text: msg });
+      } else {
+        console.log("ADMIN_USER_ID not set -> skip pushMessage");
+      }
+
+      return null;
     }
 
-    // 未割当なら先頭から割当
-    const flp = getNextUnusedFlp();
-    if (!flp) {
-      await replyText(replyToken, "申し訳ありません。現在、割り当て可能なFLP番号がありません。紹介者へご連絡ください。");
-      return;
-    }
-
-    state.assignedByUser[userId] = { flp, assignedAt: nowISO() };
-
-    await replyText(
-      replyToken,
-      `【あなたのFLP番号（自動割当）】\n${flp}\n\nこの番号を使って登録を進めてください。\n次に「3点をLINEで返信する」へ進み、\n①氏名 ②あなたのFLP番号 ③購入画面スクショ を送ってください。`
-    );
-    return;
+    return null;
+  } catch (err) {
+    console.error("handleEvent error:", err);
+    return null;
   }
-
-  // 2) 「3点をLINEで返信する」→ 手順案内（割当はしない）
-  const isThreePoints =
-    (event.type === "message" &&
-      event.message?.type === "text" &&
-      normalize(event.message.text) === "3点をlineで返信する") ||
-    (event.type === "postback" && normalize(event.postback?.data) === "three_points");
-
-  if (isThreePoints) {
-    await replyText(
-      replyToken,
-      `【登録受付を開始します】\n① 氏名 を入力してください\n\n② あなたのFLP番号 を入力してください\n\n③ 最後に【購入画面のスクリーンショット】を画像で送ってください`
-    );
-    return;
-  }
-
-  // その他は無反応（必要ならログだけ）
-  return;
 }
 
-function normalize(s) {
-  return String(s || "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "")
-    .replace(/　+/g, "");
-}
-
-// =========================
-// Start
-// =========================
-app.listen(PORT, () => {
-  const { unused, assigned, consumed } = counts();
-  console.log(`VSH server listening on ${PORT}`);
-  console.log(`BASE_URL=${BASE_URL}`);
-  console.log(`ADMIN_TOKEN=${ADMIN_TOKEN ? "有" : "無"}`);
-  console.log(`CHANNEL_SECRET=${CHANNEL_SECRET ? "有" : "無"}`);
-  console.log(`CHANNEL_ACCESS_TOKEN=${CHANNEL_ACCESS_TOKEN ? "有" : "無"}`);
-  console.log(`プール:未使用=${unused} 割り当て=${assigned} 消費=${consumed}`);
-  if (BASE_URL) console.log(`Admin: ${BASE_URL}/admin?token=...`);
-  console.log(`Webhook: ${BASE_URL ? `${BASE_URL}/callback` : "/callback"}`);
+// =====================
+// 起動
+// =====================
+const port = process.env.PORT || 10000;
+app.listen(port, () => {
+  console.log("======================================");
+  console.log("VSH server listening on port", port);
+  console.log("BASE_URL:", BASE_URL);
+  console.log("ADMIN_TOKEN:", maskToken(ADMIN_TOKEN));
+  console.log("FBO_GUIDE_URL:", FBO_GUIDE_URL);
+  console.log("INTRODUCER_NAME:", INTRODUCER_NAME);
+  console.log("INTRODUCER_FLP:", INTRODUCER_FLP);
+  console.log("ADMIN_USER_ID set:", ADMIN_USER_ID ? "YES" : "NO");
+  console.log("Admin:", `${BASE_URL}/admin?token=${ADMIN_TOKEN ? maskToken(ADMIN_TOKEN) : ""}`);
+  console.log("Webhook:", `${BASE_URL}/callback`);
+  console.log("======================================");
 });
