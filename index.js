@@ -1,421 +1,540 @@
-// index.js (ESM / Full replacement)
-// Render / Node 18+ / Express + LINE Messaging API
+// index.js  (ESM / "type":"module" 対応)
+// =====================================
+// 環境変数（Renderの Environment）
+// - CHANNEL_ACCESS_TOKEN
+// - CHANNEL_SECRET
+// - ADMIN_TOKEN
+// - ADMIN_USER_ID（任意: 管理者へ通知したい場合）
+// - BASE_URL（任意）例: https://vsh-server.onrender.com
+// =====================================
 
 import express from "express";
-import crypto from "crypto";
+import { Client, middleware } from "@line/bot-sdk";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import { fileURLToPath } from "url";
-import * as line from "@line/bot-sdk";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// -------------------- ENV --------------------
+// ---- 基本設定
 const PORT = process.env.PORT || 10000;
 
-const CHANNEL_ACCESS_TOKEN = process.env.CHANNEL_ACCESS_TOKEN;
-const CHANNEL_SECRET = process.env.CHANNEL_SECRET;
-const OA_LINE_ID = process.env.OA_LINE_ID || ""; // optional
-const BASE_URL = process.env.BASE_URL || ""; // optional
+const CHANNEL_ACCESS_TOKEN = process.env.CHANNEL_ACCESS_TOKEN || "";
+const CHANNEL_SECRET = process.env.CHANNEL_SECRET || "";
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
+const ADMIN_USER_ID = process.env.ADMIN_USER_ID || ""; // 任意
+const BASE_URL = process.env.BASE_URL || "";
 
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || ""; // must be set for /admin
-const ADMIN_USER_ID = process.env.ADMIN_USER_ID || ""; // admin push notify target (optional but recommended)
-
-if (!CHANNEL_ACCESS_TOKEN || !CHANNEL_SECRET) {
-  console.error("Missing CHANNEL_ACCESS_TOKEN or CHANNEL_SECRET");
-  process.exit(1);
-}
-if (!ADMIN_TOKEN) {
-  console.warn("ADMIN_TOKEN is not set (admin page will show error).");
-}
-
+// ---- LINEクライアント
 const lineConfig = {
   channelAccessToken: CHANNEL_ACCESS_TOKEN,
   channelSecret: CHANNEL_SECRET,
 };
-const client = new line.messagingApi.MessagingApiClient({
-  channelAccessToken: CHANNEL_ACCESS_TOKEN,
-});
 
-// -------------------- Simple JSON DB (Render: use /tmp) --------------------
-const DB_PATH = process.env.DB_PATH || "/tmp/vsh_db.json";
+const lineClient = new Client(lineConfig);
 
-function loadDB() {
-  try {
-    const raw = fs.readFileSync(DB_PATH, "utf-8");
-    return JSON.parse(raw);
-  } catch {
+// ---- データ保存（簡易JSON / WEB_CONCURRENCY=1想定）
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_DIR = path.join(__dirname, "data");
+const DATA_FILE = path.join(DATA_DIR, "store.json");
+
+function ensureDataDir() {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+function nowMs() {
+  return Date.now();
+}
+
+function safeReadStore() {
+  ensureDataDir();
+  if (!fs.existsSync(DATA_FILE)) {
     return {
-      pool: [], // unused FLP list
-      assigned: {}, // userId -> { flp, assignedAt }
-      consumed: {}, // userId -> { flp, name, userFlp, imageMessageId, consumedAt }
-      state: {}, // userId -> { step, tempName, tempUserFlp }
+      pool: [], // [{ flp, status: "unused"|"assigned"|"consumed", assignedTo, assignedAt, consumedAt }]
+      users: {}, // userId -> { assignedFlp, assignedAt, consumedAt, lastActionAt }
+      meta: { updatedAt: nowMs() },
+    };
+  }
+  try {
+    const raw = fs.readFileSync(DATA_FILE, "utf-8");
+    const data = JSON.parse(raw);
+    // 最低限の整形
+    data.pool = Array.isArray(data.pool) ? data.pool : [];
+    data.users = data.users && typeof data.users === "object" ? data.users : {};
+    data.meta = data.meta && typeof data.meta === "object" ? data.meta : {};
+    return data;
+  } catch (e) {
+    // 壊れていても新規
+    return {
+      pool: [],
+      users: {},
+      meta: { updatedAt: nowMs(), corruptedRecoveredAt: nowMs() },
     };
   }
 }
-function saveDB(db) {
-  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2), "utf-8");
-}
-let db = loadDB();
 
-// -------------------- Helpers --------------------
-function nowISO() {
-  return new Date().toISOString();
-}
+function safeWriteStore(store) {
+  ensureDataDir();
+  store.meta = store.meta || {};
+  store.meta.updatedAt = nowMs();
 
-function normalizeText(s) {
-  return (s || "").trim().replace(/\s+/g, "");
+  const tmp = DATA_FILE + ".tmp";
+  fs.writeFileSync(tmp, JSON.stringify(store, null, 2), "utf-8");
+  fs.renameSync(tmp, DATA_FILE);
 }
 
-function getCounts() {
-  const unused = db.pool.length;
-  const assigned = Object.keys(db.assigned).length;
-  const consumed = Object.keys(db.consumed).length;
+function normalizeFlpLines(text) {
+  return text
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+    .map((s) => s.replace(/[^\d]/g, "")) // 数字以外除去
+    .filter((s) => s.length >= 6); // 最低6桁
+}
+
+function uniq(arr) {
+  const seen = new Set();
+  const out = [];
+  for (const x of arr) {
+    if (!seen.has(x)) {
+      seen.add(x);
+      out.push(x);
+    }
+  }
+  return out;
+}
+
+// ---- 10日経過 assigned を unused に戻す
+const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+
+function recycleExpiredAssigned(store) {
+  const t = nowMs();
+  for (const item of store.pool) {
+    if (item.status === "assigned" && item.assignedAt && t - item.assignedAt > TEN_DAYS_MS) {
+      // userの紐付けも解除
+      const uid = item.assignedTo;
+      item.status = "unused";
+      item.assignedTo = null;
+      item.assignedAt = null;
+
+      if (uid && store.users[uid] && store.users[uid].assignedFlp === item.flp) {
+        // consumedじゃなければ解除
+        if (!store.users[uid].consumedAt) {
+          delete store.users[uid].assignedFlp;
+          delete store.users[uid].assignedAt;
+        }
+      }
+    }
+  }
+}
+
+// ---- カウンター
+function getCounters(store) {
+  let unused = 0,
+    assigned = 0,
+    consumed = 0;
+  for (const p of store.pool) {
+    if (p.status === "unused") unused++;
+    else if (p.status === "assigned") assigned++;
+    else if (p.status === "consumed") consumed++;
+  }
   return { unused, assigned, consumed };
 }
 
-function assignNextFlpToUser(userId) {
-  // idempotent: if already assigned or consumed, return same flp
-  if (db.consumed[userId]?.flp) return db.consumed[userId].flp;
-  if (db.assigned[userId]?.flp) return db.assigned[userId].flp;
+// ---- 割り当て（登録希望）
+function assignNextFlpToUser(store, userId) {
+  recycleExpiredAssigned(store);
 
-  if (db.pool.length === 0) return null;
-
-  const flp = db.pool.shift(); // FIFO
-  db.assigned[userId] = { flp, assignedAt: nowISO() };
-  saveDB(db);
-  return flp;
-}
-
-function ensureAssigned(userId) {
-  return db.assigned[userId]?.flp || db.consumed[userId]?.flp || null;
-}
-
-function setState(userId, step, extra = {}) {
-  db.state[userId] = { step, ...extra, updatedAt: nowISO() };
-  saveDB(db);
-}
-function clearState(userId) {
-  delete db.state[userId];
-  saveDB(db);
-}
-
-async function replyText(replyToken, text) {
-  await client.replyMessage({
-    replyToken,
-    messages: [{ type: "text", text }],
-  });
-}
-
-async function pushAdmin(text) {
-  if (!ADMIN_USER_ID) return;
-  try {
-    await client.pushMessage({
-      to: ADMIN_USER_ID,
-      messages: [{ type: "text", text }],
-    });
-  } catch (e) {
-    console.error("pushAdmin failed:", e?.message || e);
+  // 既に割り当て済みならそれを返す（同じ番号を再送）
+  const u = store.users[userId];
+  if (u && u.assignedFlp && !u.consumedAt) {
+    return { ok: true, flp: u.assignedFlp, already: true };
   }
+
+  // 先頭unusedを取る（1→30）
+  const next = store.pool.find((x) => x.status === "unused");
+  if (!next) return { ok: false, reason: "NO_UNUSED" };
+
+  next.status = "assigned";
+  next.assignedTo = userId;
+  next.assignedAt = nowMs();
+
+  store.users[userId] = store.users[userId] || {};
+  store.users[userId].assignedFlp = next.flp;
+  store.users[userId].assignedAt = next.assignedAt;
+  store.users[userId].lastActionAt = nowMs();
+
+  return { ok: true, flp: next.flp, already: false };
 }
 
-// -------------------- Express --------------------
+// ---- consumed（3点返信を受けた扱い）
+function markConsumed(store, userId) {
+  const u = store.users[userId];
+  if (!u || !u.assignedFlp) return { ok: false, reason: "NO_ASSIGNED" };
+  if (u.consumedAt) return { ok: true, already: true, flp: u.assignedFlp };
+
+  // pool側も更新
+  const item = store.pool.find((x) => x.flp === u.assignedFlp);
+  if (item) {
+    item.status = "consumed";
+    item.consumedAt = nowMs();
+  }
+  u.consumedAt = nowMs();
+  u.lastActionAt = nowMs();
+
+  return { ok: true, already: false, flp: u.assignedFlp };
+}
+
+// ---- メッセージ判定（3点返信っぽいか）
+function looksLike3PointReply(event) {
+  // 画像なら「3点返信が来た」とみなす（テスト優先で簡易）
+  if (event.message?.type === "image") return true;
+
+  // テキストなら「FLP」or「番号」+ 6桁以上の数字があるなら3点っぽい
+  if (event.message?.type === "text") {
+    const text = (event.message.text || "").trim();
+    const hasDigits = /\d{6,}/.test(text);
+    const hasKeyword = /FLP|番号|会員|会員番号|ID/i.test(text);
+    const hasName = /氏名|名前|名前/.test(text);
+    // 厳密でなく「っぽい」判定
+    return (hasDigits && hasKeyword) || (hasDigits && hasName);
+  }
+  return false;
+}
+
+// ---- LINE返信テンプレ
+function buildAssignedMessage(flp) {
+  return [
+    {
+      type: "text",
+      text:
+        "【登録受付を開始します】\n" +
+        "以下の内容で登録を進めてください。\n\n" +
+        "① 紹介者氏名：細井信孝\n" +
+        "② 紹介者FLP番号：203145165\n" +
+        `③ あなたのFLP番号：${flp}\n\n` +
+        "登録完了後、Day7のボタン「3点をLINEで返信する」から\n" +
+        "①氏名 ②FLP番号 ③購入画面スクリーンショット を送ってください。",
+    },
+  ];
+}
+
+function buildAsk3PointsMessage() {
+  return [
+    {
+      type: "text",
+      text:
+        "【3点を送ってください】\n" +
+        "① 氏名\n" +
+        "② FLP番号\n" +
+        "③ 購入画面のスクリーンショット（画像）\n\n" +
+        "この順で送ってください。",
+    },
+  ];
+}
+
+function buildPreparingMessage() {
+  return [
+    {
+      type: "text",
+      text: "現在、受付準備中です。紹介者へご連絡ください。",
+    },
+  ];
+}
+
+// ---- Express
 const app = express();
 
+// Render / LINE middleware は raw body を使うため、/webhook は middleware に任せる
 app.get("/", (req, res) => {
-  const counts = getCounts();
-  res.status(200).send(
-    `VSH server running\nunused=${counts.unused} assigned=${counts.assigned} consumed=${counts.consumed}\n`
-  );
+  res.status(200).send("VSH server running.");
 });
 
-// LINE webhook must use raw body for signature verification.
-// line.middleware handles it.
-app.post("/callback", line.middleware(lineConfig), async (req, res) => {
-  try {
-    const events = req.body.events || [];
-    for (const ev of events) {
-      await handleEvent(ev);
-    }
-    res.status(200).end();
-  } catch (e) {
-    console.error("Webhook error:", e?.message || e);
-    res.status(500).end();
-  }
-});
-
-// -------------------- Admin (simple HTML) --------------------
+// 管理画面
 app.get("/admin", (req, res) => {
   const token = req.query.token || "";
   if (!ADMIN_TOKEN) return res.status(500).send("ADMIN_TOKEN not set");
-  if (token !== ADMIN_TOKEN) return res.status(403).send("Forbidden");
+  if (token !== ADMIN_TOKEN) return res.status(401).send("Unauthorized");
 
-  const counts = getCounts();
-  const example = `例）123456789\n234567890\n...`;
-  const html = `
+  const store = safeReadStore();
+  recycleExpiredAssigned(store);
+  safeWriteStore(store);
+
+  const { unused, assigned, consumed } = getCounters(store);
+
+  const listText = store.pool.map((x) => x.flp).join("\n");
+
+  // 状態一覧（最大30）
+  const statusLines = store.pool.slice(0, 30).map((x, i) => {
+    const idx = String(i + 1).padStart(2, "0");
+    const st = x.status || "unused";
+    const to = x.assignedTo ? `to:${x.assignedTo}` : "to:-";
+    const at = x.assignedAt ? `at:${new Date(x.assignedAt).toLocaleString("ja-JP")}` : "at:-";
+    return `${idx}. ${x.flp} [${st}] ${to} ${at}`;
+  });
+
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(`
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>VSH Admin</title>
-<style>
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans JP",sans-serif;margin:20px;}
-  .card{max-width:720px;border:1px solid #ddd;border-radius:12px;padding:16px;}
-  .badges span{display:inline-block;margin-right:8px;padding:6px 10px;border:1px solid #ddd;border-radius:999px;background:#fafafa;}
-  textarea{width:100%;height:180px;border:1px solid #ccc;border-radius:10px;padding:10px;font-size:14px;}
-  button{margin-top:10px;padding:10px 14px;border:0;border-radius:10px;background:#111;color:#fff;cursor:pointer;}
-  small{color:#666;}
-  pre{white-space:pre-wrap;background:#f7f7f7;border:1px solid #eee;border-radius:10px;padding:10px;}
-</style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>VSH Admin</title>
+  <style>
+    body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;background:#fff;margin:0;padding:24px;}
+    .card{max-width:920px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+    h1{margin:0 0 16px;font-size:42px;letter-spacing:.5px}
+    .pill{display:inline-block;padding:10px 16px;border-radius:999px;border:1px solid #e5e7eb;background:#f9fafb;margin-right:10px;font-size:18px}
+    .muted{color:#6b7280}
+    textarea{width:100%;min-height:280px;border:1px solid #e5e7eb;border-radius:10px;padding:14px;font-size:16px;line-height:1.4}
+    button{display:inline-block;margin-top:12px;background:#111827;color:#fff;border:none;border-radius:10px;padding:10px 14px;font-size:16px;cursor:pointer}
+    pre{background:#0b1020;color:#e5e7eb;border-radius:10px;padding:12px;overflow:auto}
+    .row{margin-top:14px}
+  </style>
 </head>
 <body>
   <div class="card">
     <h1>VSH Admin</h1>
-    <div class="badges">
-      <span>unused: <b>${counts.unused}</b></span>
-      <span>assigned: <b>${counts.assigned}</b></span>
-      <span>consumed: <b>${counts.consumed}</b></span>
+    <div>
+      <span class="pill">unused: <b>${unused}</b></span>
+      <span class="pill">assigned: <b>${assigned}</b></span>
+      <span class="pill">consumed: <b>${consumed}</b></span>
     </div>
 
-    <p style="margin-top:14px;">
-      <b>assignedFlp</b> を改行区切りで貼り付け → 保存（上から30件のみ有効）
-      <br/><small>※ここに貼ったものが「未使用プール(unused)」になります。割当は「登録希望」時に先頭から順に行われます。</small>
-    </p>
+    <div class="row muted">
+      assignedFlp を改行区切りで貼り付け → 保存（上から30件のみ有効）
+    </div>
 
-    <textarea id="flp" placeholder="${example}"></textarea>
-    <button onclick="save()">保存する</button>
+    <div class="row">
+      <textarea id="flp">${escapeHtml(listText || "")}</textarea>
+      <button onclick="save()">保存する</button>
+      <span id="msg" class="muted" style="margin-left:10px;"></span>
+    </div>
 
-    <h3 style="margin-top:18px;">状態（先頭）</h3>
-    <pre id="status">loading...</pre>
-    <small>URL: ${BASE_URL || ""}</small>
+    <div class="row">
+      <div class="muted">状態一覧（先頭30件）</div>
+      <pre>${escapeHtml(statusLines.join("\n"))}</pre>
+    </div>
+
+    <div class="row muted">
+      URL: ${escapeHtml(BASE_URL ? `${BASE_URL}/admin?token=...` : "(BASE_URL未設定)")}
+    </div>
   </div>
 
 <script>
-async function refresh(){
-  const r = await fetch('/admin/status?token=${encodeURIComponent(token)}');
-  const j = await r.json();
-  document.querySelector('#status').textContent = JSON.stringify(j, null, 2);
-}
 async function save(){
-  const text = document.querySelector('#flp').value || '';
-  const r = await fetch('/admin/assignedFlp?token=${encodeURIComponent(token)}', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ text })
+  const token = new URLSearchParams(location.search).get("token");
+  const flp = document.getElementById("flp").value || "";
+  const msg = document.getElementById("msg");
+  msg.textContent = "保存中...";
+  const r = await fetch("/admin/assignedFlp?token="+encodeURIComponent(token),{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ text: flp })
   });
-  const j = await r.json();
-  await refresh();
-  alert('保存しました。unused=' + j.unused);
+  const j = await r.json().catch(()=>({ok:false}));
+  if(j.ok){
+    msg.textContent = "保存しました。再読み込みします...";
+    setTimeout(()=>location.reload(),600);
+  }else{
+    msg.textContent = "保存失敗: " + (j.error || r.status);
+  }
 }
-refresh();
 </script>
 </body>
 </html>
-`;
-  res.status(200).send(html);
+  `);
 });
 
-app.get("/admin/status", (req, res) => {
+app.use(express.json({ limit: "2mb" })); // admin post用
+
+app.post("/admin/assignedFlp", (req, res) => {
   const token = req.query.token || "";
-  if (!ADMIN_TOKEN) return res.status(500).json({ error: "ADMIN_TOKEN not set" });
-  if (token !== ADMIN_TOKEN) return res.status(403).json({ error: "Forbidden" });
-
-  const counts = getCounts();
-
-  // show first 30 pool items and first 30 assigned summary
-  const poolHead = db.pool.slice(0, 30);
-  const assignedList = Object.entries(db.assigned)
-    .slice(0, 30)
-    .map(([userId, v]) => ({ userId, flp: v.flp, assignedAt: v.assignedAt }));
-
-  res.json({
-    counts,
-    poolHead,
-    assignedHead: assignedList,
-  });
-});
-
-app.post("/admin/assignedFlp", express.json(), (req, res) => {
-  const token = req.query.token || "";
-  if (!ADMIN_TOKEN) return res.status(500).json({ error: "ADMIN_TOKEN not set" });
-  if (token !== ADMIN_TOKEN) return res.status(403).json({ error: "Forbidden" });
+  if (!ADMIN_TOKEN) return res.status(500).json({ ok: false, error: "ADMIN_TOKEN not set" });
+  if (token !== ADMIN_TOKEN) return res.status(401).json({ ok: false, error: "Unauthorized" });
 
   const text = (req.body?.text || "").toString();
-  const lines = text
-    .split(/\r?\n/)
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const lines = normalizeFlpLines(text);
+  const flps = uniq(lines).slice(0, 30);
 
-  // keep only digits (optional) - but allow any string as ID if needed
-  const cleaned = lines
-    .map((s) => s.replace(/[^\d]/g, "")) // digits only
-    .filter((s) => s.length > 0);
+  const store = safeReadStore();
 
-  // Only top 30 valid
-  db.pool = cleaned.slice(0, 30);
-  saveDB(db);
+  // 仕様：貼り付け保存したら、プールを作り直して全て unused にする（テスト優先）
+  store.pool = flps.map((flp) => ({
+    flp,
+    status: "unused",
+    assignedTo: null,
+    assignedAt: null,
+    consumedAt: null,
+  }));
 
-  const counts = getCounts();
-  res.json({ ok: true, ...counts });
+  // users は残すが、割当済みは一旦解除（プール再生成なので整合性優先）
+  for (const uid of Object.keys(store.users)) {
+    delete store.users[uid].assignedFlp;
+    delete store.users[uid].assignedAt;
+    delete store.users[uid].consumedAt;
+  }
+
+  safeWriteStore(store);
+  res.json({ ok: true, count: store.pool.length });
 });
 
-// -------------------- LINE Event handler --------------------
-async function handleEvent(ev) {
-  // Only handle user (not group/room) in this project
-  const userId = ev.source?.userId;
-  if (!userId) return;
+// ---- LINE webhook
+// middleware が署名検証 + rawbody を面倒見ます
+app.post("/webhook", middleware(lineConfig), async (req, res) => {
+  try {
+    const events = req.body?.events || [];
+    const store = safeReadStore();
 
-  // 1) Postback (from richmenu/richmessage button if set as postback)
-  if (ev.type === "postback") {
-    const data = ev.postback?.data || "";
-    const norm = normalizeText(data);
+    for (const event of events) {
+      if (event.type !== "message") continue;
+      const userId = event.source?.userId;
+      if (!userId) continue;
 
-    if (norm.includes("登録希望") || norm.includes("register_wish")) {
-      return handleRegisterWish(userId, ev.replyToken);
+      // 期限切れ回収
+      recycleExpiredAssigned(store);
+
+      // ユーザーが押した文字（リッチメニューのテキスト送信）
+      if (event.message.type === "text") {
+        const text = (event.message.text || "").trim();
+
+        // 1) 登録希望 → ここで割当（仕様確定）
+        if (text === "登録希望") {
+          if (!store.pool.length) {
+            // プールが空なら受付準備中
+            await replySafe(event.replyToken, buildPreparingMessage());
+            continue;
+          }
+
+          const r = assignNextFlpToUser(store, userId);
+          safeWriteStore(store);
+
+          if (!r.ok) {
+            await replySafe(event.replyToken, buildPreparingMessage());
+            continue;
+          }
+
+          await replySafe(event.replyToken, buildAssignedMessage(r.flp));
+
+          // 管理者へ通知（任意）
+          if (ADMIN_USER_ID) {
+            await pushSafe(ADMIN_USER_ID, [
+              {
+                type: "text",
+                text: `【登録希望】userId=${userId}\n割当FLP=${r.flp}\n(assigned ${r.already ? "再送" : "新規"})`,
+              },
+            ]);
+          }
+          continue;
+        }
+
+        // 2) 3点をLINEで返信する → 返信の案内
+        if (text === "3点をLINEで返信する") {
+          await replySafe(event.replyToken, buildAsk3PointsMessage());
+          continue;
+        }
+
+        // 3) 3点返信とみなせる入力 → consumed
+        if (looksLike3PointReply(event)) {
+          const m = markConsumed(store, userId);
+          safeWriteStore(store);
+
+          if (m.ok && !m.already) {
+            await replySafe(event.replyToken, [
+              { type: "text", text: "受け取りました。ありがとうございます。" },
+              { type: "text", text: `（受付処理中）あなたのFLP番号: ${m.flp}` },
+            ]);
+
+            if (ADMIN_USER_ID) {
+              await pushSafe(ADMIN_USER_ID, [
+                {
+                  type: "text",
+                  text:
+                    `【3点返信受領 → consumed】\nuserId=${userId}\nFLP=${m.flp}\n` +
+                    `内容: ${text.slice(0, 100)}`,
+                },
+              ]);
+            }
+          } else {
+            // 既にconsumed等
+            await replySafe(event.replyToken, [{ type: "text", text: "受領済みです。ありがとうございます。" }]);
+          }
+          continue;
+        }
+
+        // その他の通常テキスト：何もしない（誤爆防止）
+        store.users[userId] = store.users[userId] || {};
+        store.users[userId].lastActionAt = nowMs();
+        safeWriteStore(store);
+        continue;
+      }
+
+      // 画像など → 3点返信扱いで consumed
+      if (event.message.type === "image") {
+        const m = markConsumed(store, userId);
+        safeWriteStore(store);
+
+        if (m.ok && !m.already) {
+          await replySafe(event.replyToken, [
+            { type: "text", text: "画像を受け取りました。ありがとうございます。" },
+            { type: "text", text: `（受付処理中）あなたのFLP番号: ${m.flp}` },
+          ]);
+
+          if (ADMIN_USER_ID) {
+            await pushSafe(ADMIN_USER_ID, [
+              { type: "text", text: `【画像受領 → consumed】\nuserId=${userId}\nFLP=${m.flp}` },
+            ]);
+          }
+        } else {
+          await replySafe(event.replyToken, [{ type: "text", text: "画像は受領済みです。ありがとうございます。" }]);
+        }
+        continue;
+      }
     }
-    if (norm.includes("3点をLINEで返信する") || norm.includes("three_points")) {
-      return handleThreePointsStart(userId, ev.replyToken);
-    }
-    // Unknown postback
-    return;
+
+    res.status(200).end();
+  } catch (err) {
+    console.error("webhook error:", err);
+    res.status(200).end(); // LINEには200返す
   }
+});
 
-  // 2) Message text
-  if (ev.type === "message" && ev.message?.type === "text") {
-    const textRaw = ev.message.text || "";
-    const text = normalizeText(textRaw);
-
-    if (text === "登録希望") {
-      return handleRegisterWish(userId, ev.replyToken);
-    }
-    if (text === "3点をLINEで返信する") {
-      return handleThreePointsStart(userId, ev.replyToken);
-    }
-
-    // Step flow
-    const st = db.state[userId]?.step || "idle";
-    if (st === "awaiting_name") {
-      db.state[userId].tempName = textRaw.trim();
-      setState(userId, "awaiting_userflp", { tempName: db.state[userId].tempName });
-      const assignedFlp = ensureAssigned(userId);
-      return replyText(
-        ev.replyToken,
-        `ありがとうございます。\n（あなたのFLP番号：${assignedFlp}）\n\n② FLP番号（あなたご本人の番号）を入力してください。`
-      );
-    }
-
-    if (st === "awaiting_userflp") {
-      db.state[userId].tempUserFlp = textRaw.trim();
-      setState(userId, "awaiting_receipt", {
-        tempName: db.state[userId].tempName,
-        tempUserFlp: db.state[userId].tempUserFlp,
-      });
-      const assignedFlp = ensureAssigned(userId);
-      return replyText(
-        ev.replyToken,
-        `ありがとうございます。\n（あなたのFLP番号：${assignedFlp}）\n\n③ 最後に【購入画面のスクリーンショット】を画像で送ってください。`
-      );
-    }
-
-    // Otherwise ignore
-    return;
+// ---- 返信/通知の安全ラッパー
+async function replySafe(replyToken, messages) {
+  try {
+    if (!replyToken) return;
+    await lineClient.replyMessage(replyToken, messages);
+  } catch (e) {
+    console.error("replySafe error:", e?.message || e);
   }
-
-  // 3) Message image (receipt)
-  if (ev.type === "message" && ev.message?.type === "image") {
-    const st = db.state[userId]?.step || "idle";
-    if (st !== "awaiting_receipt") {
-      // If user sent image without flow, guide
-      return replyText(
-        ev.replyToken,
-        `画像を受け取りました。\n先に「登録希望」→「3点をLINEで返信する」の順で進めてください。`
-      );
-    }
-
-    const assignedFlp = ensureAssigned(userId);
-    const name = db.state[userId]?.tempName || "";
-    const userFlp = db.state[userId]?.tempUserFlp || "";
-    const imageMessageId = ev.message.id;
-
-    // move to consumed
-    db.consumed[userId] = {
-      flp: assignedFlp,
-      name,
-      userFlp,
-      imageMessageId,
-      consumedAt: nowISO(),
-    };
-    // remove from assigned (optional) — counts: assigned decreases, consumed increases
-    delete db.assigned[userId];
-    clearState(userId);
-    saveDB(db);
-
-    // user reply
-    await replyText(
-      ev.replyToken,
-      `画像を受け取りました。ありがとうございます。\n\n【登録情報を確認中です】\n紹介者へご連絡ください。`
-    );
-
-    // admin notify
-    await pushAdmin(
-      `【3点受領】\n氏名: ${name}\n本人FLP: ${userFlp}\n割当FLP(あなたのFLP): ${assignedFlp}\n画像messageId: ${imageMessageId}\nuserId: ${userId}`
-    );
-    return;
+}
+async function pushSafe(to, messages) {
+  try {
+    if (!to) return;
+    await lineClient.pushMessage(to, messages);
+  } catch (e) {
+    console.error("pushSafe error:", e?.message || e);
   }
-
-  // Other events ignored
 }
 
-// -------------------- Actions --------------------
-async function handleRegisterWish(userId, replyToken) {
-  const assignedFlp = assignNextFlpToUser(userId);
-
-  if (!assignedFlp) {
-    return replyText(
-      replyToken,
-      `現在、あなたのFLP番号（割当）が不足しています。\n紹介者へご連絡ください。`
-    );
-  }
-
-  // Start flow at name input (so user can proceed right away)
-  setState(userId, "awaiting_name");
-
-  return replyText(
-    replyToken,
-    `【登録受付を開始します】\nあなたのFLP番号：${assignedFlp}\n\n① 氏名 を入力してください`
-  );
+// ---- HTML escape
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
-async function handleThreePointsStart(userId, replyToken) {
-  const assignedFlp = ensureAssigned(userId);
-
-  if (!assignedFlp) {
-    return replyText(
-      replyToken,
-      `先に「登録希望」を押して、あなたのFLP番号（割当）を受け取ってください。`
-    );
-  }
-
-  // If already in progress, keep state. Otherwise start.
-  const step = db.state[userId]?.step || "idle";
-  if (step === "idle") setState(userId, "awaiting_name");
-
-  return replyText(
-    replyToken,
-    `【3点返信を開始します】\n（あなたのFLP番号：${assignedFlp}）\n\n① 氏名 を入力してください`
-  );
-}
-
-// -------------------- Start --------------------
 app.listen(PORT, () => {
-  const counts = getCounts();
-  console.log(`10000で動作するサーバー`);
-  console.log(`サービスは稼働中です`);
-  console.log(`BASE_URL=${BASE_URL}`);
-  console.log(`ADMIN_TOKEN=${ADMIN_TOKEN ? "set" : "not set"}`);
-  console.log(`ADMIN_USER_ID=${ADMIN_USER_ID ? "set" : "not set"}`);
-  console.log(`unused=${counts.unused} assigned=${counts.assigned} consumed=${counts.consumed}`);
+  const store = safeReadStore();
+  const c = getCounters(store);
+  console.log("======================================");
+  console.log(`VSH server listening on :${PORT}`);
+  console.log(`ADMIN_TOKEN=${ADMIN_TOKEN ? "set" : "missing"}`);
+  console.log(`BASE_URL=${BASE_URL || "(not set)"}`);
+  console.log(`pool: unused=${c.unused} assigned=${c.assigned} consumed=${c.consumed}`);
+  console.log("======================================");
 });
-
