@@ -1,84 +1,126 @@
 import express from "express";
-import crypto from "crypto";
-import { Client } from "@line/bot-sdk";
+import { middleware, Client } from "@line/bot-sdk";
 
-const app = express();
-
-/* ===== 環境変数 ===== */
+// =====================
+// 環境変数
+// =====================
 const {
   CHANNEL_ACCESS_TOKEN,
   CHANNEL_SECRET,
+  ADMIN_USER_ID,
   INTRODUCER_NAME,
   INTRODUCER_FLP,
-  FBO_GUIDE_URL
+  FBO_GUIDE_URL,
+  PORT
 } = process.env;
 
-/* ===== LINE Client ===== */
-const client = new Client({
-  channelAccessToken: CHANNEL_ACCESS_TOKEN
-});
+// =====================
+// LINE SDK 設定
+// =====================
+const lineConfig = {
+  channelAccessToken: CHANNEL_ACCESS_TOKEN,
+  channelSecret: CHANNEL_SECRET,
+};
 
-/* ===== Webhook 検証 ===== */
-function verifySignature(req, res, buf) {
-  const signature = crypto
-    .createHmac("SHA256", CHANNEL_SECRET)
-    .update(buf)
-    .digest("base64");
+const client = new Client(lineConfig);
 
-  if (signature !== req.headers["x-line-signature"]) {
-    throw new Error("Invalid signature");
-  }
-}
+// =====================
+// Express 初期化
+// =====================
+const app = express();
 
+// Render 対策（必須）
+const port = PORT || 10000;
+
+// =====================
+// Webhook エンドポイント
+// =====================
 app.post(
   "/callback",
-  express.raw({ type: "application/json" }),
-  (req, res) => {
+  middleware(lineConfig),
+  async (req, res) => {
     try {
-      verifySignature(req, res, req.body);
-      const events = JSON.parse(req.body.toString()).events;
-      events.forEach(handleEvent);
+      const events = req.body.events;
+      await Promise.all(events.map(handleEvent));
       res.status(200).end();
     } catch (err) {
-      console.error(err);
-      res.status(403).end();
+      console.error("Webhook Error:", err);
+      res.status(500).end();
     }
   }
 );
 
-/* ===== イベント処理 ===== */
+// =====================
+// イベント処理
+// =====================
 async function handleEvent(event) {
   if (event.type !== "message") return;
 
+  const userId = event.source.userId;
   const text = event.message.text;
 
-  /* 登録希望 */
+  // ---------------------
+  // 「登録希望」
+  // ---------------------
   if (text === "登録希望") {
+
+    // ① 管理者（紹介者）へ通知
+    await client.pushMessage(ADMIN_USER_ID, {
+      type: "text",
+      text: `【登録希望 受信】\n\nユーザーID:\n${userId}`,
+    });
+
+    // ② 新規登録者へ3点＋案内送信
+    const replyText =
+`ありがとうございます。登録手続きをご案内します。
+
+【あなたの3点情報】
+・紹介者氏名：${INTRODUCER_NAME}
+・紹介者FLP番号：${INTRODUCER_FLP}
+・あなたのFLP番号：後ほど発行されます
+
+▼ FBO登録手順はこちら
+${FBO_GUIDE_URL}
+
+登録完了後、
+「3点をLINEで返信する」ボタンを押してください。`;
+
     await client.replyMessage(event.replyToken, {
       type: "text",
-      text:
-        `【登録情報】\n\n` +
-        `紹介者氏名：${INTRODUCER_NAME}\n` +
-        `紹介者FLP番号：${INTRODUCER_FLP}\n` +
-        `あなたのFLP番号：${INTRODUCER_FLP}\n\n` +
-        `▼FBO登録手順はこちら\n${FBO_GUIDE_URL}`
+      text: replyText,
     });
   }
 
-  /* 3点返信 */
-  if (text === "３点をLINEで返信する") {
+  // ---------------------
+  // 「3点をLINEで返信する」
+  // ---------------------
+  if (text === "3点をLINEで返信する") {
     await client.replyMessage(event.replyToken, {
       type: "text",
       text:
-        `以下の3点をこのままLINEで送信してください。\n\n` +
-        `① 氏名\n② FLP番号\n③ 購入画面のスクリーンショット`
+`次の3点を、このままLINEで送ってください。
+
+① 氏名
+② FLP番号
+③ 購入画面のスクリーンショット（画像）
+
+確認後、Vera Sky Harmony を譲渡します。`,
     });
   }
 }
 
-/* ===== 起動 ===== */
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log(`VSH server running on port ${PORT}`);
+// =====================
+// ヘルスチェック（重要）
+// =====================
+app.get("/", (req, res) => {
+  res.send("VSH server is running 🚀");
+});
+
+// =====================
+// サーバー起動
+// =====================
+app.listen(port, () => {
+  console.log(`VSHサーバー起動中：ポート ${port}`);
+  console.log(`Webhook URL: /callback`);
 });
 
