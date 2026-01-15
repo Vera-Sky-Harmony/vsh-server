@@ -1,47 +1,104 @@
-import express from "express";
-import { middleware, Client } from "@line/bot-sdk";
+// ===============================
+// VSH LINE Webhook Server
+// ES Modules 完全対応版
+// ===============================
 
-// =====================
+import express from "express";
+import crypto from "crypto";
+import { Client } from "@line/bot-sdk";
+
+// ===============================
 // 環境変数
-// =====================
+// ===============================
 const {
   CHANNEL_ACCESS_TOKEN,
   CHANNEL_SECRET,
-  ADMIN_USER_ID,
+  PORT = 10000,
   INTRODUCER_NAME,
   INTRODUCER_FLP,
-  FBO_GUIDE_URL,
-  PORT
+  FBO_GUIDE_URL
 } = process.env;
 
-// =====================
-// LINE SDK 設定
-// =====================
-const lineConfig = {
+// ===============================
+// LINE Client
+// ===============================
+const lineClient = new Client({
   channelAccessToken: CHANNEL_ACCESS_TOKEN,
-  channelSecret: CHANNEL_SECRET,
-};
+});
 
-const client = new Client(lineConfig);
-
-// =====================
-// Express 初期化
-// =====================
+// ===============================
+// Express App
+// ===============================
 const app = express();
 
-// Render 対策（必須）
-const port = PORT || 10000;
-
-// =====================
-// Webhook エンドポイント
-// =====================
+// raw body を保持（署名検証用）
 app.post(
   "/callback",
-  middleware(lineConfig),
+  express.json({
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    },
+  }),
   async (req, res) => {
     try {
+      // ===============================
+      // 署名検証
+      // ===============================
+      const signature = req.headers["x-line-signature"];
+      const hash = crypto
+        .createHmac("sha256", CHANNEL_SECRET)
+        .update(req.rawBody)
+        .digest("base64");
+
+      if (signature !== hash) {
+        console.error("署名不一致");
+        return res.status(401).end();
+      }
+
+      // ===============================
+      // イベント処理
+      // ===============================
       const events = req.body.events;
-      await Promise.all(events.map(handleEvent));
+
+      for (const event of events) {
+        if (event.type !== "message") continue;
+        if (event.message.type !== "text") continue;
+
+        const text = event.message.text.trim();
+        const userId = event.source.userId;
+
+        // ===============================
+        // 「登録希望」受信
+        // ===============================
+        if (text === "登録希望") {
+          const replyText = `
+【登録希望 受信】
+
+ユーザーID：
+${userId}
+
+ありがとうございます。
+登録手続きをご案内します。
+
+【あなたの3点情報】
+・ 紹介者氏名：${INTRODUCER_NAME}
+・ 紹介者FLP番号：${INTRODUCER_FLP}
+・ あなたのFLP番号：後ほど発行されます
+
+▼ FBO登録手順はこちら
+${FBO_GUIDE_URL}
+
+登録完了後、
+「3点をLINEで返信する」ボタンを押してください。
+          `.trim();
+
+          await lineClient.replyMessage(event.replyToken, {
+            type: "text",
+            text: replyText,
+          });
+        }
+      }
+
       res.status(200).end();
     } catch (err) {
       console.error("Webhook Error:", err);
@@ -50,77 +107,17 @@ app.post(
   }
 );
 
-// =====================
-// イベント処理
-// =====================
-async function handleEvent(event) {
-  if (event.type !== "message") return;
-
-  const userId = event.source.userId;
-  const text = event.message.text;
-
-  // ---------------------
-  // 「登録希望」
-  // ---------------------
-  if (text === "登録希望") {
-
-    // ① 管理者（紹介者）へ通知
-    await client.pushMessage(ADMIN_USER_ID, {
-      type: "text",
-      text: `【登録希望 受信】\n\nユーザーID:\n${userId}`,
-    });
-
-    // ② 新規登録者へ3点＋案内送信
-    const replyText =
-`ありがとうございます。登録手続きをご案内します。
-
-【あなたの3点情報】
-・紹介者氏名：${INTRODUCER_NAME}
-・紹介者FLP番号：${INTRODUCER_FLP}
-・あなたのFLP番号：後ほど発行されます
-
-▼ FBO登録手順はこちら
-${FBO_GUIDE_URL}
-
-登録完了後、
-「3点をLINEで返信する」ボタンを押してください。`;
-
-    await client.replyMessage(event.replyToken, {
-      type: "text",
-      text: replyText,
-    });
-  }
-
-  // ---------------------
-  // 「3点をLINEで返信する」
-  // ---------------------
-  if (text === "3点をLINEで返信する") {
-    await client.replyMessage(event.replyToken, {
-      type: "text",
-      text:
-`次の3点を、このままLINEで送ってください。
-
-① 氏名
-② FLP番号
-③ 購入画面のスクリーンショット（画像）
-
-確認後、Vera Sky Harmony を譲渡します。`,
-    });
-  }
-}
-
-// =====================
-// ヘルスチェック（重要）
-// =====================
+// ===============================
+// 起動
+// ===============================
 app.get("/", (req, res) => {
-  res.send("VSH server is running 🚀");
+  res.send("VSH server running");
 });
 
-// =====================
-// サーバー起動
-// =====================
-app.listen(port, () => {
-  console.log(`VSHサーバー起動中：ポート ${port}`);
+app.listen(PORT, () => {
+  console.log("=======================================");
+  console.log(`VSHサーバー起動中: ポート ${PORT}`);
   console.log(`Webhook URL: /callback`);
+  console.log("=======================================");
 });
 
