@@ -3,16 +3,16 @@ import crypto from "crypto";
 import { Client } from "@line/bot-sdk";
 
 /**
- * ENV
+ * ENV (Render > Environment)
  * CHANNEL_ACCESS_TOKEN
  * CHANNEL_SECRET
  * INTRODUCER_NAME
  * INTRODUCER_FLP
- * ADMIN_NOTIFY_USER_ID
+ * ADMIN_NOTIFY_USER_ID   (紹介者AのuserId)
  * ADMIN_TOKEN
- * FBO_GUIDE_URL (optional)
- * ASSIGNED_FLP_TIMEOUT_DAYS (optional)
- * PORT (optional)
+ * FBO_GUIDE_URL          (任意)
+ * ASSIGNED_FLP_TIMEOUT_DAYS (任意 / default 10)
+ * PORT (Renderが自動付与)
  */
 
 const {
@@ -27,22 +27,18 @@ const {
   PORT,
 } = process.env;
 
-if (!CHANNEL_ACCESS_TOKEN || !CHANNEL_SECRET) {
-  console.error("Missing CHANNEL_ACCESS_TOKEN or CHANNEL_SECRET");
-  process.exit(1);
+function must(v, name) {
+  if (!v) {
+    console.error(`Missing ${name}`);
+    process.exit(1);
+  }
 }
-if (!INTRODUCER_NAME || !INTRODUCER_FLP) {
-  console.error("Missing INTRODUCER_NAME or INTRODUCER_FLP");
-  process.exit(1);
-}
-if (!ADMIN_NOTIFY_USER_ID) {
-  console.error("Missing ADMIN_NOTIFY_USER_ID (紹介者AのuserId)");
-  process.exit(1);
-}
-if (!ADMIN_TOKEN) {
-  console.error("Missing ADMIN_TOKEN");
-  process.exit(1);
-}
+must(CHANNEL_ACCESS_TOKEN, "CHANNEL_ACCESS_TOKEN");
+must(CHANNEL_SECRET, "CHANNEL_SECRET");
+must(INTRODUCER_NAME, "INTRODUCER_NAME");
+must(INTRODUCER_FLP, "INTRODUCER_FLP");
+must(ADMIN_NOTIFY_USER_ID, "ADMIN_NOTIFY_USER_ID");
+must(ADMIN_TOKEN, "ADMIN_TOKEN");
 
 const TIMEOUT_DAYS = Number(ASSIGNED_FLP_TIMEOUT_DAYS || "10");
 const TIMEOUT_MS = TIMEOUT_DAYS * 24 * 60 * 60 * 1000;
@@ -50,16 +46,18 @@ const TIMEOUT_MS = TIMEOUT_DAYS * 24 * 60 * 60 * 1000;
 const app = express();
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
-// ========= In-memory store (テスト用) =========
+/** =========================
+ * In-memory store (テスト用)
+ * Render再起動で消えます（今はOK）
+ * ========================= */
 let flpUnused = [];
 let flpAssigned = new Map(); // userId -> { flp, assignedAt }
 let flpConsumed = new Map(); // userId -> { flp, consumedAt }
-// ===========================================
+const threePointsState = new Map(); // userId -> { step, name, flp, screenshotId }
 
-// ---- health check
-app.get("/", (req, res) => res.send("VSH server is running"));
-
-// ---- webhook (raw body needed)
+/** =========================
+ * Webhook
+ * ========================= */
 app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
   try {
     if (!verifyLineSignature(req)) {
@@ -71,11 +69,16 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
     res.status(200).send("OK");
   } catch (e) {
     console.error("Webhook error:", e);
-    res.status(200).send("OK"); // LINEには200（再送抑止）
+    // LINE再送抑止
+    res.status(200).send("OK");
   }
 });
 
-// ========= Admin =========
+app.get("/", (req, res) => res.send("VSH server is running"));
+
+/** =========================
+ * Admin
+ * ========================= */
 app.get("/admin", (req, res) => {
   const token = req.query.token;
   if (token !== ADMIN_TOKEN) return res.status(403).send("Forbidden");
@@ -88,7 +91,7 @@ app.get("/admin", (req, res) => {
 
   const unusedPreview = flpUnused.slice(0, 10).join("\n");
   const assignedList = Array.from(flpAssigned.entries())
-    .slice(0, 20)
+    .slice(0, 30)
     .map(([uid, v]) => `${uid} => ${v.flp} (${new Date(v.assignedAt).toLocaleString()})`)
     .join("\n");
 
@@ -109,14 +112,14 @@ button{padding:10px 14px}
 <div class="card">
   <b>Counts</b><br>
   unused: <b>${unusedCount}</b> / assigned: <b>${assignedCount}</b> / consumed: <b>${consumedCount}</b><br>
-  <span class="small">※ assignedは「登録希望」で割当済み（${TIMEOUT_DAYS}日で無効化→unusedへ戻る）</span>
+  <span class="small">assignedは「登録希望」で割当済み（${TIMEOUT_DAYS}日でunusedへ戻る）</span>
 </div>
 
 <div class="card">
-  <b>30件入力（改行でOK）</b>
+  <b>FLPプール投入（改行でOK）</b>
   <form method="POST" action="/admin/pool?token=${encodeURIComponent(token)}">
-    <textarea name="pool" placeholder="1行に1件ずつFLP番号を貼り付け（30行まとめ貼り付けOK）"></textarea>
-    <p class="small">※ ここに入れた値はunusedプールに追加（重複は除外）</p>
+    <textarea name="pool" placeholder="1行に1件ずつFLP番号を貼り付け"></textarea>
+    <p class="small">重複は自動除外</p>
     <button type="submit">追加する</button>
   </form>
 </div>
@@ -127,7 +130,7 @@ button{padding:10px 14px}
 </div>
 
 <div class="card">
-  <b>割当中（最大20件）</b>
+  <b>割当中（最大30件）</b>
   <pre>${escapeHtml(assignedList || "(none)")}</pre>
 </div>
 
@@ -172,81 +175,125 @@ app.post("/admin/reset", express.urlencoded({ extended: false }), (req, res) => 
   flpUnused = [];
   flpAssigned.clear();
   flpConsumed.clear();
+  threePointsState.clear();
   res.redirect(`/admin?token=${encodeURIComponent(token)}`);
 });
 
-// ========= Webhook handling =========
+/** =========================
+ * Webhook handler
+ * ========================= */
 async function handleWebhook(body) {
   const events = body.events || [];
   cleanupExpiredAssignments();
 
   for (const ev of events) {
     const userId = ev.source?.userId;
+
+    // 受信ログ（重要：ここで textRaw が改行混在しても追える）
+    if (ev.type === "message") {
+      console.log("[EVENT]", {
+        type: ev.type,
+        msgType: ev.message?.type,
+        userId,
+        textRaw: ev.message?.text,
+      });
+    }
+
     if (!userId) continue;
 
-    // ---- text
+    // text
     if (ev.type === "message" && ev.message?.type === "text") {
-      const rawText = (ev.message.text || "").trim();
-      const tokens = tokenize(rawText);
+      const replyToken = ev.replyToken;
+      const textRaw = (ev.message.text || "").toString();
 
-      console.log("[MSG]", { userId, rawText, tokens });
+      // 正規化：改行/タブ/全角スペースも潰して判定
+      const text = normalizeText(textRaw);
 
-      // ★ 登録希望トリガー（完全一致ではなく「含む」で拾う）
-      if (tokens.has("登録希望") || tokens.has("day7-2") || tokens.has("Day7-2")) {
-        await onRegisterIntent(userId, ev.replyToken);
+      // ③ 登録希望トリガー：
+      // - 登録希望（Day7-1）
+      // - day7-2（混入してくるケース対策）
+      // - 「登録希望\nDay7-2」等も normalize で拾う
+      if (isRegisterIntent(textRaw, text)) {
+        await onRegisterIntent(userId, replyToken);
         continue;
       }
 
-      // ★ 3点返信開始トリガー
-      if (tokens.has("登録") || tokens.has("3点返信開始") || tokens.has("3点返信") || tokens.has("start")) {
-        await startThreePointsFlow(userId, ev.replyToken);
+      // ⑥ 3点返信開始（Day7-2）
+      if (isThreePointsStart(textRaw, text)) {
+        await startThreePointsFlow(userId, replyToken);
         continue;
       }
 
-      // 3点会話継続
-      await handleThreePointsConversation(userId, rawText, ev.replyToken);
+      // 3点会話中
+      await handleThreePointsConversation(userId, replyToken, textRaw);
       continue;
     }
 
-    // ---- image
+    // image (スクショ)
     if (ev.type === "message" && ev.message?.type === "image") {
-      console.log("[IMG]", { userId, messageId: ev.message.id });
-      await handleScreenshot(userId, ev.message.id, ev.replyToken);
+      const replyToken = ev.replyToken;
+      await handleScreenshot(userId, replyToken, ev.message.id);
       continue;
     }
   }
 }
 
-function tokenize(text) {
-  // 改行/スペース/タブ等を全部区切りにしてセット化
-  const parts = String(text)
-    .split(/\s+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  // 小文字版も入れておく（day7-2対策）
-  const set = new Set(parts);
-  for (const p of parts) set.add(p.toLowerCase());
-  return set;
+/** =========================
+ * 判定（ここが今回の肝）
+ * ========================= */
+function normalizeText(s) {
+  return String(s)
+    .replace(/\u3000/g, " ") // 全角スペース→半角
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
 
-// ========= Day7 core =========
+function isRegisterIntent(textRaw, textNorm) {
+  // rawに「登録希望」が含まれていたら最優先で登録希望
+  if (String(textRaw).includes("登録希望")) return true;
+
+  // 旧テストで「day7-2」が混入するケースがあるので救済
+  if (textNorm === "day7-2") return true;
+
+  // 「登録希望 day7-2」など混在も救済
+  if (textNorm.includes("登録希望")) return true;
+
+  return false;
+}
+
+function isThreePointsStart(textRaw, textNorm) {
+  // 正式トリガー
+  if (String(textRaw).includes("3点返信開始")) return true;
+  if (textNorm.includes("3点返信開始")) return true;
+
+  // 念のため旧トリガーも許容（保険）
+  if (textNorm === "3点返信") return true;
+  if (textNorm === "start") return true;
+
+  return false;
+}
+
+/** =========================
+ * ③〜⑤：登録希望
+ * ========================= */
 async function onRegisterIntent(userId, replyToken) {
   const assigned = assignFlpToUser(userId);
 
-  // A通知
+  // ④ Aへ通知（必ず詳細で送る）
   await safePush(ADMIN_NOTIFY_USER_ID, [
     {
       type: "text",
       text:
         `【登録希望 受信】\n` +
         `userId: ${userId}\n` +
-        (assigned
-          ? `割当FLP（あなたのFLP番号）: ${assigned}\n`
-          : `割当FLP: （未割当：unusedが空）\n`) +
-        `※Bへ自動返信を送信しました`,
+        (assigned ? `割当FLP（あなたのFLP番号）：${assigned}\n` : `割当FLP：未割当（unusedが空）\n`) +
+        `（Bへ自動返信を送信）`,
     },
   ]);
 
+  // ⑤ Bへ3点 + 手順URL
   if (!assigned) {
     await safeReplyOrPush(userId, replyToken, [
       {
@@ -261,9 +308,7 @@ async function onRegisterIntent(userId, replyToken) {
     return;
   }
 
-  const guideUrlText = FBO_GUIDE_URL
-    ? `\n\n【フォーエバービジネスオーナー（FBO）登録手順】\n${FBO_GUIDE_URL}`
-    : "";
+  const guideUrlText = FBO_GUIDE_URL ? `\n\n【FBO登録手順】\n${FBO_GUIDE_URL}` : "";
 
   await safeReplyOrPush(userId, replyToken, [
     {
@@ -273,25 +318,28 @@ async function onRegisterIntent(userId, replyToken) {
         `① 紹介者の氏名：${INTRODUCER_NAME}\n` +
         `② 紹介者FLP番号：${INTRODUCER_FLP}\n` +
         `③ あなたのFLP番号：${assigned}\n\n` +
-        "登録が終わりましたら、青い画像の「3点をLINEで返信する」をタップして案内に従って送信してください。" +
+        "登録が終わりましたら、青い画像の「3点をLINEで返信する」をタップして、案内に従って送信してください。" +
         guideUrlText,
     },
   ]);
 }
 
-// ---- 3点返信ステート
-const threePointsState = new Map(); // userId -> { step, name, flp, screenshotId }
-
+/** =========================
+ * ⑥〜⑦：3点返信フロー
+ * ========================= */
 async function startThreePointsFlow(userId, replyToken) {
   threePointsState.set(userId, { step: 1, name: "", flp: "", screenshotId: "" });
+
   await safeReplyOrPush(userId, replyToken, [
     { type: "text", text: "【3点返信を開始します】\n① 氏名 を入力してください" },
   ]);
 }
 
-async function handleThreePointsConversation(userId, text, replyToken) {
+async function handleThreePointsConversation(userId, replyToken, textRaw) {
   const st = threePointsState.get(userId);
   if (!st) return;
+
+  const text = String(textRaw || "").trim();
 
   if (st.step === 1) {
     st.name = text;
@@ -310,18 +358,25 @@ async function handleThreePointsConversation(userId, text, replyToken) {
     ]);
     return;
   }
-  // step3は画像待ち
+
+  // step3 は画像待ち
 }
 
-async function handleScreenshot(userId, messageId, replyToken) {
+async function handleScreenshot(userId, replyToken, messageId) {
   const st = threePointsState.get(userId);
-  if (!st || st.step !== 3) return;
+  if (!st || st.step !== 3) {
+    // 3点開始前に画像が来た場合の案内
+    await safeReplyOrPush(userId, replyToken, [
+      { type: "text", text: "スクリーンショットを受信しました。\n先に「3点返信開始」を押して、案内どおりに送信してください。" },
+    ]);
+    return;
+  }
 
   st.screenshotId = messageId;
   threePointsState.delete(userId);
 
+  // ⑦ Aへ3点送信
   const assigned = flpAssigned.get(userId)?.flp || "(未割当)";
-
   await safePush(ADMIN_NOTIFY_USER_ID, [
     {
       type: "text",
@@ -335,7 +390,7 @@ async function handleScreenshot(userId, messageId, replyToken) {
     },
   ]);
 
-  // 在庫処理：assigned→consumed
+  // ⑧ 在庫処理：assigned → consumed
   if (flpAssigned.has(userId)) {
     const v = flpAssigned.get(userId);
     flpAssigned.delete(userId);
@@ -353,7 +408,9 @@ async function handleScreenshot(userId, messageId, replyToken) {
   ]);
 }
 
-// ========= FLP pool logic =========
+/** =========================
+ * FLP pool
+ * ========================= */
 function assignFlpToUser(userId) {
   if (flpAssigned.has(userId)) return flpAssigned.get(userId).flp;
   if (flpUnused.length === 0) return null;
@@ -369,7 +426,6 @@ function cleanupExpiredAssignments() {
     if (now - v.assignedAt > TIMEOUT_MS) {
       flpAssigned.delete(uid);
       if (!flpUnused.includes(v.flp)) flpUnused.push(v.flp);
-
       safePush(ADMIN_NOTIFY_USER_ID, [
         {
           type: "text",
@@ -382,14 +438,13 @@ function cleanupExpiredAssignments() {
   }
 }
 
-// ========= helpers =========
+/** =========================
+ * helpers
+ * ========================= */
 function verifyLineSignature(req) {
   const signature = req.headers["x-line-signature"];
   if (!signature) return false;
-  const hash = crypto
-    .createHmac("sha256", CHANNEL_SECRET)
-    .update(req.body)
-    .digest("base64");
+  const hash = crypto.createHmac("sha256", CHANNEL_SECRET).update(req.body).digest("base64");
   return hash === signature;
 }
 
@@ -402,14 +457,13 @@ async function safePush(to, messages) {
 }
 
 async function safeReplyOrPush(userId, replyToken, messages) {
-  // replyTokenが使える時はreply（速度&表示安定）
-  if (replyToken) {
-    try {
+  try {
+    if (replyToken) {
       await client.replyMessage(replyToken, messages);
       return;
-    } catch (e) {
-      console.error("replyMessage failed (fallback to push):", e?.originalError?.response?.data || e);
     }
+  } catch (e) {
+    console.error("replyMessage failed (fallback to push):", e?.originalError?.response?.data || e);
   }
   await safePush(userId, messages);
 }
