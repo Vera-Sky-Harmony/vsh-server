@@ -1,4 +1,4 @@
-import express from "express";
+ import express from "express";
 import crypto from "crypto";
 import { Client } from "@line/bot-sdk";
 
@@ -7,133 +7,180 @@ const {
   CHANNEL_ACCESS_TOKEN,
   CHANNEL_SECRET,
   DAY0_IMAGE_URL,
-  PORT
+  DAY1_IMAGE_URL,
+  PORT,
 } = process.env;
 
-if (!CHANNEL_ACCESS_TOKEN || !CHANNEL_SECRET || !DAY0_IMAGE_URL) {
-  console.error("ENV不足");
-  process.exit(1);
+function must(v, name) {
+  if (!v) {
+    console.error(`Missing ENV: ${name}`);
+    process.exit(1);
+  }
+  return v;
 }
 
-const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
+must(CHANNEL_ACCESS_TOKEN, "CHANNEL_ACCESS_TOKEN");
+must(CHANNEL_SECRET, "CHANNEL_SECRET");
+must(DAY0_IMAGE_URL, "DAY0_IMAGE_URL");
+must(DAY1_IMAGE_URL, "DAY1_IMAGE_URL");
+
 const app = express();
+const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
-/* ========= Day0 文書 ========= */
-const DAY0_TEXT = `
-ようこそ、Vera Sky Harmony へ
-― あなたは「選ばれた」のではありません。「気づいた」のです ―
+/* ========= 設定 ========= */
+// テスト用：10時間後（本番は 24 * 60 * 60 * 1000）
+const DAY1_DELAY_MS = 10 * 60 * 60 * 1000;
 
-はじめまして。
-そして、ここまで辿り着いてくださり、ありがとうございます。
-
-あなたは今、
-売り込みも、説得も、勧誘もされていません。
-それにも関わらず、
-ここに辿り着いたという事実そのものが、
-とても重要な意味を持っています。
-
-────────────────
-
-これからあなたが目にするのは、
-・誰かに依存しない
-・人に気を遣わない
-・無理をしない
-・我慢を前提としない
-
-それでいて、
-「健康」と「繁栄」が同時に広がっていく仕組みです。
-
-────────────────
-
-Vera Sky Harmony（VSH）は、
-従来のMLMの常識をすべて捨てて設計されました。
-
-人が頑張る → ❌  
-人が説明する → ❌  
-人が教育する → ❌  
-人が拡散する → ❌  
-
-これらはすべて、AIが担います。
-
-あなたがすることは、
-「理解すること」と「選択すること」だけです。
-
-────────────────
-
-この仕組みは、
-✔ 経験  
-✔ 年齢  
-✔ 人脈  
-✔ 話術  
-
-いずれも一切問いません。
-なぜなら、人の能力に依存しない設計だからです。
-
-────────────────
-
-ここから数日間、
-あなたは「説明」を受けるのではなく、
-一つの完成されたシステムを体験していきます。
-
-判断はいつでも自由です。
-押されることも、急かされることもありません。
-
-────────────────
-
-ただ一つだけ、大切なことがあります。
-
-「理解してから判断してほしい」
-
-────────────────
-
-それでは、
-Vera Sky Harmony の世界へ。
-
-明日は、
-「なぜこの仕組みが成り立つのか」をお伝えします。
-`;
+/* ========= ユーザー状態（簡易：メモリ） ========= */
+// userId -> { day0SentAt }
+const users = new Map();
 
 /* ========= Health ========= */
-app.get("/", (_req, res) => res.send("VSH Day0 server running"));
+app.get("/", (_req, res) => res.send("VSH server running"));
 
 /* ========= Webhook ========= */
 app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
   try {
-    if (!verify(req)) return res.status(401).end();
-
-    const body = JSON.parse(req.body.toString("utf8"));
-    for (const ev of body.events || []) {
-      if (ev.type === "follow") {
-        await client.replyMessage(ev.replyToken, [
-          {
-            type: "image",
-            originalContentUrl: DAY0_IMAGE_URL,
-            previewImageUrl: DAY0_IMAGE_URL
-          },
-          {
-            type: "text",
-            text: DAY0_TEXT
-          }
-        ]);
-      }
+    if (!verifySignature(req)) {
+      return res.status(401).send("Bad signature");
     }
-    res.status(200).end();
+    const body = JSON.parse(req.body.toString("utf8"));
+    await handleEvents(body.events || []);
+    res.status(200).send("OK");
   } catch (e) {
     console.error(e);
-    res.status(200).end();
+    res.status(200).send("OK");
   }
 });
 
-/* ========= Signature ========= */
-function verify(req) {
-  const sig = req.headers["x-line-signature"];
-  const body = req.body;
-  const hmac = crypto
-    .createHmac("sha256", CHANNEL_SECRET)
-    .update(body)
-    .digest("base64");
-  return sig === hmac;
+/* ========= Event handler ========= */
+async function handleEvents(events) {
+  for (const ev of events) {
+    if (ev.type === "follow") {
+      const userId = ev.source.userId;
+      await sendDay0(userId);
+      scheduleDay1(userId);
+    }
+  }
 }
 
-app.listen(PORT || 10000);
+/* ========= Day0 ========= */
+async function sendDay0(userId) {
+  const message = {
+    type: "flex",
+    altText: "Vera Sky Harmony - Day0",
+    contents: {
+      type: "bubble",
+      hero: {
+        type: "image",
+        url: DAY0_IMAGE_URL,
+        size: "full",
+        aspectRatio: "1.51:1",
+        aspectMode: "cover",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "ようこそ、Vera Sky Harmony へ",
+            weight: "bold",
+            size: "lg",
+            wrap: true,
+          },
+          {
+            type: "text",
+            text:
+              "あなたは「選ばれた」のではありません。\n" +
+              "「気づいた」のです。\n\n" +
+              "売り込みも、説得も、勧誘もありません。\n" +
+              "それでも、ここに辿り着いた事実そのものが\n" +
+              "重要な意味を持っています。\n\n" +
+              "これから数日間、\n" +
+              "完成された仕組みを体験してください。\n\n" +
+              "明日は、\n" +
+              "なぜこの仕組みが成り立つのかをお伝えします。",
+            wrap: true,
+            margin: "md",
+          },
+        ],
+      },
+    },
+  };
 
+  await client.pushMessage(userId, message);
+  users.set(userId, { day0SentAt: Date.now() });
+}
+
+/* ========= Day1 ========= */
+async function sendDay1(userId) {
+  if (!users.has(userId)) return;
+
+  const message = {
+    type: "flex",
+    altText: "Vera Sky Harmony - Day1",
+    contents: {
+      type: "bubble",
+      hero: {
+        type: "image",
+        url: DAY1_IMAGE_URL,
+        size: "full",
+        aspectRatio: "1.51:1",
+        aspectMode: "cover",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "なぜ、この仕組みは成り立つのか",
+            weight: "bold",
+            size: "lg",
+            wrap: true,
+          },
+          {
+            type: "text",
+            text:
+              "あなたが体験しているのは\n" +
+              "説明ではありません。\n\n" +
+              "人が頑張らなくても成立する\n" +
+              "正しく設計された構造です。\n\n" +
+              "明日は、\n" +
+              "この仕組みが\n" +
+              "健康と繁栄を同時に生む理由を\n" +
+              "お伝えします。",
+            wrap: true,
+            margin: "md",
+          },
+        ],
+      },
+    },
+  };
+
+  await client.pushMessage(userId, message);
+}
+
+/* ========= スケジューラ ========= */
+function scheduleDay1(userId) {
+  setTimeout(() => {
+    sendDay1(userId).catch(console.error);
+  }, DAY1_DELAY_MS);
+}
+
+/* ========= Signature ========= */
+function verifySignature(req) {
+  const signature = req.headers["x-line-signature"];
+  const hash = crypto
+    .createHmac("sha256", CHANNEL_SECRET)
+    .update(req.body)
+    .digest("base64");
+  return hash === signature;
+}
+
+/* ========= Start ========= */
+const port = PORT || 3000;
+app.listen(port, () => {
+  console.log(`VSH listening on ${port}`);
+});
