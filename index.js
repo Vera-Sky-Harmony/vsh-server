@@ -24,56 +24,63 @@ must(CHANNEL_SECRET, "CHANNEL_SECRET");
 must(DAY0_IMAGE_URL, "DAY0_IMAGE_URL");
 must(DAY1_IMAGE_URL, "DAY1_IMAGE_URL");
 
-/* ========= 設定 ========= */
-const DAY1_DELAY_MS = 10 * 60 * 60 * 1000; // 10時間（テスト用）
-
+/* ========= APP ========= */
 const app = express();
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
-/* ========= メモリDB（テスト用） =========
-userId -> {
-  day0SentAt: number,
-  day1Sent: boolean
-}
-======================================== */
-const users = new Map();
-
-/* ========= ヘルスチェック ========= */
-app.get("/", (_, res) => res.send("VSH server running"));
+/* ========= Health ========= */
+app.get("/", (_req, res) => res.send("VSH server running"));
 
 /* ========= Webhook ========= */
 app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
   try {
     if (!verifySignature(req)) {
-      return res.status(401).send("Bad signature");
+      res.status(401).send("Bad signature");
+      return;
     }
     const body = JSON.parse(req.body.toString("utf8"));
     await handleEvents(body.events || []);
+    res.status(200).send("OK");
   } catch (e) {
     console.error(e);
+    res.status(200).send("OK");
   }
-  res.status(200).send("OK");
 });
 
-/* ========= LINEイベント処理 ========= */
+/* ========= Signature ========= */
+function verifySignature(req) {
+  const signature = req.headers["x-line-signature"];
+  const hash = crypto
+    .createHmac("SHA256", CHANNEL_SECRET)
+    .update(req.body)
+    .digest("base64");
+  return hash === signature;
+}
+
+/* ========= Event Handler ========= */
 async function handleEvents(events) {
   for (const ev of events) {
+    if (!ev?.source?.userId) continue;
+    const userId = ev.source.userId;
+
+    /* --- Day0 : 友だち追加 --- */
     if (ev.type === "follow") {
-      await handleFollow(ev.source.userId);
+      await sendDay0(userId);
+      continue;
+    }
+
+    /* --- Day1 : 「次を読む」押下 --- */
+    if (ev.type === "message" && ev.message.type === "text") {
+      if (ev.message.text === "次を読む") {
+        await sendDay1(userId);
+      }
     }
   }
 }
 
-/* ========= Day0送信 ========= */
-async function handleFollow(userId) {
-  if (users.has(userId)) return;
+/* ========= Messages ========= */
 
-  const now = Date.now();
-  users.set(userId, {
-    day0SentAt: now,
-    day1Sent: false,
-  });
-
+async function sendDay0(userId) {
   await client.pushMessage(userId, [
     {
       type: "image",
@@ -82,40 +89,58 @@ async function handleFollow(userId) {
     },
     {
       type: "text",
-      text:
-`ようこそ、Vera Sky Harmony へ
+      text: `ようこそ、Vera Sky Harmony へ
 ― あなたは「選ばれた」のではありません。「気づいた」のです ―
 
-ここから数日間、
-完成された仕組みを体験していただきます。
+はじめまして。
+そして、ここまで辿り着いてくださり、ありがとうございます。
 
-判断はいつでも自由です。
-押されることも、急かされることもありません。
+あなたは今、
+売り込みも、説得も、勧誘もされていません。
+それにも関わらず、
+ここに辿り着いたという事実そのものが、
+とても重要な意味を持っています。
 
-明日は、
-「なぜこの仕組みが成り立つのか」をお伝えします。`
-    }
+これからあなたが目にするのは、
+・誰かに依存しない
+・人に気を遣わない
+・無理をしない
+・我慢を前提としない
+それでいて、
+「健康」と「繁栄」が同時に広がっていく仕組みです。
+
+Vera Sky Harmony（VSH）は、
+従来のMLMの常識をすべて捨てて設計されました。
+人が頑張る → ❌
+人が説明する → ❌
+人が教育する → ❌
+人が拡散する → ❌
+すべてAIが担います。
+
+あなたがすることは、
+「理解すること」と「選択すること」だけです。
+
+ただ一つだけ大切なことがあります。
+「理解してから判断してほしい」
+
+それでは、
+Vera Sky Harmony の世界へ。`,
+      quickReply: {
+        items: [
+          {
+            type: "action",
+            action: {
+              type: "message",
+              label: "次を読む",
+              text: "次を読む",
+            },
+          },
+        ],
+      },
+    },
   ]);
-
-  console.log("Day0 sent:", userId);
 }
 
-/* ========= Day1 自動送信チェック ========= */
-setInterval(async () => {
-  const now = Date.now();
-
-  for (const [userId, data] of users.entries()) {
-    if (data.day1Sent) continue;
-
-    if (now - data.day0SentAt >= DAY1_DELAY_MS) {
-      await sendDay1(userId);
-      data.day1Sent = true;
-      console.log("Day1 sent:", userId);
-    }
-  }
-}, 60 * 1000); // 1分ごとにチェック
-
-/* ========= Day1送信 ========= */
 async function sendDay1(userId) {
   await client.pushMessage(userId, [
     {
@@ -125,33 +150,48 @@ async function sendDay1(userId) {
     },
     {
       type: "text",
-      text:
-`なぜ、この仕組みは
-「人が頑張らなくても」成り立つのか。
+      text: `Day1
+なぜ、この仕組みは「人が頑張らなくても」成り立つのか
 
-あなたが体験したのは
-説明ではありません。
-
+あなたが体験したのは、
+「説明」ではありません。
 完成された仕組みの入口です。
 
-明日は、
-「健康」と「繁栄」が
-なぜ同時に生まれるのかをお伝えします。`
-    }
+世の中の多くのビジネスは、
+人の努力・才能・時間・人脈に依存しています。
+だからこそ、多くの人が途中で疲れ、諦めます。
+
+Vera Sky Harmony が目指したのは、その真逆。
+「人が頑張らなくても成立する構造」
+
+紹介 → AI
+説明 → AI
+登録案内 → AI
+教育 → AI
+拡散 → AI
+
+あなたが行うのは、
+「体験すること」と「判断すること」だけ。
+これは楽をする仕組みではありません。
+正しい設計の結果です。`,
+      quickReply: {
+        items: [
+          {
+            type: "action",
+            action: {
+              type: "message",
+              label: "次を読む",
+              text: "次を読む",
+            },
+          },
+        ],
+      },
+    },
   ]);
 }
 
-/* ========= 署名検証 ========= */
-function verifySignature(req) {
-  const signature = req.headers["x-line-signature"];
-  const body = req.body;
-  const hash = crypto
-    .createHmac("SHA256", CHANNEL_SECRET)
-    .update(body)
-    .digest("base64");
-  return hash === signature;
-}
-
-app.listen(PORT || 10000, () =>
-  console.log("Server listening")
-);
+/* ========= Listen ========= */
+const port = PORT || 3000;
+app.listen(port, () => {
+  console.log("VSH server listening on", port);
+});
