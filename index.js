@@ -1,4 +1,4 @@
- import express from "express";
+import express from "express";
 import crypto from "crypto";
 import { Client } from "@line/bot-sdk";
 
@@ -25,35 +25,36 @@ function verify(req) {
   return sig === hash;
 }
 
-/* ===== 連打・二重防止ステート ===== */
+/* ===== 連打防止（簡易ステート）===== */
 const lastDay = {}; // { userId: "DAY1" }
-
 function canProceed(userId, nextDay) {
   if (lastDay[userId] === nextDay) return false;
   lastDay[userId] = nextDay;
   return true;
 }
 
-/* ===== 共通送信（B方式）===== */
-async function sendDay(userId, imageUrl, text, nextData) {
-  // ① 画像（全面・切れない）
+/* ===== 共通送信（全文・分割表示）===== */
+async function sendDay(userId, imageUrl, texts, nextData) {
+  // ① 画像
   await client.pushMessage(userId, {
     type: "image",
     originalContentUrl: imageUrl,
     previewImageUrl: imageUrl,
   });
 
-  // ② テキスト（全文表示）
-  await client.pushMessage(userId, {
-    type: "text",
-    text,
-  });
+  // ② テキスト（分割して全文表示）
+  for (const t of texts) {
+    await client.pushMessage(userId, {
+      type: "text",
+      text: t,
+    });
+  }
 
-  // ③ 次へ（Quick Reply）
+  // ③ 次へ（最後のみ）
   if (nextData) {
     await client.pushMessage(userId, {
       type: "text",
-      text: "▼ 続きを読む",
+      text: "▼ 次を読む",
       quickReply: {
         items: [
           {
@@ -70,78 +71,85 @@ async function sendDay(userId, imageUrl, text, nextData) {
   }
 }
 
-/* ===== 各Day ===== */
+/* ===== Day0 ===== */
 const day0 = (userId) =>
-  sendDay(
-    userId,
-    DAY0_IMAGE_URL,
-`ようこそ、Vera Sky Harmony へ
+  sendDay(userId, DAY0_IMAGE_URL, [
+`ようこそ、Vera Sky Harmony へ`,
 
-あなたは今、
-売り込みも、説得も、勧誘もされていません。
+`あなたは今、
+売り込みも、説得も、勧誘もされていません。`,
 
-それにも関わらず、
+`それにも関わらず、
 ここに辿り着いたという事実そのものが、
-とても重要な意味を持っています。
+とても重要な意味を持っています。`,
 
-これは
+`これは
 「健康」と「繁栄」が
-同時に広がっていく仕組みです。
+同時に広がっていく仕組みです。`,
 
-次は、
-なぜこの仕組みが成り立つのかをお伝えします。`,
-    "DAY1"
-  );
+`あなたがすることは、
+「理解すること」と「選択すること」だけ。`,
 
+`次は、
+なぜこの仕組みが成り立つのかをお伝えします。`
+], "DAY1");
+
+/* ===== Day1 ===== */
 const day1 = (userId) =>
-  sendDay(
-    userId,
-    DAY1_IMAGE_URL,
-`Day1｜人が頑張らなくても成り立つ理由
+  sendDay(userId, DAY1_IMAGE_URL, [
+`Day1｜人が頑張らなくても成り立つ理由`,
 
-VSHでは、
+`あなたが体験しているのは、
+説明ではありません。`,
+
+`これは、
+完成された仕組みの入口です。`,
+
+`VSHでは、
 紹介・説明・教育・拡散
-すべてをAIが担います。
+そのすべてをAIが担います。`,
 
-あなたが行うのは、
-体験し、判断することだけ。
+`あなたが行うのは、
+体験し、判断することだけ。`,
 
-これは楽ではなく、
-正しく設計された結果です。`,
-    "DAY2"
-  );
+`これは楽ではなく、
+正しく設計された結果です。`
+], "DAY2");
 
+/* ===== Day2 ===== */
 const day2 = (userId) =>
-  sendDay(
-    userId,
-    DAY2_IMAGE_URL,
-`Day2｜健康と繁栄を同時に扱う理由
+  sendDay(userId, DAY2_IMAGE_URL, [
+`Day2｜健康と繁栄を同時に扱う理由`,
 
-健康だけでは不安定になり、
-お金だけでは心と体が消耗します。
+`健康だけでは不安定になり、
+お金だけでは心と体が消耗します。`,
 
-FLPが守ってきた理念
-「健康と繁栄は同時に育つ」。
+`FLPが守ってきた理念は、
+「健康と繁栄は同時に育つ」という考え方です。`,
 
-次は、
-なぜこの構造が止まらないのかをお伝えします。`,
-    "DAY3"
-  );
+`VSHは、
+この理念をAIで再構築した仕組みです。`,
 
+`次は、
+なぜこの構造が止まらないのかをお伝えします。`
+], "DAY3");
+
+/* ===== Day3 ===== */
 const day3 = (userId) =>
-  sendDay(
-    userId,
-    DAY3_IMAGE_URL,
-`Day3｜連鎖が止まらない理由
+  sendDay(userId, DAY3_IMAGE_URL, [
+`Day3｜連鎖が止まらない理由`,
 
-VSHでは、
-伝える・説明する・教育する・保つ
-すべてAI。
+`多くのMLMは、
+人が動かなければ広がりません。`,
 
-人は、
-判断するだけの存在に戻されます。`,
-    null
-  );
+`VSHは違います。`,
+
+`伝える・説明する・教育する・保つ
+そのすべてをAIが行います。`,
+
+`人は、
+判断するだけの存在に戻されます。`
+], null);
 
 /* ===== Webhook ===== */
 app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
@@ -152,13 +160,11 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
   for (const ev of events) {
     const userId = ev.source.userId;
 
-    // 友だち追加 → Day0
     if (ev.type === "follow") {
       lastDay[userId] = "DAY0";
       await day0(userId);
     }
 
-    // 次を読む（連打防止）
     if (ev.type === "postback") {
       const d = ev.postback.data;
 
@@ -173,6 +179,5 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
 
 /* ===== 起動 ===== */
 app.listen(PORT, () => {
-  console.log("VSH server running (B mode + stable)");
+  console.log("VSH server running (B mode / full text)");
 });
-  
