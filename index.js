@@ -1,4 +1,4 @@
-import express from "express";
+ import express from "express";
 import crypto from "crypto";
 import { Client } from "@line/bot-sdk";
 
@@ -25,54 +25,59 @@ function verify(req) {
   return sig === hash;
 }
 
-/* ===== 共通Flex ===== */
-function flex(imageUrl, title, body, next) {
-  return {
-    type: "flex",
-    altText: title,
-    contents: {
-      type: "bubble",
-      hero: {
-        type: "image",
-        url: imageUrl,
-        size: "full",
-        aspectRatio: "1:1",
-        aspectMode: "cover",
-      },
-      body: {
-        type: "box",
-        layout: "vertical",
-        contents: [
-          { type: "text", text: title, weight: "bold", wrap: true },
-          { type: "separator", margin: "md" },
-          { type: "text", text: body, wrap: true, margin: "md" },
-        ],
-      },
-      footer: {
-        type: "box",
-        layout: "vertical",
-        contents: [
+/* ===== 連打・二重防止ステート ===== */
+const lastDay = {}; // { userId: "DAY1" }
+
+function canProceed(userId, nextDay) {
+  if (lastDay[userId] === nextDay) return false;
+  lastDay[userId] = nextDay;
+  return true;
+}
+
+/* ===== 共通送信（B方式）===== */
+async function sendDay(userId, imageUrl, text, nextData) {
+  // ① 画像（全面・切れない）
+  await client.pushMessage(userId, {
+    type: "image",
+    originalContentUrl: imageUrl,
+    previewImageUrl: imageUrl,
+  });
+
+  // ② テキスト（全文表示）
+  await client.pushMessage(userId, {
+    type: "text",
+    text,
+  });
+
+  // ③ 次へ（Quick Reply）
+  if (nextData) {
+    await client.pushMessage(userId, {
+      type: "text",
+      text: "▼ 続きを読む",
+      quickReply: {
+        items: [
           {
-            type: "button",
+            type: "action",
             action: {
               type: "postback",
               label: "次を読む",
-              data: next,
+              data: nextData,
             },
-            style: "primary",
           },
         ],
       },
-    },
-  };
+    });
+  }
 }
 
 /* ===== 各Day ===== */
-const day0 = () =>
-  flex(
+const day0 = (userId) =>
+  sendDay(
+    userId,
     DAY0_IMAGE_URL,
-    "ようこそ、Vera Sky Harmony へ",
-    `あなたは今、
+`ようこそ、Vera Sky Harmony へ
+
+あなたは今、
 売り込みも、説得も、勧誘もされていません。
 
 それにも関わらず、
@@ -83,21 +88,16 @@ const day0 = () =>
 「健康」と「繁栄」が
 同時に広がっていく仕組みです。
 
-あなたがすることは、
-「理解すること」と「選択すること」だけ。
-
 次は、
 なぜこの仕組みが成り立つのかをお伝えします。`,
     "DAY1"
   );
 
-const day1 = () =>
-  flex(
+const day1 = (userId) =>
+  sendDay(
+    userId,
     DAY1_IMAGE_URL,
-    "Day1｜人が頑張らなくても成り立つ理由",
-    `あなたが体験したのは
-説明ではありません。
-完成された仕組みの入口です。
+`Day1｜人が頑張らなくても成り立つ理由
 
 VSHでは、
 紹介・説明・教育・拡散
@@ -111,41 +111,36 @@ VSHでは、
     "DAY2"
   );
 
-const day2 = () =>
-  flex(
+const day2 = (userId) =>
+  sendDay(
+    userId,
     DAY2_IMAGE_URL,
-    "Day2｜健康と繁栄を同時に扱う理由",
-    `健康だけでは不安定になり、
+`Day2｜健康と繁栄を同時に扱う理由
+
+健康だけでは不安定になり、
 お金だけでは心と体が消耗します。
 
-FLPが守ってきた理念は
+FLPが守ってきた理念
 「健康と繁栄は同時に育つ」。
-
-VSHは、
-その理念をAIで再構築した仕組みです。
 
 次は、
 なぜこの構造が止まらないのかをお伝えします。`,
     "DAY3"
   );
 
-const day3 = () =>
-  flex(
+const day3 = (userId) =>
+  sendDay(
+    userId,
     DAY3_IMAGE_URL,
-    "Day3｜連鎖が止まらない理由",
-    `多くのMLMは
-人が動かないと広がりません。
+`Day3｜連鎖が止まらない理由
 
-VSHは違います。
-あなたが存在するだけで、
-連鎖が起こります。
-
+VSHでは、
 伝える・説明する・教育する・保つ
 すべてAI。
 
 人は、
 判断するだけの存在に戻されます。`,
-    "DAY4"
+    null
   );
 
 /* ===== Webhook ===== */
@@ -157,14 +152,19 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
   for (const ev of events) {
     const userId = ev.source.userId;
 
+    // 友だち追加 → Day0
     if (ev.type === "follow") {
-      await client.pushMessage(userId, day0());
+      lastDay[userId] = "DAY0";
+      await day0(userId);
     }
 
+    // 次を読む（連打防止）
     if (ev.type === "postback") {
-      if (ev.postback.data === "DAY1") await client.pushMessage(userId, day1());
-      if (ev.postback.data === "DAY2") await client.pushMessage(userId, day2());
-      if (ev.postback.data === "DAY3") await client.pushMessage(userId, day3());
+      const d = ev.postback.data;
+
+      if (d === "DAY1" && canProceed(userId, "DAY1")) await day1(userId);
+      if (d === "DAY2" && canProceed(userId, "DAY2")) await day2(userId);
+      if (d === "DAY3" && canProceed(userId, "DAY3")) await day3(userId);
     }
   }
 
@@ -173,5 +173,6 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
 
 /* ===== 起動 ===== */
 app.listen(PORT, () => {
-  console.log("VSH server running");
+  console.log("VSH server running (B mode + stable)");
 });
+  
