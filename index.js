@@ -25,32 +25,26 @@ function verify(req) {
   return sig === hash;
 }
 
-/* ===== 連打防止（簡易ステート）===== */
-const lastDay = {}; // { userId: "DAY1" }
+/* ===== 連打防止 ===== */
+const lastDay = {};
 function canProceed(userId, nextDay) {
   if (lastDay[userId] === nextDay) return false;
   lastDay[userId] = nextDay;
   return true;
 }
 
-/* ===== 共通送信（全文・分割表示）===== */
+/* ===== 共通送信（全文分割）===== */
 async function sendDay(userId, imageUrl, texts, nextData) {
-  // ① 画像
   await client.pushMessage(userId, {
     type: "image",
     originalContentUrl: imageUrl,
     previewImageUrl: imageUrl,
   });
 
-  // ② テキスト（分割して全文表示）
   for (const t of texts) {
-    await client.pushMessage(userId, {
-      type: "text",
-      text: t,
-    });
+    await client.pushMessage(userId, { type: "text", text: t });
   }
 
-  // ③ 次へ（最後のみ）
   if (nextData) {
     await client.pushMessage(userId, {
       type: "text",
@@ -74,7 +68,12 @@ async function sendDay(userId, imageUrl, texts, nextData) {
 /* ===== Day0 ===== */
 const day0 = (userId) =>
   sendDay(userId, DAY0_IMAGE_URL, [
-`ようこそ、Vera Sky Harmony へ`,
+`【タイトル】
+ようこそ、Vera Sky Harmony へ
+― あなたは「選ばれた」のではありません。「気づいた」のです ―`,
+
+`はじめまして。
+そして、ここまで辿り着いてくださり、ありがとうございます。`,
 
 `あなたは今、
 売り込みも、説得も、勧誘もされていません。`,
@@ -83,78 +82,153 @@ const day0 = (userId) =>
 ここに辿り着いたという事実そのものが、
 とても重要な意味を持っています。`,
 
-`これは
+`これからあなたが目にするのは、
+誰かに依存せず、
+人に気を遣わず、
+無理も我慢もしない。`,
+
+`それでいて、
 「健康」と「繁栄」が
 同時に広がっていく仕組みです。`,
 
-`あなたがすることは、
-「理解すること」と「選択すること」だけ。`,
+`Vera Sky Harmony（VSH）は、
+従来のMLMの常識をすべて捨てて設計されました。`,
 
-`次は、
-なぜこの仕組みが成り立つのかをお伝えします。`
+`人が頑張る必要も、
+説明する必要も、
+教育する必要も、
+拡散する必要もありません。`,
+
+`それらはすべて、AIが担います。
+あなたがすることは、
+「理解すること」と「選択すること」だけです。`,
+
+`経験・年齢・人脈・話術は、
+一切問いません。
+人の能力に依存しない設計だからです。`,
+
+`ここから数日間、
+あなたは「説明」ではなく、
+完成された仕組みを体験します。`,
+
+`押されることも、
+急かされることもありません。`,
+
+`ただ一つだけ、
+大切なことがあります。`,
+
+`「理解してから判断してほしい」`,
+
+`それでは、
+Vera Sky Harmony の世界へ。`
 ], "DAY1");
 
 /* ===== Day1 ===== */
 const day1 = (userId) =>
   sendDay(userId, DAY1_IMAGE_URL, [
-`Day1｜人が頑張らなくても成り立つ理由`,
+`Day1
+なぜ、この仕組みは
+「人が頑張らなくても」成り立つのか`,
 
-`あなたが体験しているのは、
-説明ではありません。`,
-
-`これは、
+`あなたが体験したのは、
+「説明」ではありません。
 完成された仕組みの入口です。`,
 
-`VSHでは、
-紹介・説明・教育・拡散
-そのすべてをAIが担います。`,
+`多くのビジネスは、
+人の努力・才能・時間・人脈に依存します。`,
+
+`だから多くの人が、
+疲れ、諦め、続きません。`,
+
+`Vera Sky Harmony が目指したのは、
+その真逆。
+「人が頑張らなくても成立する構造」です。`,
+
+`紹介・説明・登録案内・教育・拡散
+そのすべてを、
+最初からAIが担います。`,
 
 `あなたが行うのは、
 体験し、判断することだけ。`,
 
-`これは楽ではなく、
-正しく設計された結果です。`
+`これは「楽をする仕組み」ではなく、
+「正しい設計」の結果です。`
 ], "DAY2");
 
 /* ===== Day2 ===== */
 const day2 = (userId) =>
   sendDay(userId, DAY2_IMAGE_URL, [
-`Day2｜健康と繁栄を同時に扱う理由`,
+`Day2
+なぜこの仕組みは
+「健康」と「繁栄」を同時に扱うのか`,
 
-`健康だけでは不安定になり、
+`多くのビジネスは「お金」だけ。
+多くの健康活動は「理想」だけ。`,
+
+`どちらか一方だけでは、
+人は続きません。`,
+
+`健康だけでは生活が不安定になり、
 お金だけでは心と体が消耗します。`,
 
-`FLPが守ってきた理念は、
-「健康と繁栄は同時に育つ」という考え方です。`,
+`FLPが守り続けてきたのは、
+「健康と繁栄は同時に育てるもの」
+という理念でした。`,
 
 `VSHは、
-この理念をAIで再構築した仕組みです。`,
+その理念をAIで再構築した仕組みです。`,
 
-`次は、
-なぜこの構造が止まらないのかをお伝えします。`
+`無理をしなくても、
+説得しなくても、
+自然につながる構造を
+設計段階で完成させています。`,
+
+`VSHは
+「稼ぐための仕組み」ではありません。
+正しく生きた結果として
+繁栄が生まれる構造です。`
 ], "DAY3");
 
 /* ===== Day3 ===== */
 const day3 = (userId) =>
   sendDay(userId, DAY3_IMAGE_URL, [
-`Day3｜連鎖が止まらない理由`,
+`Day3
+なぜVera Sky Harmonyは
+連鎖が止まらないのか`,
 
-`多くのMLMは、
-人が動かなければ広がりません。`,
+`多くのMLMが止まる理由は、
+人が動かなければ
+広がらないからです。`,
 
-`VSHは違います。`,
+`紹介・説明・継続。
+この人依存がある限り、
+連鎖は止まります。`,
 
-`伝える・説明する・教育する・保つ
-そのすべてをAIが行います。`,
+`VSHは、
+この前提を最初から捨てました。`,
+
+`あなたが動かなくても、
+存在するだけで連鎖が起こります。`,
+
+`伝えるのも、
+説明するのも、
+教育するのも、
+拡散を保つのもAI。`,
 
 `人は、
-判断するだけの存在に戻されます。`
+判断するだけの存在に戻されます。`,
+
+`あなたがやることは一つ。
+納得して、使い続けること。`,
+
+`VSHは
+「広げる仕組み」ではなく、
+“広がってしまう構造”です。`
 ], null);
 
 /* ===== Webhook ===== */
 app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
   if (!verify(req)) return res.sendStatus(401);
-
   const events = JSON.parse(req.body).events;
 
   for (const ev of events) {
@@ -167,17 +241,15 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
 
     if (ev.type === "postback") {
       const d = ev.postback.data;
-
       if (d === "DAY1" && canProceed(userId, "DAY1")) await day1(userId);
       if (d === "DAY2" && canProceed(userId, "DAY2")) await day2(userId);
       if (d === "DAY3" && canProceed(userId, "DAY3")) await day3(userId);
     }
   }
-
   res.sendStatus(200);
 });
 
 /* ===== 起動 ===== */
 app.listen(PORT, () => {
-  console.log("VSH server running (B mode / full text)");
+  console.log("VSH server running (B mode / official text)");
 });
