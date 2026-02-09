@@ -1,21 +1,27 @@
 const express = require("express");
 const bodyParser = require("body-parser");
+const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// JSON受信
+// JSON受信（Webhook用）
 app.use(bodyParser.json());
 
-// ✅ pages フォルダを静的公開（←これが無いと Error）
-app.use("/pages", express.static("pages"));
+// ===============================
+// ✅ pages フォルダを正しく静的公開
+// ===============================
+app.use(
+  "/pages",
+  express.static(path.join(__dirname, "pages"))
+);
 
-// 確認用トップ
+// 動作確認用
 app.get("/", (req, res) => {
   res.send("VSH Server is running");
 });
 
-// Webhook（今は空でOK：Day7は後で統合）
+// Webhook（今は空でOK）
 app.post("/webhook", (req, res) => {
   res.sendStatus(200);
 });
