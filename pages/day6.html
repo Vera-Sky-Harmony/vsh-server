@@ -28,27 +28,36 @@
       margin-bottom: 18px;
       font-size: 16px;
     }
-    .line-guide {
-      margin-top: 40px;
-      padding: 20px;
+    hr {
+      margin: 40px 0;
+      border: none;
       border-top: 1px solid #ddd;
     }
-    .line-guide p {
-      font-size: 16px;
-      margin-bottom: 14px;
-    }
-    .next {
+    .choice-area {
+      margin: 40px 0;
       text-align: center;
-      margin: 28px 0 12px;
     }
-    .next a {
-      display: inline-block;
-      padding: 14px 28px;
+    .btn-main {
+      display: block;
+      max-width: 320px;
+      margin: 0 auto 20px;
+      padding: 16px 0;
       background: #06c755; /* LINEグリーン */
       color: #ffffff;
       text-decoration: none;
       font-size: 16px;
       font-weight: bold;
+      border-radius: 6px;
+    }
+    .btn-sub {
+      display: block;
+      max-width: 320px;
+      margin: 0 auto;
+      padding: 14px 0;
+      background: #f0f0f0;
+      color: #333333;
+      text-decoration: none;
+      font-size: 14px;
       border-radius: 6px;
     }
   </style>
@@ -62,7 +71,7 @@
   <!-- タイトル -->
   <h1>あなたがここにいる理由</h1>
 
-  <!-- 本文 -->
+  <!-- 本文（そのまま） -->
   <p>
     ここまで来たあなたに、<br>
     ひとつだけお伝えしたいことがあります。
@@ -123,21 +132,28 @@
     それだけです。
   </p>
 
-  <!-- LINE導線 -->
-  <div class="line-guide">
-    <p>
-      <strong>ここから先は、LINEでご案内します。</strong><br>
-      この仕組みを「使う側」として体験したい方は、<br>
-      下のボタンからお進みください。
-    </p>
+  <hr>
 
-    <div class="next">
-      <a href="	https://line.me/R/ti/p/@591tvejt">
-        LINEで続ける
-      </a>
-    </div>
+  <!-- 分岐UI -->
+  <div class="choice-area">
+
+    <!-- 登録希望 → Day7-1（LINE） -->
+    <a
+      href="https://line.me/R/oaMessage/@591tvejt/?登録希望"
+      class="btn-main"
+    >
+      登録希望
+    </a>
+
+    <!-- Day0に戻る -->
+    <a
+      href="/pages/day0.html"
+      class="btn-sub"
+    >
+      もう一度 Day0 から見る
+    </a>
+
   </div>
 
 </body>
 </html>
-
