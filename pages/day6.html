@@ -28,132 +28,98 @@
       margin-bottom: 18px;
       font-size: 16px;
     }
-    hr {
-      margin: 40px 0;
-      border: none;
+    .cta-area {
+      margin-top: 40px;
+      padding-top: 24px;
       border-top: 1px solid #ddd;
-    }
-    .choice-area {
-      margin: 40px 0;
       text-align: center;
     }
-    .btn-main {
+    .btn {
       display: block;
+      margin: 14px auto;
+      padding: 16px 28px;
       max-width: 320px;
-      margin: 0 auto 20px;
-      padding: 16px 0;
-      background: #06c755; /* LINEグリーン */
-      color: #ffffff;
       text-decoration: none;
       font-size: 16px;
       font-weight: bold;
-      border-radius: 6px;
+      border-radius: 8px;
     }
-    .btn-sub {
-      display: block;
-      max-width: 320px;
-      margin: 0 auto;
-      padding: 14px 0;
-      background: #f0f0f0;
-      color: #333333;
-      text-decoration: none;
-      font-size: 14px;
-      border-radius: 6px;
+    .btn-register {
+      background: #f4c542;
+      color: #000;
+    }
+    .btn-back {
+      background: #06c755;
+      color: #fff;
     }
   </style>
 </head>
 
 <body>
 
-  <!-- 画像 -->
-  <img src="https://res.cloudinary.com/dxegzwukb/image/upload/v1770272610/Day6-2_tfup4e.png" alt="Day6">
+<img src="https://res.cloudinary.com/dxegzwukb/image/upload/v1770272610/Day6-2_tfup4e.png" alt="Day6">
 
-  <!-- タイトル -->
-  <h1>あなたがここにいる理由</h1>
+<h1>あなたがここにいる理由</h1>
 
-  <!-- 本文（そのまま） -->
-  <p>
-    ここまで来たあなたに、<br>
-    ひとつだけお伝えしたいことがあります。
-  </p>
+<p>ここまで来たあなたに、ひとつだけお伝えしたいことがあります。</p>
 
-  <p>
-    あなたがこの Vera Sky Harmony に出会ったのは、<br>
-    偶然ではありません。
-  </p>
+<p>あなたがこの Vera Sky Harmony に出会ったのは、偶然ではありません。</p>
 
-  <p>
-    そして、<br>
-    誰かに選ばれたからでもありません。
-  </p>
+<p>そして、誰かに選ばれたからでもありません。</p>
 
-  <p>
-    あなたは、無意識のうちに<br>
-    「今までと同じ生き方ではない道」を<br>
-    選び始めていました。
-  </p>
+<p>あなたは無意識のうちに、「今までと同じ生き方ではない道」を選び始めていました。</p>
 
-  <p>
-    ・説明され続ける人生<br>
-    ・追いかけ続ける人生<br>
-    ・努力し続けなければ止まる人生
-  </p>
+<p>
+・説明され続ける人生<br>
+・追いかけ続ける人生<br>
+・努力し続けなければ止まる人生
+</p>
 
-  <p>
-    それらに、<br>
-    どこかで違和感を持っていたはずです。
-  </p>
+<p>それらに、どこかで違和感を持っていたはずです。</p>
 
-  <p>
-    Vera Sky Harmony は、<br>
-    「頑張れる人」や<br>
-    「特別な才能がある人」のための<br>
-    システムではありません。
-  </p>
+<p>
+Vera Sky Harmony は、<br>
+「頑張れる人」や<br>
+「特別な才能がある人」のための<br>
+システムではありません。
+</p>
 
-  <p>
-    <strong>“違和感に気づいた人”のための仕組みです。</strong>
-  </p>
+<p>
+<strong>“違和感に気づいた人”のための仕組みです。</strong>
+</p>
 
-  <p>
-    そして、<br>
-    その違和感に気づける人は<br>
-    多くありません。
-  </p>
+<p>
+そして、<br>
+その違和感に気づける人は、<br>
+多くありません。
+</p>
 
-  <p>
-    あなたはすでに、<br>
-    選択を終えています。
-  </p>
+<p>
+あなたはすでに<br>
+選択を終えています。
+</p>
 
-  <p>
-    あとは、<br>
-    その流れを止めるか、進めるか。<br>
-    それだけです。
-  </p>
+<p>
+あとは、<br>
+その流れを止めるか、進めるか。<br>
+それだけです。
+</p>
 
-  <hr>
+<div class="cta-area">
 
-  <!-- 分岐UI -->
-  <div class="choice-area">
+  <!-- 登録希望 -->
+  <a class="btn btn-register"
+     href="https://line.me/R/oaMessage/@591tvejt/?登録希望">
+     登録希望
+  </a>
 
-    <!-- 登録希望 → Day7-1（LINE） -->
-    <a
-      href="https://line.me/R/oaMessage/@591tvejt/?登録希望"
-      class="btn-main"
-    >
-      登録希望
-    </a>
+  <!-- Day0へ戻る -->
+  <a class="btn btn-back"
+     href="/pages/day0.html">
+     もう一度Day0から見る
+  </a>
 
-    <!-- Day0に戻る -->
-    <a
-      href="/pages/day0.html"
-      class="btn-sub"
-    >
-      もう一度 Day0 から見る
-    </a>
-
-  </div>
+</div>
 
 </body>
 </html>
