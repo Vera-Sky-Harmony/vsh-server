@@ -1,28 +1,30 @@
 import express from "express";
 import crypto from "crypto";
 import { Client } from "@line/bot-sdk";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const {
   CHANNEL_ACCESS_TOKEN,
   CHANNEL_SECRET,
-  INTRODUCER_NAME,
-  INTRODUCER_FLP,
   ADMIN_NOTIFY_USER_ID,
   DAY7_2_IMAGE_URL,
-  FLP_OFFICIAL_URL,
-  ENTRY_GUIDE_URL,
   PORT,
 } = process.env;
 
 const app = express();
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
+/* =============================
+   🔵 静的ファイル公開（これが重要）
+============================= */
+app.use("/pages", express.static(path.join(__dirname, "pages")));
+
 app.use(express.json());
 
-/* =============================
-   メモリ管理（簡易）
-============================= */
-let flpAssigned = new Map();
 let usedRegisterIntent = new Set();
 let threePointsState = new Map();
 
@@ -34,7 +36,6 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
     if (!verifyLineSignature(req)) {
       return res.status(401).send("Bad signature");
     }
-
     const body = JSON.parse(req.body.toString("utf8"));
     await handleWebhook(body);
     res.status(200).send("OK");
@@ -54,7 +55,7 @@ async function handleWebhook(body) {
     if (!ev.source?.userId) continue;
     const userId = ev.source.userId;
 
-    /* --- follow（友だち追加） --- */
+    /* follow時 */
     if (ev.type === "follow") {
       await client.pushMessage(userId, {
         type: "text",
@@ -64,11 +65,9 @@ async function handleWebhook(body) {
       continue;
     }
 
-    /* --- テキスト受信 --- */
     if (ev.type === "message" && ev.message.type === "text") {
       const text = ev.message.text.trim();
 
-      /* Day6 → 登録希望 */
       if (text === "登録希望") {
         if (usedRegisterIntent.has(userId)) return;
         usedRegisterIntent.add(userId);
@@ -76,7 +75,6 @@ async function handleWebhook(body) {
         continue;
       }
 
-      /* 青ボタン */
       if (text === "3点返信開始") {
         await startThreePointsFlow(userId);
         continue;
@@ -85,7 +83,6 @@ async function handleWebhook(body) {
       await handleThreePointsConversation(userId, text);
     }
 
-    /* --- 画像受信 --- */
     if (ev.type === "message" && ev.message.type === "image") {
       await handleScreenshot(userId, ev.message.id);
     }
@@ -99,20 +96,16 @@ async function sendDay7(userId) {
   await client.pushMessage(userId, [
     {
       type: "text",
-      text:
-        "7日間ありがとうございました！\n\nあなたが登録すると同時に、このVera.Sky.Harmonyがプレゼントされます。",
+      text: "7日間ありがとうございました！",
     },
     buildBlueFlex(),
   ]);
 }
 
-/* =============================
-   青画面（ループ防止版）
-============================= */
 function buildBlueFlex() {
   return {
     type: "flex",
-    altText: "3点をLINEで返信する",
+    altText: "3点返信開始",
     contents: {
       type: "bubble",
       hero: {
@@ -125,14 +118,7 @@ function buildBlueFlex() {
       body: {
         type: "box",
         layout: "vertical",
-        spacing: "md",
         contents: [
-          {
-            type: "text",
-            text: "登録を開始しますか？",
-            weight: "bold",
-            size: "md",
-          },
           {
             type: "button",
             style: "primary",
@@ -149,7 +135,7 @@ function buildBlueFlex() {
 }
 
 /* =============================
-   3点返信フロー
+   3点フロー
 ============================= */
 async function startThreePointsFlow(userId) {
   threePointsState.set(userId, { step: 1 });
@@ -178,7 +164,7 @@ async function handleThreePointsConversation(userId, text) {
     state.step = 3;
     await client.pushMessage(userId, {
       type: "text",
-      text: "③ 購入画面のスクリーンショットを送信してください",
+      text: "③ 購入画面スクリーンショットを送信してください",
     });
   }
 }
@@ -191,16 +177,15 @@ async function handleScreenshot(userId, messageId) {
 
   await client.pushMessage(userId, {
     type: "text",
-    text: "登録情報を受け取りました。確認後ご連絡します。",
+    text: "登録情報を受け取りました。",
   });
 
   await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
     type: "text",
     text:
-      "【登録完了報告】\n" +
+      "【登録報告】\n" +
       `氏名: ${state.name}\n` +
-      `FLP: ${state.flp}\n` +
-      `スクショID: ${messageId}`,
+      `FLP: ${state.flp}`,
   });
 }
 
