@@ -1,71 +1,77 @@
-import express from "express";
-import bodyParser from "body-parser";
-import path from "path";
-import { fileURLToPath } from "url";
-import axios from "axios";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const express = require("express");
+const crypto = require("crypto");
+const axios = require("axios");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+app.use(express.json());
 
-app.use(bodyParser.json());
+const CHANNEL_ACCESS_TOKEN = process.env.CHANNEL_ACCESS_TOKEN;
+const CHANNEL_SECRET = process.env.CHANNEL_SECRET;
 
-// 静的公開
-app.use("/pages", express.static(path.join(__dirname, "pages")));
+const PORT = process.env.PORT || 10000;
 
-app.get("/", (req, res) => {
-  res.send("VSH Server is running");
-});
-
-// ===============================
-// LINE Webhook
-// ===============================
 app.post("/webhook", async (req, res) => {
-  try {
-    const events = req.body.events;
+  const signature = req.headers["x-line-signature"];
+  const body = JSON.stringify(req.body);
 
-    if (!events) {
-      return res.sendStatus(200);
-    }
+  const hash = crypto
+    .createHmac("SHA256", CHANNEL_SECRET)
+    .update(body)
+    .digest("base64");
 
-    for (const event of events) {
-      if (
-        event.type === "message" &&
-        event.message.type === "text" &&
-        event.message.text === "登録希望"
-      ) {
-        const replyToken = event.replyToken;
+  if (signature !== hash) {
+    console.log("❌ 署名エラー");
+    return res.status(403).send("Invalid signature");
+  }
 
-        await axios.post(
-          "https://api.line.me/v2/bot/message/reply",
-          {
-            replyToken: replyToken,
-            messages: [
-              {
-                type: "text",
-                text: "登録受付を開始します。\n① 氏名を入力してください"
+  const events = req.body.events;
+
+  for (const event of events) {
+    if (event.type === "message" && event.message.type === "text") {
+      const userMessage = event.message.text;
+      const replyToken = event.replyToken;
+
+      if (userMessage === "登録希望") {
+        try {
+          await axios.post(
+            "https://api.line.me/v2/bot/message/reply",
+            {
+              replyToken: replyToken,
+              messages: [
+                {
+                  type: "text",
+                  text: "🟡 Day7-1：登録受付を開始します"
+                },
+                {
+                  type: "text",
+                  text: "🔵 Day7-2：①氏名 ②FLP番号 ③購入スクショを送信してください"
+                }
+              ]
+            },
+            {
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`
               }
-            ]
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`
             }
-          }
-        );
+          );
+
+          console.log("✅ 返信成功");
+        } catch (error) {
+          console.log("❌ LINE送信エラー");
+          console.log(error.response?.data || error.message);
+        }
       }
     }
-
-    res.sendStatus(200);
-  } catch (error) {
-    console.error("Webhook Error:", error.response?.data || error.message);
-    res.sendStatus(500);
   }
+
+  res.sendStatus(200);
+});
+
+app.get("/", (req, res) => {
+  res.send("VSH Server Running");
 });
 
 app.listen(PORT, () => {
-  console.log(`VSH server running on port ${PORT}`);
+  console.log(`🚀 VSHサーバー起動 ポート${PORT}`);
 });
