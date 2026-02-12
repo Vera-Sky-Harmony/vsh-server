@@ -1,77 +1,128 @@
-const express = require("express");
-const crypto = require("crypto");
-const axios = require("axios");
+import express from "express";
+import crypto from "crypto";
+import { Client } from "@line/bot-sdk";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(express.json());
+const PORT = process.env.PORT || 10000;
 
+/* ===========================
+   ENV
+=========================== */
 const CHANNEL_ACCESS_TOKEN = process.env.CHANNEL_ACCESS_TOKEN;
 const CHANNEL_SECRET = process.env.CHANNEL_SECRET;
 
-const PORT = process.env.PORT || 10000;
+if (!CHANNEL_ACCESS_TOKEN || !CHANNEL_SECRET) {
+  console.error("❌ CHANNEL_ACCESS_TOKEN または CHANNEL_SECRET 未設定");
+  process.exit(1);
+}
 
-app.post("/webhook", async (req, res) => {
-  const signature = req.headers["x-line-signature"];
-  const body = JSON.stringify(req.body);
+const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
-  const hash = crypto
-    .createHmac("SHA256", CHANNEL_SECRET)
-    .update(body)
-    .digest("base64");
+/* ===========================
+   静的ページ公開（Day0〜Day6）
+=========================== */
+app.use("/pages", express.static(path.join(__dirname, "pages")));
 
-  if (signature !== hash) {
-    console.log("❌ 署名エラー");
-    return res.status(403).send("Invalid signature");
+/* ===========================
+   Health Check
+=========================== */
+app.get("/", (req, res) => {
+  res.send("VSH server running");
+});
+
+/* ===========================
+   Webhook（署名検証）
+=========================== */
+app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
+  try {
+    const signature = req.headers["x-line-signature"];
+    const hash = crypto
+      .createHmac("sha256", CHANNEL_SECRET)
+      .update(req.body)
+      .digest("base64");
+
+    if (signature !== hash) {
+      console.log("❌ 署名不一致");
+      return res.status(401).send("Invalid signature");
+    }
+
+    const body = JSON.parse(req.body.toString("utf8"));
+    await handleEvents(body.events);
+    res.status(200).send("OK");
+  } catch (err) {
+    console.error("Webhook Error:", err);
+    res.status(200).send("OK");
   }
+});
 
-  const events = req.body.events;
-
+/* ===========================
+   イベント処理
+=========================== */
+async function handleEvents(events) {
   for (const event of events) {
-    if (event.type === "message" && event.message.type === "text") {
-      const userMessage = event.message.text;
-      const replyToken = event.replyToken;
 
-      if (userMessage === "登録希望") {
-        try {
-          await axios.post(
-            "https://api.line.me/v2/bot/message/reply",
-            {
-              replyToken: replyToken,
-              messages: [
-                {
-                  type: "text",
-                  text: "🟡 Day7-1：登録受付を開始します"
-                },
-                {
-                  type: "text",
-                  text: "🔵 Day7-2：①氏名 ②FLP番号 ③購入スクショを送信してください"
-                }
-              ]
-            },
-            {
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`
-              }
-            }
-          );
-
-          console.log("✅ 返信成功");
-        } catch (error) {
-          console.log("❌ LINE送信エラー");
-          console.log(error.response?.data || error.message);
+    // ともだち追加時
+    if (event.type === "follow") {
+      await client.replyMessage(event.replyToken, [
+        {
+          type: "text",
+          text:
+            "ようこそ Vera Sky Harmony へ。\n\n" +
+            "こちらから Day0 をお読みください。\n" +
+            "https://vsh-server.onrender.com/pages/day0.html"
         }
+      ]);
+    }
+
+    // メッセージ受信
+    if (event.type === "message" && event.message.type === "text") {
+
+      const text = event.message.text.trim();
+
+      /* ========= 登録希望 ========= */
+      if (text === "登録希望") {
+
+        await client.replyMessage(event.replyToken, [
+
+          // Day7-1 黄色画像
+          {
+            type: "image",
+            originalContentUrl:
+              "https://res.cloudinary.com/dxegzwukb/image/upload/v1770446396/1fb98781-8e51-43d9-87c1-691eb51f6d8b_cjdpfm.png",
+            previewImageUrl:
+              "https://res.cloudinary.com/dxegzwukb/image/upload/v1770446396/1fb98781-8e51-43d9-87c1-691eb51f6d8b_cjdpfm.png"
+          },
+
+          // Day7-2 青画像
+          {
+            type: "image",
+            originalContentUrl:
+              "https://res.cloudinary.com/dxegzwukb/image/upload/v1769679233/Day7-1_dpjx3u.png",
+            previewImageUrl:
+              "https://res.cloudinary.com/dxegzwukb/image/upload/v1769679233/Day7-1_dpjx3u.png"
+          },
+
+          // 説明メッセージ
+          {
+            type: "text",
+            text:
+              "登録ありがとうございます。\n\n" +
+              "この後、登録手順をご案内いたします。"
+          }
+        ]);
       }
     }
   }
+}
 
-  res.sendStatus(200);
-});
-
-app.get("/", (req, res) => {
-  res.send("VSH Server Running");
-});
-
+/* ===========================
+   サーバー起動
+=========================== */
 app.listen(PORT, () => {
-  console.log(`🚀 VSHサーバー起動 ポート${PORT}`);
+  console.log(`VSH server running on port ${PORT}`);
 });
