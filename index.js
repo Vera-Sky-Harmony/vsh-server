@@ -56,7 +56,7 @@ const TIMEOUT_MS = TIMEOUT_DAYS * 24 * 60 * 60 * 1000;
 
 const app = express();
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
-
+app.use("/pages", express.static("pages"));
 /**
  * ==========
  * データ（テスト用：メモリ）
