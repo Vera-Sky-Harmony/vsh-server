@@ -31,7 +31,6 @@ const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
 let flpUnused = [];
 let flpAssigned = new Map();
-let flpConsumed = new Map();
 const threePointsState = new Map();
 
 app.get("/", (_req, res) => res.send("VSH server running"));
@@ -106,131 +105,64 @@ async function handleWebhook(body) {
 }
 
 async function showYellow(userId) {
-  await client.pushMessage(userId, [
-    {
-      type: "text",
-      text:
-        "🌟1週間ありがとうございました！\n\n" +
-        "下の黄色ボタンを押してください。",
-    },
-    {
-      type: "flex",
-      altText: "登録希望",
-      contents: {
-        type: "bubble",
-        hero: {
-          type: "image",
-          url: DAY7_1_IMAGE_URL,
-          size: "full",
-          aspectMode: "cover",
-          aspectRatio: "20:13",
-        },
-        body: {
-          type: "box",
-          layout: "vertical",
-          contents: [
-            {
-              type: "button",
-              style: "primary",
-              action: {
-                type: "message",
-                label: "登録希望",
-                text: "登録確定",
-              },
-            },
-          ],
-        },
-      },
-    },
-  ]);
+  await client.pushMessage(userId, {
+    type: "text",
+    text: "🌟1週間ありがとうございました！\n下の黄色ボタンを押してください。",
+  });
 }
 
 async function executeRegistration(userId) {
-  if (flpUnused.length === 0) {
-    await client.pushMessage(userId, {
-      type: "text",
-      text: "現在準備中です。",
-    });
-    return;
-  }
-
-  const assigned = flpUnused.shift();
-  flpAssigned.set(userId, assigned);
-
-  await client.pushMessage(userId, [
-    {
-      type: "flex",
-      altText: "3点返信",
-      contents: {
-        type: "bubble",
-        hero: {
-          type: "image",
-          url: DAY7_2_IMAGE_URL,
-          size: "full",
-        },
-        body: {
-          type: "box",
-          layout: "vertical",
-          contents: [
-            {
-              type: "button",
-              style: "primary",
-              action: {
-                type: "message",
-                label: "3点をLINEで返信する",
-                text: "3点返信開始",
-              },
-            },
-          ],
-        },
-      },
-    },
-    {
-      type: "text",
-      text:
-        `① 紹介者氏名:${INTRODUCER_NAME}\n` +
-        `② 紹介者FLP:${INTRODUCER_FLP}\n` +
-        `③ あなたのFLP:${assigned}`,
-    },
-  ]);
+  await client.pushMessage(userId, {
+    type: "text",
+    text: "登録準備が完了しました。",
+  });
 }
 
 async function handleScreenshot(userId, messageId) {
   const state = threePointsState.get(userId);
   if (!state || state.step !== 3) return;
 
-  const stream = await client.getMessageContent(messageId);
-  const chunks = [];
-  for await (const chunk of stream) {
-    chunks.push(chunk);
-  }
-  const buffer = Buffer.concat(chunks);
+  try {
+    const stream = await client.getMessageContent(messageId);
+    const chunks = [];
+    for await (const chunk of stream) {
+      chunks.push(chunk);
+    }
+    const buffer = Buffer.concat(chunks);
 
-  const upload = await new Promise((resolve, reject) => {
-    const up = cloudinary.uploader.upload_stream(
-      { folder: "vsh_screenshots" },
-      (err, result) => (err ? reject(err) : resolve(result))
-    );
-    streamifier.createReadStream(buffer).pipe(up);
-  });
+    const upload = await new Promise((resolve, reject) => {
+      const up = cloudinary.uploader.upload_stream(
+        { folder: "vsh_screenshots" },
+        (err, result) => (err ? reject(err) : resolve(result))
+      );
+      streamifier.createReadStream(buffer).pipe(up);
+    });
 
-  const imageUrl = upload.secure_url;
+    const imageUrl = upload.secure_url;
 
-  await client.pushMessage(ADMIN_NOTIFY_USER_ID, [
-    {
+    // ① 画像を単体送信
+    await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
       type: "image",
       originalContentUrl: imageUrl,
       previewImageUrl: imageUrl,
-    },
-    {
+    });
+
+    // ② テキストを別送信
+    await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
       type: "text",
       text:
-        `【3点完了】\n氏名:${state.name}\n入力FLP:${state.flp}\n割当FLP:${flpAssigned.get(userId)}`,
-    },
-  ]);
+        `【3点完了】\n` +
+        `氏名:${state.name}\n` +
+        `入力FLP:${state.flp}`,
+    });
 
-  flpAssigned.delete(userId);
-  threePointsState.delete(userId);
+    threePointsState.delete(userId);
+
+  } catch (err) {
+    console.error("スクショ送信エラー:", err);
+  }
 }
 
-app.listen(Number(PORT || 10000));
+app.listen(Number(PORT || 10000), () => {
+  console.log("VSH Stable Version Running");
+});
