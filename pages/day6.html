@@ -7,7 +7,7 @@
   <style>
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      line-height: 1.8;
+      line-height: 1.9;
       margin: 0;
       padding: 16px;
       background: #ffffff;
@@ -36,13 +36,14 @@
     }
     .btn {
       display: block;
-      margin: 14px auto;
+      margin: 16px auto;
       padding: 16px 28px;
       max-width: 320px;
       text-decoration: none;
       font-size: 16px;
       font-weight: bold;
       border-radius: 8px;
+      text-align: center;
     }
     .btn-register {
       background: #f4c542;
@@ -51,6 +52,11 @@
     .btn-back {
       background: #06c755;
       color: #fff;
+    }
+    .note {
+      font-size: 14px;
+      color: #666;
+      margin-top: 12px;
     }
   </style>
 </head>
@@ -84,37 +90,26 @@ Vera Sky Harmony は、<br>
 システムではありません。
 </p>
 
-<p>
-<strong>“違和感に気づいた人”のための仕組みです。</strong>
-</p>
+<p><strong>“違和感に気づいた人”のための仕組みです。</strong></p>
 
 <p>
-そして、<br>
-その違和感に気づける人は、<br>
-多くありません。
-</p>
-
-<p>
-あなたはすでに<br>
-選択を終えています。
-</p>
-
-<p>
-あとは、<br>
-その流れを止めるか、進めるか。<br>
+あなたはすでに選択を終えています。<br>
+あとは、その流れを止めるか、進めるか。<br>
 それだけです。
 </p>
 
 <div class="cta-area">
 
-  <!-- 登録希望（Webhook直送） -->
+  <!-- 登録希望 -->
   <a class="btn btn-register"
-     <a class="btn btn-register"
-   href="https://line.me/R/oaMessage/@591tvejt/?text=登録希望">
-   次を読む
-</a>
-
+     href="https://line.me/R/oaMessage/@591tvejt/?text=登録希望">
+     登録希望（LINEで送信）
   </a>
+
+  <div class="note">
+    タップするとLINEトークが開きます。<br>
+    表示された「登録希望」をそのまま送信してください。
+  </div>
 
   <!-- Day0へ戻る -->
   <a class="btn btn-back"
