@@ -264,11 +264,28 @@ async function handleScreenshot(userId, messageId) {
   flpAssigned.delete(userId);
   flpConsumed.set(userId, assigned);
 
+  // 🔹 画像データ取得
+  const stream = await client.getMessageContent(messageId);
+
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk);
+  }
+  const buffer = Buffer.concat(chunks);
+
+  // 🔹 まずテキスト送信
   await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
     type: "text",
     text:
       `【3点完了】\n` +
-      `氏名:${s.name}\n入力FLP:${s.flp}\n割当FLP:${assigned}\nスクショ:${messageId}`,
+      `氏名:${s.name}\n入力FLP:${s.flp}\n割当FLP:${assigned}`,
+  });
+
+  // 🔹 画像をAへ転送
+  await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
+    type: "image",
+    originalContentUrl: `data:image/jpeg;base64,${buffer.toString("base64")}`,
+    previewImageUrl: `data:image/jpeg;base64,${buffer.toString("base64")}`,
   });
 
   await client.pushMessage(userId, {
@@ -276,6 +293,7 @@ async function handleScreenshot(userId, messageId) {
     text: "確認完了しました。",
   });
 }
+
 
 /* ================= TIMEOUT ================= */
 
