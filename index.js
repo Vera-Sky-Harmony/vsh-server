@@ -263,42 +263,59 @@ async function handleConversation(userId, text) {
 }
 
 async function handleScreenshot(userId, messageId) {
-  const s = threePointsState.get(userId);
-  if (!s || s.step !== 3) return;
+  const state = threePointsState.get(userId);
+  if (!state || state.step !== 3) return;
 
   threePointsState.delete(userId);
 
-  const assigned = flpAssigned.get(userId)?.flp;
-  flpAssigned.delete(userId);
-  flpConsumed.set(userId, assigned);
+  const assigned = flpAssigned.get(userId);
 
-  // 🔹 画像データ取得
+  // LINEから画像取得
   const stream = await client.getMessageContent(messageId);
-
   const chunks = [];
   for await (const chunk of stream) {
     chunks.push(chunk);
   }
   const buffer = Buffer.concat(chunks);
 
-  // 🔹 まずテキスト送信
-  await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
-    type: "text",
-    text:
-      `【3点完了】\n` +
-      `氏名:${s.name}\n入力FLP:${s.flp}\n割当FLP:${assigned}`,
+  // Cloudinaryへアップロード
+  const uploadResult = await new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder: "vsh_screenshots" },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+    uploadStream.end(buffer);
   });
 
-  // 🔹 画像をAへ転送
-  await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
-    type: "image",
-    originalContentUrl: `data:image/jpeg;base64,${buffer.toString("base64")}`,
-    previewImageUrl: `data:image/jpeg;base64,${buffer.toString("base64")}`,
-  });
+  const imageUrl = uploadResult.secure_url;
+
+  // 在庫処理
+  flpAssigned.delete(userId);
+  flpConsumed.set(userId, assigned);
+
+  // Aへ画像付き通知
+  await client.pushMessage(ADMIN_NOTIFY_USER_ID, [
+    {
+      type: "text",
+      text:
+        "【3点完了】\n" +
+        `氏名:${state.name}\n` +
+        `入力FLP:${state.flp}\n` +
+        `割当FLP:${assigned}`,
+    },
+    {
+      type: "image",
+      originalContentUrl: imageUrl,
+      previewImageUrl: imageUrl,
+    },
+  ]);
 
   await client.pushMessage(userId, {
     type: "text",
-    text: "確認完了しました。",
+    text: "確認完了しました。ありがとうございます。",
   });
 }
 
