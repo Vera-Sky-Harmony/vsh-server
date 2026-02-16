@@ -27,7 +27,11 @@ const app = express();
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 app.use("/pages", express.static("pages"));
 
-let flpUnused = [];
+let flpUnused = [
+  "361799161",
+  "361799162",
+  "361799163"
+];
 let flpAssigned = new Map();
 let flpConsumed = new Map();
 const threePointsState = new Map();
