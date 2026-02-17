@@ -33,6 +33,7 @@ cloudinary.config({
 
 const app = express();
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
+app.use(express.static("ページ"));
 
 /* =========================
    🔵 静的ページ配信設定
