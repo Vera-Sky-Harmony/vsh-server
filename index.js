@@ -3,6 +3,11 @@ import crypto from "crypto";
 import { Client } from "@line/bot-sdk";
 import { v2 as cloudinary } from "cloudinary";
 import streamifier from "streamifier";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const {
   CHANNEL_ACCESS_TOKEN,
@@ -28,6 +33,23 @@ cloudinary.config({
 
 const app = express();
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
+
+/* =========================
+   🔵 静的ページ配信設定
+========================= */
+
+// ルート直下を公開
+app.use(express.static(__dirname));
+
+// 「ページ」フォルダを公開
+app.use("/ページ", express.static(path.join(__dirname, "ページ")));
+
+// 確認用
+app.get("/test", (_req, res) => {
+  res.send("VSH Static OK");
+});
+
+/* ========================= */
 
 let flpUnused = [];
 let flpAssigned = new Map();
@@ -67,7 +89,7 @@ async function handleWebhook(body) {
         return;
       }
 
-      if (text === "3点返信開始") {
+      if (text === "登録完了をLINEで返信する") {
         threePointsState.set(userId, { step: 1 });
         await client.pushMessage(userId, {
           type: "text",
@@ -89,17 +111,24 @@ async function handleWebhook(body) {
 
       if (state?.step === 2) {
         state.flp = text;
-        state.step = 3;
+
+        await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
+          type: "text",
+          text:
+            `【登録完了通知】\n` +
+            `氏名:${state.name}\n` +
+            `FLP:${state.flp}`,
+        });
+
+        threePointsState.delete(userId);
+
         await client.pushMessage(userId, {
           type: "text",
-          text: "③ 購入画面スクリーンショットを送ってください",
+          text: "登録確認が完了しました。",
         });
+
         return;
       }
-    }
-
-    if (ev.type === "message" && ev.message.type === "image") {
-      await handleScreenshot(ev.source.userId, ev.message.id);
     }
   }
 }
@@ -118,51 +147,9 @@ async function executeRegistration(userId) {
   });
 }
 
-async function handleScreenshot(userId, messageId) {
-  const state = threePointsState.get(userId);
-  if (!state || state.step !== 3) return;
-
-  try {
-    const stream = await client.getMessageContent(messageId);
-    const chunks = [];
-    for await (const chunk of stream) {
-      chunks.push(chunk);
-    }
-    const buffer = Buffer.concat(chunks);
-
-    const upload = await new Promise((resolve, reject) => {
-      const up = cloudinary.uploader.upload_stream(
-        { folder: "vsh_screenshots" },
-        (err, result) => (err ? reject(err) : resolve(result))
-      );
-      streamifier.createReadStream(buffer).pipe(up);
-    });
-
-    const imageUrl = upload.secure_url;
-
-    // ① 画像を単体送信
-    await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
-      type: "image",
-      originalContentUrl: imageUrl,
-      previewImageUrl: imageUrl,
-    });
-
-    // ② テキストを別送信
-    await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
-      type: "text",
-      text:
-        `【3点完了】\n` +
-        `氏名:${state.name}\n` +
-        `入力FLP:${state.flp}`,
-    });
-
-    threePointsState.delete(userId);
-
-  } catch (err) {
-    console.error("スクショ送信エラー:", err);
-  }
-}
-
 app.listen(Number(PORT || 10000), () => {
+  console.log("=================================");
   console.log("VSH Stable Version Running");
+  console.log("PORT:", PORT);
+  console.log("=================================");
 });
