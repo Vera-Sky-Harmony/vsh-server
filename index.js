@@ -32,6 +32,14 @@ cloudinary.config({
 });
 
 const app = express();
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use("/pages", express.static(path.join(__dirname, "pages")));
+
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
 /* =========================
