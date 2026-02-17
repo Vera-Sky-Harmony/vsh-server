@@ -42,6 +42,8 @@ cloudinary.config({
 ========================= */
 
 const app = express();
+app.use(express.static(__dirname));
+
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
 /* =========================
