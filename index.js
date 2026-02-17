@@ -47,18 +47,20 @@ const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 /* =========================
    🔵 静的ページ公開
 ========================= */
+/* =========================
+   🔵 静的ページ完全修正版
+========================= */
 
-/*
-  /pages/day7-1.html でアクセス可能にする
-  プロジェクト直下に pages フォルダがある前提
-*/
+app.use(
+  "/pages",
+  express.static(path.join(__dirname, "../pages"))
+);
 
-app.use("/pages", express.static(path.join(__dirname, "pages")));
-
-// 確認用
-app.get("/test", (_req, res) => {
-  res.send("VSH Static OK");
+app.get("/pages/day7-1.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "../pages/day7-1.html"));
 });
+
+
 
 /* =========================
    🔵 LINE Webhook
