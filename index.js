@@ -6,24 +6,30 @@ import streamifier from "streamifier";
 import path from "path";
 import { fileURLToPath } from "url";
 
+/* =========================
+   🔵 __dirname 設定（ESM用）
+========================= */
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+/* =========================
+   🔵 環境変数
+========================= */
 
 const {
   CHANNEL_ACCESS_TOKEN,
   CHANNEL_SECRET,
-  INTRODUCER_NAME,
-  INTRODUCER_FLP,
   ADMIN_NOTIFY_USER_ID,
-  DAY7_1_IMAGE_URL,
-  DAY7_2_IMAGE_URL,
-  FLP_OFFICIAL_URL,
-  ENTRY_GUIDE_URL,
   CLOUDINARY_CLOUD_NAME,
   CLOUDINARY_API_KEY,
   CLOUDINARY_API_SECRET,
   PORT,
 } = process.env;
+
+/* =========================
+   🔵 Cloudinary設定
+========================= */
 
 cloudinary.config({
   cloud_name: CLOUDINARY_CLOUD_NAME,
@@ -31,26 +37,23 @@ cloudinary.config({
   api_secret: CLOUDINARY_API_SECRET,
 });
 
+/* =========================
+   🔵 Express 初期化
+========================= */
+
 const app = express();
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-app.use("/pages", express.static(path.join(__dirname, "pages")));
-
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
 /* =========================
-   🔵 静的ページ完全設定
+   🔵 静的ページ公開
 ========================= */
 
-// ルート直下公開（day7-1.htmlなど）
-app.use(express.static(__dirname));
+/*
+  /pages/day7-1.html でアクセス可能にする
+  プロジェクト直下に pages フォルダがある前提
+*/
 
-// 「ページ」フォルダ公開
-app.use("/ページ", express.static(path.join(__dirname, "ページ")));
+app.use("/pages", express.static(path.join(__dirname, "pages")));
 
 // 確認用
 app.get("/test", (_req, res) => {
@@ -63,15 +66,19 @@ app.get("/test", (_req, res) => {
 
 app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
   const signature = req.headers["x-line-signature"];
+
   const hash = crypto
     .createHmac("sha256", CHANNEL_SECRET)
     .update(req.body)
     .digest("base64");
 
-  if (signature !== hash) return res.status(401).end();
+  if (signature !== hash) {
+    return res.status(401).end();
+  }
 
   const body = JSON.parse(req.body.toString());
   await handleWebhook(body);
+
   res.status(200).end();
 });
 
@@ -86,6 +93,7 @@ async function handleWebhook(body) {
     if (!ev?.source?.userId) continue;
     const userId = ev.source.userId;
 
+    // テキスト処理
     if (ev.type === "message" && ev.message.type === "text") {
       const text = ev.message.text.trim();
 
@@ -121,6 +129,7 @@ async function handleWebhook(body) {
       }
     }
 
+    // 画像処理
     if (ev.type === "message" && ev.message.type === "image") {
       await handleScreenshot(ev.source.userId, ev.message.id);
     }
@@ -138,9 +147,11 @@ async function handleScreenshot(userId, messageId) {
   try {
     const stream = await client.getMessageContent(messageId);
     const chunks = [];
+
     for await (const chunk of stream) {
       chunks.push(chunk);
     }
+
     const buffer = Buffer.concat(chunks);
 
     const upload = await new Promise((resolve, reject) => {
@@ -153,12 +164,14 @@ async function handleScreenshot(userId, messageId) {
 
     const imageUrl = upload.secure_url;
 
+    // 管理者に画像送信
     await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
       type: "image",
       originalContentUrl: imageUrl,
       previewImageUrl: imageUrl,
     });
 
+    // 管理者にテキスト送信
     await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
       type: "text",
       text:
@@ -174,7 +187,9 @@ async function handleScreenshot(userId, messageId) {
   }
 }
 
-/* ========================= */
+/* =========================
+   🔵 サーバー起動
+========================= */
 
 app.listen(Number(PORT || 10000), () => {
   console.log("VSH Server Running");
