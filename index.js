@@ -1,149 +1,106 @@
 import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
 import { middleware, Client } from "@line/bot-sdk";
 
+/* ===== ESM用 __dirname生成 ===== */
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+/* ===== LINE設定 ===== */
 const config = {
   channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
   channelSecret: process.env.CHANNEL_SECRET,
 };
 
 const app = express();
+
+/* ===== 静的HTML配信（Day0〜Day7用）===== */
 app.use(express.static(__dirname));
 
+/* ===== LINEクライアント ===== */
 const client = new Client(config);
 
+/* ===== 3点フロー状態管理 ===== */
 const threePointsState = new Map();
 
+/* ===== Webhook ===== */
 app.post("/webhook", middleware(config), async (req, res) => {
-
   try {
-
-    for (const ev of req.body.events) {
-
-      if (ev.type !== "message") continue;
-      if (ev.message.type !== "text") continue;
-
-      const userId = ev.source.userId;
-      const text = ev.message.text.trim();
-
-      /* 登録希望 */
-      if (text === "登録希望") {
-
-        await client.replyMessage(ev.replyToken, [
-          {
-            type: "image",
-            originalContentUrl:
-              "https://res.cloudinary.com/dxegzwukb/image/upload/v1771291127/X41_s9psh6.png",
-            previewImageUrl:
-              "https://res.cloudinary.com/dxegzwukb/image/upload/v1771291127/X41_s9psh6.png",
-          },
-          {
-            type: "flex",
-            altText: "スタート",
-            contents: {
-              type: "bubble",
-              body: {
-                type: "box",
-                layout: "vertical",
-                contents: [
-                  {
-                    type: "text",
-                    text:
-                      "【VSH登録受付】\n\n" +
-                      "① 紹介者の氏名\n" +
-                      "② 紹介者のFLP番号\n" +
-                      "③ あなたのFLP番号",
-                    wrap: true,
-                  },
-                  {
-                    type: "button",
-                    style: "primary",
-                    action: {
-                      type: "message",
-                      label: "スタート",
-                      text: "VSH_START",
-                    },
-                  },
-                ],
-              },
-            },
-          },
-        ]);
-
-        continue;
-      }
-
-      if (text === "VSH_START") {
-
-        threePointsState.set(userId, { step: 1 });
-
-        await client.replyMessage(ev.replyToken, {
-          type: "text",
-          text: "① 氏名を入力してください",
-        });
-
-        continue;
-      }
-
-      const state = threePointsState.get(userId);
-
-      if (state?.step === 1) {
-
-        state.step = 2;
-
-        await client.replyMessage(ev.replyToken, {
-          type: "text",
-          text: "② あなたのFLP番号を入力してください",
-        });
-
-        continue;
-      }
-
-      if (state?.step === 2) {
-
-        threePointsState.delete(userId);
-
-        await client.replyMessage(ev.replyToken, {
-          type: "flex",
-          altText: "登録ありがとうございます",
-          contents: {
-            type: "bubble",
-            hero: {
-              type: "image",
-              url:
-                "https://res.cloudinary.com/dxegzwukb/image/upload/v1769679233/Day7-1_dpjx3u.png",
-              size: "full",
-              aspectRatio: "1:1",
-              aspectMode: "cover",
-            },
-            body: {
-              type: "box",
-              layout: "vertical",
-              contents: [
-                {
-                  type: "text",
-                  text:
-                    "登録を受け付けました。\n\n" +
-                    "FLP登録確認後、VSHを譲渡いたします。",
-                  wrap: true,
-                },
-              ],
-            },
-          },
-        });
-
-        continue;
-      }
-
-    }
-
+    await Promise.all(req.body.events.map(handleEvent));
     res.status(200).end();
-
   } catch (err) {
-    console.error(err);
+    console.error("Webhook Error:", err);
     res.status(500).end();
   }
 });
 
-app.listen(process.env.PORT || 10000, () => {
-  console.log("VSH reply版 起動");
+/* ===== イベント処理 ===== */
+async function handleEvent(event) {
+  if (event.type !== "message" || event.message.type !== "text") {
+    return null;
+  }
+
+  const userId = event.source.userId;
+  const text = event.message.text;
+
+  /* ===== VSH_START ===== */
+  if (text === "VSH_START") {
+    threePointsState.set(userId, { step: 1 });
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "① 氏名を入力してください",
+    });
+  }
+
+  /* ===== 3点フロー ===== */
+  const state = threePointsState.get(userId);
+
+  if (!state) return null;
+
+  // ① 氏名
+  if (state.step === 1) {
+    state.name = text;
+    state.step = 2;
+    threePointsState.set(userId, state);
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "② あなたのFLP番号を入力してください",
+    });
+  }
+
+  // ② FLP番号
+  if (state.step === 2) {
+    state.flp = text;
+    state.step = 3;
+    threePointsState.set(userId, state);
+
+    return client.replyMessage(event.replyToken, [
+      {
+        type: "image",
+        originalContentUrl:
+          "https://res.cloudinary.com/dxegzwukb/image/upload/v1769679233/Day7-1_dpjx3u.png",
+        previewImageUrl:
+          "https://res.cloudinary.com/dxegzwukb/image/upload/v1769679233/Day7-1_dpjx3u.png",
+      },
+      {
+        type: "text",
+        text:
+          "登録を受け付けました。\n" +
+          "FLPのシステムへの登録完了が確認できるまで\n" +
+          "数日お待ちください。\n" +
+          "確認でき次第VSHを譲渡いたします。",
+      },
+    ]);
+  }
+
+  return null;
+}
+
+/* ===== サーバー起動 ===== */
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("VSH 完全版 起動");
 });
