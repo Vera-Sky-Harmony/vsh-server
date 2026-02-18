@@ -42,27 +42,16 @@ cloudinary.config({
 ========================= */
 
 const app = express();
+
+// ルート直下のHTML公開（day7-1.html など）
 app.use(express.static(__dirname));
 
-const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
+// pagesフォルダがある場合も公開
+app.use("/pages", express.static(path.join(__dirname, "pages")));
 
-/* =========================
-   🔵 静的ページ公開
-========================= */
-/* =========================
-   🔵 静的ページ完全修正版
-========================= */
-
-app.use(
-  "/pages",
-  express.static(path.join(__dirname, "../pages"))
-);
-
-app.get("/pages/day7-1.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "../pages/day7-1.html"));
+const client = new Client({
+  channelAccessToken: CHANNEL_ACCESS_TOKEN,
 });
-
-
 
 /* =========================
    🔵 LINE Webhook
@@ -97,10 +86,27 @@ async function handleWebhook(body) {
     if (!ev?.source?.userId) continue;
     const userId = ev.source.userId;
 
-    // テキスト処理
+    /* =========================
+       🔵 テキスト処理
+    ========================= */
+
     if (ev.type === "message" && ev.message.type === "text") {
       const text = ev.message.text.trim();
 
+      /* ===== Day7-2（登録希望） ===== */
+      if (text === "登録希望") {
+        await client.pushMessage(userId, {
+          type: "text",
+          text:
+            "【VSH登録受付】\n\n" +
+            "あなたの決断を確認しました。\n\n" +
+            "次に進む準備ができましたら\n" +
+            "『3点返信開始』と送信してください。",
+        });
+        continue;
+      }
+
+      /* ===== 3点返信開始 ===== */
       if (text === "3点返信開始") {
         threePointsState.set(userId, { step: 1 });
         await client.pushMessage(userId, {
@@ -127,13 +133,18 @@ async function handleWebhook(body) {
         state.step = 3;
         await client.pushMessage(userId, {
           type: "text",
-          text: "③ 購入画面スクリーンショットを送ってください",
+          text:
+            "③ 購入画面スクリーンショットを送ってください\n\n" +
+            "送信後、登録確認を行います。",
         });
         continue;
       }
     }
 
-    // 画像処理
+    /* =========================
+       🔵 画像処理
+    ========================= */
+
     if (ev.type === "message" && ev.message.type === "image") {
       await handleScreenshot(ev.source.userId, ev.message.id);
     }
@@ -168,33 +179,30 @@ async function handleScreenshot(userId, messageId) {
 
     const imageUrl = upload.secure_url;
 
-    // 管理者に画像送信
+    /* ===== 管理者通知 ===== */
+
     await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
       type: "image",
       originalContentUrl: imageUrl,
       previewImageUrl: imageUrl,
     });
 
-    // 管理者にテキスト送信
     await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
       type: "text",
       text:
-        `【3点完了】\n` +
-        `氏名:${state.name}\n` +
-        `入力FLP:${state.flp}`,
+        "【3点完了】\n" +
+        `氏名: ${state.name}\n` +
+        `入力FLP: ${state.flp}`,
     });
 
-    threePointsState.delete(userId);
+    /* ===== ユーザー返信 ===== */
 
-  } catch (err) {
-    console.error("スクショ送信エラー:", err);
-  }
-}
+    await client.pushMessage(userId, {
+      type: "text",
+      text:
+        "登録情報を受け付けました。\n\n" +
+        "確認後、VSH譲渡手続きを進めます。\n" +
+        "しばらくお待ちください。",
+    });
 
-/* =========================
-   🔵 サーバー起動
-========================= */
-
-app.listen(Number(PORT || 10000), () => {
-  console.log("VSH Server Running");
-});
+    thr
