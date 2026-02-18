@@ -7,8 +7,7 @@ const config = {
 };
 
 const app = express();
-app.use(express.static("public"));
-app.use("/pages", express.static("public/pages"));
+app.use(express.static(__dirname));
 
 const client = new Client(config);
 
