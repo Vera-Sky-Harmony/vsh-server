@@ -1,37 +1,23 @@
 import express from "express";
-import crypto from "crypto";
-import { Client } from "@line/bot-sdk";
+import { middleware, Client } from "@line/bot-sdk";
 
-const { CHANNEL_ACCESS_TOKEN, CHANNEL_SECRET, PORT } = process.env;
+const config = {
+  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
+  channelSecret: process.env.CHANNEL_SECRET,
+};
 
 const app = express();
+const client = new Client(config);
 
-// 重要：raw ではなく json 使用
-app.use(express.json());
-
-const client = new Client({
-  channelAccessToken: CHANNEL_ACCESS_TOKEN,
-});
-
+// 3点入力状態管理
 const threePointsState = new Map();
 
-app.post("/webhook", async (req, res) => {
+app.post("/webhook", middleware(config), async (req, res) => {
   try {
-    const signature = req.headers["x-line-signature"];
 
-    const hash = crypto
-      .createHmac("sha256", CHANNEL_SECRET)
-      .update(JSON.stringify(req.body))
-      .digest("base64");
+    for (const ev of req.body.events) {
 
-    if (signature !== hash) {
-      console.log("署名エラー");
-      return res.status(401).end();
-    }
-
-    const body = req.body;
-
-    for (const ev of body.events || []) {
+      console.log("受信イベント:", ev.type, ev.message?.text);
 
       if (ev.type !== "message") continue;
       if (ev.message.type !== "text") continue;
@@ -39,10 +25,12 @@ app.post("/webhook", async (req, res) => {
       const userId = ev.source.userId;
       const text = ev.message.text.trim();
 
-      /* ======================
+      /* ===============================
          登録希望
-      ====================== */
+      =============================== */
       if (text === "登録希望") {
+
+        console.log("登録希望受信");
 
         await client.pushMessage(userId, {
           type: "image",
@@ -89,10 +77,12 @@ app.post("/webhook", async (req, res) => {
         continue;
       }
 
-      /* ======================
+      /* ===============================
          スタート押下
-      ====================== */
+      =============================== */
       if (text === "VSH_START") {
+
+        console.log("スタート押下");
 
         threePointsState.set(userId, { step: 1 });
 
@@ -106,7 +96,13 @@ app.post("/webhook", async (req, res) => {
 
       const state = threePointsState.get(userId);
 
+      /* ===============================
+         ① 氏名入力
+      =============================== */
       if (state?.step === 1) {
+
+        console.log("氏名受信:", text);
+
         state.name = text;
         state.step = 2;
 
@@ -118,9 +114,12 @@ app.post("/webhook", async (req, res) => {
         continue;
       }
 
+      /* ===============================
+         ② FLP番号入力
+      =============================== */
       if (state?.step === 2) {
 
-        state.flp = text;
+        console.log("FLP番号受信:", text);
 
         await client.pushMessage(userId, {
           type: "flex",
@@ -156,16 +155,21 @@ app.post("/webhook", async (req, res) => {
         threePointsState.delete(userId);
         continue;
       }
+
     }
 
     res.status(200).end();
 
   } catch (err) {
-    console.error(err);
+    console.error("エラー発生:", err);
     res.status(500).end();
   }
 });
 
-app.listen(Number(PORT || 10000), () => {
-  console.log("VSH 安定版起動");
+app.get("/", (req, res) => {
+  res.send("VSHサーバー稼働中");
+});
+
+app.listen(process.env.PORT || 10000, () => {
+  console.log("VSH middleware最終版 起動");
 });
