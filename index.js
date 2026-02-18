@@ -7,6 +7,9 @@ const config = {
 };
 
 const app = express();
+app.use(express.static("public"));
+app.use("/pages", express.static("public/pages"));
+
 const client = new Client(config);
 
 const threePointsState = new Map();
