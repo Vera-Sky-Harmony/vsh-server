@@ -31,10 +31,17 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
 
     for (const ev of body.events || []) {
       if (ev.type === "message" && ev.message.type === "text") {
-        if (ev.message.text === "登録希望") {
-          await client.pushMessage(ev.source.userId, {
+        const text = ev.message.text.trim();
+        const userId = ev.source.userId;
+
+        if (text === "登録希望") {
+          await client.pushMessage(userId, {
             type: "text",
-            text: "サーバー正常起動確認OK",
+            text:
+              "【VSH登録受付】\n\n" +
+              "あなたの決断を確認しました。\n\n" +
+              "準備ができましたら\n" +
+              "『3点返信開始』と送信してください。",
           });
         }
       }
