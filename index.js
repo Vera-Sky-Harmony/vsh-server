@@ -2,51 +2,48 @@ import express from "express";
 import crypto from "crypto";
 import { Client } from "@line/bot-sdk";
 
-const {
-  CHANNEL_ACCESS_TOKEN,
-  CHANNEL_SECRET,
-  PORT,
-} = process.env;
+const { CHANNEL_ACCESS_TOKEN, CHANNEL_SECRET, PORT } = process.env;
 
 const app = express();
+
+// 重要：raw ではなく json 使用
+app.use(express.json());
 
 const client = new Client({
   channelAccessToken: CHANNEL_ACCESS_TOKEN,
 });
 
-// 3点入力状態管理
 const threePointsState = new Map();
 
-app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
+app.post("/webhook", async (req, res) => {
   try {
     const signature = req.headers["x-line-signature"];
 
     const hash = crypto
       .createHmac("sha256", CHANNEL_SECRET)
-      .update(req.body)
+      .update(JSON.stringify(req.body))
       .digest("base64");
 
     if (signature !== hash) {
+      console.log("署名エラー");
       return res.status(401).end();
     }
 
-    const body = JSON.parse(req.body.toString());
+    const body = req.body;
 
     for (const ev of body.events || []) {
 
       if (ev.type !== "message") continue;
-      if (!ev.source?.userId) continue;
       if (ev.message.type !== "text") continue;
 
       const userId = ev.source.userId;
       const text = ev.message.text.trim();
 
-      /* ===============================
-         Day7-2 入口
-      =============================== */
+      /* ======================
+         登録希望
+      ====================== */
       if (text === "登録希望") {
 
-        // 画像
         await client.pushMessage(userId, {
           type: "image",
           originalContentUrl:
@@ -55,7 +52,6 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
             "https://res.cloudinary.com/dxegzwukb/image/upload/v1771291127/X41_s9psh6.png",
         });
 
-        // Flex スタート
         await client.pushMessage(userId, {
           type: "flex",
           altText: "スタート",
@@ -93,9 +89,9 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
         continue;
       }
 
-      /* ===============================
+      /* ======================
          スタート押下
-      =============================== */
+      ====================== */
       if (text === "VSH_START") {
 
         threePointsState.set(userId, { step: 1 });
@@ -110,11 +106,7 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
 
       const state = threePointsState.get(userId);
 
-      /* ===============================
-         ① 氏名入力
-      =============================== */
       if (state?.step === 1) {
-
         state.name = text;
         state.step = 2;
 
@@ -126,9 +118,6 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
         continue;
       }
 
-      /* ===============================
-         ② FLP番号入力 → 完了表示
-      =============================== */
       if (state?.step === 2) {
 
         state.flp = text;
@@ -149,7 +138,6 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
             body: {
               type: "box",
               layout: "vertical",
-              spacing: "md",
               contents: [
                 {
                   type: "text",
@@ -168,7 +156,6 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
         threePointsState.delete(userId);
         continue;
       }
-
     }
 
     res.status(200).end();
@@ -180,5 +167,5 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
 });
 
 app.listen(Number(PORT || 10000), () => {
-  console.log("VSH Server Running");
+  console.log("VSH 安定版起動");
 });
