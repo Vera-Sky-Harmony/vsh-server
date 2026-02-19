@@ -1,12 +1,10 @@
 import express from "express";
 import crypto from "crypto";
 import { Client } from "@line/bot-sdk";
+import { v2 as cloudinary } from "cloudinary";
+import streamifier from "streamifier";
 import path from "path";
 import { fileURLToPath } from "url";
-
-/* =========================
-   基本設定
-========================= */
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,156 +12,145 @@ const __dirname = path.dirname(__filename);
 const {
   CHANNEL_ACCESS_TOKEN,
   CHANNEL_SECRET,
+  INTRODUCER_NAME,
+  INTRODUCER_FLP,
   ADMIN_NOTIFY_USER_ID,
+  DAY7_1_IMAGE_URL,
+  DAY7_2_IMAGE_URL,
+  FLP_OFFICIAL_URL,
+  ENTRY_GUIDE_URL,
+  CLOUDINARY_CLOUD_NAME,
+  CLOUDINARY_API_KEY,
+  CLOUDINARY_API_SECRET,
   PORT,
 } = process.env;
 
+cloudinary.config({
+  cloud_name: CLOUDINARY_CLOUD_NAME,
+  api_key: CLOUDINARY_API_KEY,
+  api_secret: CLOUDINARY_API_SECRET,
+});
+
 const app = express();
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
+app.use(express.static("ページ"));
 
 /* =========================
-   🔵 Day0～Day7-1 静的配信
+   🔵 静的ページ配信設定
 ========================= */
 
-/* フォルダ名は必ず「ページ」 */
+// ルート直下を公開
+app.use(express.static(__dirname));
+
+// 「ページ」フォルダを公開
 app.use("/ページ", express.static(path.join(__dirname, "ページ")));
 
-/* 動作確認 */
+// 確認用
 app.get("/test", (_req, res) => {
   res.send("VSH Static OK");
 });
 
-/* =========================
-   ルート確認
-========================= */
+/* ========================= */
 
-app.get("/", (_req, res) => {
-  res.send("VSH Server Running");
-});
+let flpUnused = [];
+let flpAssigned = new Map();
+const threePointsState = new Map();
 
-/* =========================
-   LINE Webhook（Day7-2 / Day7-3）
-========================= */
+app.get("/", (_req, res) => res.send("VSH server running"));
 
 app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
-  try {
-    const signature = req.headers["x-line-signature"];
-    const hash = crypto
-      .createHmac("sha256", CHANNEL_SECRET)
-      .update(req.body)
-      .digest("base64");
+  const signature = req.headers["x-line-signature"];
+  const hash = crypto
+    .createHmac("sha256", CHANNEL_SECRET)
+    .update(req.body)
+    .digest("base64");
 
-    if (signature !== hash) {
-      return res.status(401).end();
-    }
+  if (signature !== hash) return res.status(401).end();
 
-    const body = JSON.parse(req.body.toString());
-    await handleWebhook(body);
-
-    res.status(200).end();
-  } catch (err) {
-    console.error("Webhook Error:", err);
-    res.status(500).end();
-  }
+  const body = JSON.parse(req.body.toString());
+  await handleWebhook(body);
+  res.status(200).end();
 });
-
-/* =========================
-   Day7-2 / Day7-3 処理
-========================= */
-
-const threePointsState = new Map();
 
 async function handleWebhook(body) {
   for (const ev of body.events || []) {
     if (!ev?.source?.userId) continue;
-
     const userId = ev.source.userId;
 
     if (ev.type === "message" && ev.message.type === "text") {
       const text = ev.message.text.trim();
 
-      /* Day7-2 */
       if (text === "登録希望") {
+        await showYellow(userId);
+        return;
+      }
+
+      if (text === "登録確定") {
+        await executeRegistration(userId);
+        return;
+      }
+
+      if (text === "登録完了をLINEで返信する") {
+        threePointsState.set(userId, { step: 1 });
         await client.pushMessage(userId, {
           type: "text",
-          text:
-            "【登録受付を開始します】\n\n" +
-            "① 氏名 を入力してください",
+          text: "① 氏名を入力してください",
         });
-
-        threePointsState.set(userId, { step: 1 });
         return;
       }
 
       const state = threePointsState.get(userId);
-
-      /* ① 氏名 */
       if (state?.step === 1) {
         state.name = text;
         state.step = 2;
-
         await client.pushMessage(userId, {
           type: "text",
-          text: "② FLP番号 を入力してください",
+          text: "② あなたのFLP番号を入力してください",
         });
-
         return;
       }
 
-      /* ② FLP番号 */
       if (state?.step === 2) {
         state.flp = text;
-        state.step = 3;
+
+        await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
+          type: "text",
+          text:
+            `【登録完了通知】\n` +
+            `氏名:${state.name}\n` +
+            `FLP:${state.flp}`,
+        });
+
+        threePointsState.delete(userId);
 
         await client.pushMessage(userId, {
           type: "text",
-          text:
-            "③ 購入画面のスクリーンショットを送ってください",
+          text: "登録確認が完了しました。",
         });
 
         return;
-      }
-    }
-
-    /* ③ スクリーンショット受信 */
-    if (ev.type === "message" && ev.message.type === "image") {
-      const userId = ev.source.userId;
-      const state = threePointsState.get(userId);
-
-      if (state?.step === 3) {
-        await client.pushMessage(userId, {
-          type: "text",
-          text:
-            "登録情報を受け取りました。\n" +
-            "確認後、VSHを譲渡いたします。",
-        });
-
-        /* 管理者通知 */
-        if (ADMIN_NOTIFY_USER_ID) {
-          await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
-            type: "text",
-            text:
-              "【新規登録通知】\n" +
-              `氏名: ${state.name}\n` +
-              `FLP: ${state.flp}`,
-          });
-        }
-
-        threePointsState.delete(userId);
       }
     }
   }
 }
 
-/* =========================
-   サーバー起動
-========================= */
+async function showYellow(userId) {
+  await client.pushMessage(userId, {
+    type: "text",
+    text: "🌟1週間ありがとうございました！\n下の黄色ボタンを押してください。",
+  });
+}
 
-const port = Number(PORT) || 10000;
+async function executeRegistration(userId) {
+  await client.pushMessage(userId, {
+    type: "text",
+    text: "登録準備が完了しました。",
+  });
+}
 
-app.listen(port, () => {
+app.listen(Number(PORT || 10000), () => {
   console.log("=================================");
-  console.log("VSH Day0～Day7-3 稼働中");
-  console.log("PORT:", port);
+  console.log("VSH Stable Version Running");
+  console.log("PORT:", PORT);
   console.log("=================================");
 });
