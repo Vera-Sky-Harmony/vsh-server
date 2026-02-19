@@ -21,17 +21,14 @@ const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
    🔵 静的ページ（最優先・完全独立）
 ========================================= */
 
-app.use("/pages", express.static(path.join(__dirname, "ページ")));
-app.use("/ページ", express.static(path.join(__dirname, "ページ")));
-app.use(express.static(path.join(__dirname, "ページ")));
+/* ===== STATIC 確実復旧版 ===== */
 
-app.get("/test", (_req, res) => {
+app.use("/pages", express.static(path.join(__dirname, "ページ")));
+
+app.get("/test", (req, res) => {
   res.send("STATIC_OK");
 });
 
-app.get("/", (_req, res) => {
-  res.send("SERVER_OK");
-});
 
 /* =========================================
    3点ステート管理
