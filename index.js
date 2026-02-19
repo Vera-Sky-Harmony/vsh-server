@@ -10,27 +10,23 @@ const __dirname = path.dirname(__filename);
 const {
   CHANNEL_ACCESS_TOKEN,
   CHANNEL_SECRET,
-  PORT
+  PORT,
+  ADMIN_NOTIFY_USER_ID
 } = process.env;
 
 const app = express();
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
 /* ===============================
-   🔵 static（page固定）
+   🔵 Web（Day0～Day7-1のみ）
 =============================== */
-app.use("/pages", express.static(path.join(__dirname, "page")));
+app.use("/pages", express.static(path.join(__dirname, "pages")));
 
-app.get("/test", (req, res) => {
-  res.send("STATIC_OK");
-});
-
-app.get("/", (req, res) => {
-  res.send("SERVER_OK");
-});
+app.get("/test", (_req, res) => res.send("STATIC_OK"));
+app.get("/", (_req, res) => res.send("SERVER_OK"));
 
 /* ===============================
-   🔵 状態管理
+   🔵 3点フロー状態管理
 =============================== */
 const threePointsState = new Map();
 
@@ -40,7 +36,6 @@ const threePointsState = new Map();
 app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
   try {
     const signature = req.headers["x-line-signature"];
-
     const hash = crypto
       .createHmac("sha256", CHANNEL_SECRET)
       .update(req.body)
@@ -58,13 +53,13 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
 
     res.status(200).end();
   } catch (err) {
-    console.error(err);
+    console.error("Webhook error:", err);
     res.status(200).end();
   }
 });
 
 /* ===============================
-   🔵 LINEイベント処理
+   🔵 LINE処理（Day7-2/7-3のみ）
 =============================== */
 async function handleEvent(event) {
 
@@ -74,20 +69,23 @@ async function handleEvent(event) {
   const userId = event.source.userId;
   const text = event.message.text.trim();
 
-  /* Day7-1 → 登録希望 */
+  /* ===== Day7-2 ===== */
   if (text === "登録希望") {
-    await client.replyMessage(event.replyToken, {
+    await safeReply(event.replyToken, {
       type: "text",
-      text: "【Day7-2】\nFLP登録を完了してください。\n登録後『3点をLINEで返信する』と入力してください。"
+      text:
+        "【Day7-2】\n" +
+        "FLP登録を完了してください。\n\n" +
+        "登録完了後、\n" +
+        "『3点をLINEで返信する』と入力してください。"
     });
     return;
   }
 
-  /* 3点開始 */
+  /* ===== 3点開始 ===== */
   if (text === "3点をLINEで返信する") {
     threePointsState.set(userId, { step: 1 });
-
-    await client.replyMessage(event.replyToken, {
+    await safeReply(event.replyToken, {
       type: "text",
       text: "① 氏名を入力してください"
     });
@@ -100,9 +98,9 @@ async function handleEvent(event) {
     state.name = text;
     state.step = 2;
 
-    await client.replyMessage(event.replyToken, {
+    await safeReply(event.replyToken, {
       type: "text",
-      text: "② FLP番号を入力してください"
+      text: "② あなたのFLP番号を入力してください"
     });
     return;
   }
@@ -111,11 +109,46 @@ async function handleEvent(event) {
     state.flp = text;
     threePointsState.delete(userId);
 
-    await client.replyMessage(event.replyToken, {
+    await safeReply(event.replyToken, {
       type: "text",
-      text: "登録を受け付けました。\n確認後VSHを譲渡します。"
+      text:
+        "【Day7-3】\n" +
+        "登録を受け付けました。\n\n" +
+        "FLPシステムへの登録確認後、\n" +
+        "VSHを譲渡いたします。"
     });
+
+    if (ADMIN_NOTIFY_USER_ID) {
+      await safePush(ADMIN_NOTIFY_USER_ID, {
+        type: "text",
+        text:
+          "【登録完了通知】\n" +
+          `氏名: ${state.name}\n` +
+          `FLP: ${state.flp}\n` +
+          `userId: ${userId}`
+      });
+    }
+
     return;
+  }
+}
+
+/* ===============================
+   🔵 安全送信
+=============================== */
+async function safeReply(token, message) {
+  try {
+    await client.replyMessage(token, message);
+  } catch (e) {
+    console.error("Reply error:", e?.originalError?.response?.data || e);
+  }
+}
+
+async function safePush(to, message) {
+  try {
+    await client.pushMessage(to, message);
+  } catch (e) {
+    console.error("Push error:", e?.originalError?.response?.data || e);
   }
 }
 
@@ -123,5 +156,5 @@ async function handleEvent(event) {
    🔵 起動
 =============================== */
 app.listen(Number(PORT || 10000), () => {
-  console.log("VSH STABLE RUNNING");
+  console.log("VSH LINE MODE RUNNING");
 });
