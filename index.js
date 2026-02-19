@@ -18,28 +18,38 @@ const {
 const app = express();
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
-/* =========================
-   🔵 静的ページ配信
-========================= */
+/* =====================================
+   🔵 静的ページ完全復旧設定
+===================================== */
 
+// ルート直下
+app.use(express.static(__dirname));
+
+// /ページ/
 app.use("/ページ", express.static(path.join(__dirname, "ページ")));
-app.use(express.static(path.join(__dirname, "ページ")));
 
+// /pages/
+app.use("/pages", express.static(path.join(__dirname, "ページ")));
+
+// 動作確認用
 app.get("/test", (_req, res) => {
   res.send("VSH Static OK");
 });
 
-app.get("/", (_req, res) => res.send("VSH server running"));
+// ルート確認
+app.get("/", (_req, res) => {
+  res.send("VSH server running");
+});
 
-/* =========================
+/* =====================================
    3点ステート管理
-========================= */
+===================================== */
 
 const threePointsState = new Map();
 
-/* =========================
+/* =====================================
    Webhook
-========================= */
+===================================== */
 
 app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
   try {
@@ -49,21 +59,23 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
       .update(req.body)
       .digest("base64");
 
-    if (signature !== hash) return res.status(401).end();
+    if (signature !== hash) {
+      return res.status(401).end();
+    }
 
     const body = JSON.parse(req.body.toString());
     await handleWebhook(body);
 
     res.status(200).end();
   } catch (e) {
-    console.error(e);
+    console.error("Webhook error:", e);
     res.status(200).end();
   }
 });
 
-/* =========================
-   本体
-========================= */
+/* =====================================
+   Webhook本体
+===================================== */
 
 async function handleWebhook(body) {
   for (const ev of body.events || []) {
@@ -76,14 +88,16 @@ async function handleWebhook(body) {
 
       console.log("受信:", text);
 
-      // 🔥 登録希望トリガー（両対応）
-      if (text === "登録希望" || text === "text=登録希望") {
+      // 🔥 登録希望トリガー（強化版）
+      if (text.includes("登録希望")) {
         await sendDay7_2(userId);
         return;
       }
 
+      // 3点開始
       if (text === "3点返信開始") {
         threePointsState.set(userId, { step: 1 });
+
         await client.replyMessage(ev.replyToken, {
           type: "text",
           text: "① 氏名を入力してください",
@@ -113,10 +127,12 @@ async function handleWebhook(body) {
           text: "登録確認が完了しました。",
         });
 
-        await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
-          type: "text",
-          text: `【登録通知】\n氏名:${state.name}\nFLP:${state.flp}`,
-        });
+        if (ADMIN_NOTIFY_USER_ID) {
+          await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
+            type: "text",
+            text: `【登録通知】\n氏名:${state.name}\nFLP:${state.flp}`,
+          });
+        }
 
         return;
       }
@@ -124,9 +140,9 @@ async function handleWebhook(body) {
   }
 }
 
-/* =========================
+/* =====================================
    Day7-2送信
-========================= */
+===================================== */
 
 async function sendDay7_2(userId) {
   await client.pushMessage(userId, [
@@ -145,6 +161,7 @@ async function sendDay7_2(userId) {
         body: {
           type: "box",
           layout: "vertical",
+          spacing: "md",
           contents: [
             {
               type: "text",
@@ -167,6 +184,13 @@ async function sendDay7_2(userId) {
   ]);
 }
 
+/* =====================================
+   起動
+===================================== */
+
 app.listen(Number(PORT || 10000), () => {
-  console.log("VSH Day7 Stable Running");
+  console.log("=================================");
+  console.log("VSH Complete Stable Running");
+  console.log("PORT:", PORT);
+  console.log("=================================");
 });
