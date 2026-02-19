@@ -10,39 +10,37 @@ const __dirname = path.dirname(__filename);
 const {
   CHANNEL_ACCESS_TOKEN,
   CHANNEL_SECRET,
-  DAY7_2_IMAGE_URL,
-  PORT,
+  PORT
 } = process.env;
 
 const app = express();
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
-/* =========================================
-   🔵 静的ページ（最優先・完全独立）
-========================================= */
-
-/* ===== STATIC 確実復旧版 ===== */
-
-app.use("/pages", express.static(path.join(__dirname, "ページ")));
+/* ===============================
+   🔵 static（page固定）
+=============================== */
+app.use("/pages", express.static(path.join(__dirname, "page")));
 
 app.get("/test", (req, res) => {
   res.send("STATIC_OK");
 });
 
+app.get("/", (req, res) => {
+  res.send("SERVER_OK");
+});
 
-/* =========================================
-   3点ステート管理
-========================================= */
-
+/* ===============================
+   🔵 状態管理
+=============================== */
 const threePointsState = new Map();
 
-/* =========================================
-   Webhook（完全防御版）
-========================================= */
-
+/* ===============================
+   🔵 Webhook
+=============================== */
 app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
   try {
     const signature = req.headers["x-line-signature"];
+
     const hash = crypto
       .createHmac("sha256", CHANNEL_SECRET)
       .update(req.body)
@@ -54,52 +52,47 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
 
     const body = JSON.parse(req.body.toString());
 
-    for (const ev of body.events || []) {
-      await handleEvent(ev);
+    for (const event of body.events || []) {
+      await handleEvent(event);
     }
 
     res.status(200).end();
-  } catch (e) {
-    console.error("Webhook Error:", e);
-    // 絶対に落とさない
+  } catch (err) {
+    console.error(err);
     res.status(200).end();
   }
 });
 
-/* =========================================
-   イベント処理
-========================================= */
+/* ===============================
+   🔵 LINEイベント処理
+=============================== */
+async function handleEvent(event) {
 
-async function handleEvent(ev) {
-  if (!ev?.source?.userId) return;
-  if (ev.type !== "message") return;
-  if (ev.message.type !== "text") return;
+  if (event.type !== "message") return;
+  if (event.message.type !== "text") return;
 
-  const userId = ev.source.userId;
-  const text = ev.message.text.trim();
+  const userId = event.source.userId;
+  const text = event.message.text.trim();
 
-  console.log("受信:", text);
-
-  /* ===== 登録希望 ===== */
-
-  if (text.includes("登録希望")) {
-    await safeReply(ev.replyToken, buildDay7_2());
-    return;
-  }
-
-  /* ===== 3点開始 ===== */
-
-  if (text === "3点返信開始") {
-    threePointsState.set(userId, { step: 1 });
-
-    await safeReply(ev.replyToken, {
+  /* Day7-1 → 登録希望 */
+  if (text === "登録希望") {
+    await client.replyMessage(event.replyToken, {
       type: "text",
-      text: "① 氏名を入力してください",
+      text: "【Day7-2】\nFLP登録を完了してください。\n登録後『3点をLINEで返信する』と入力してください。"
     });
     return;
   }
 
-  /* ===== 3点フロー ===== */
+  /* 3点開始 */
+  if (text === "3点をLINEで返信する") {
+    threePointsState.set(userId, { step: 1 });
+
+    await client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "① 氏名を入力してください"
+    });
+    return;
+  }
 
   const state = threePointsState.get(userId);
 
@@ -107,9 +100,9 @@ async function handleEvent(ev) {
     state.name = text;
     state.step = 2;
 
-    await safeReply(ev.replyToken, {
+    await client.replyMessage(event.replyToken, {
       type: "text",
-      text: "② あなたのFLP番号を入力してください",
+      text: "② FLP番号を入力してください"
     });
     return;
   }
@@ -118,77 +111,17 @@ async function handleEvent(ev) {
     state.flp = text;
     threePointsState.delete(userId);
 
-    await safeReply(ev.replyToken, {
+    await client.replyMessage(event.replyToken, {
       type: "text",
-      text: "登録確認が完了しました。",
+      text: "登録を受け付けました。\n確認後VSHを譲渡します。"
     });
     return;
   }
 }
 
-/* =========================================
-   Day7-2 Flex
-========================================= */
-
-function buildDay7_2() {
-  return {
-    type: "flex",
-    altText: "3点返信開始",
-    contents: {
-      type: "bubble",
-      hero: {
-        type: "image",
-        url:
-          DAY7_2_IMAGE_URL ||
-          "https://via.placeholder.com/600x400.png?text=Day7-2",
-        size: "full",
-        aspectRatio: "20:13",
-        aspectMode: "cover",
-      },
-      body: {
-        type: "box",
-        layout: "vertical",
-        spacing: "md",
-        contents: [
-          {
-            type: "text",
-            text: "登録が終わったら、ここから3点返信を開始します",
-            wrap: true,
-          },
-          {
-            type: "button",
-            style: "primary",
-            action: {
-              type: "message",
-              label: "3点をLINEで返信する",
-              text: "3点返信開始",
-            },
-          },
-        ],
-      },
-    },
-  };
-}
-
-/* =========================================
-   安全reply（429でも落ちない）
-========================================= */
-
-async function safeReply(token, message) {
-  try {
-    await client.replyMessage(token, message);
-  } catch (e) {
-    console.error("Reply Error:", e?.originalError?.response?.data || e);
-  }
-}
-
-/* =========================================
-   起動
-========================================= */
-
+/* ===============================
+   🔵 起動
+=============================== */
 app.listen(Number(PORT || 10000), () => {
-  console.log("=================================");
-  console.log("VSH FULL STABLE RUNNING");
-  console.log("PORT:", PORT || 10000);
-  console.log("=================================");
+  console.log("VSH STABLE RUNNING");
 });
