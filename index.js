@@ -1,106 +1,172 @@
 import express from "express";
+import crypto from "crypto";
+import { Client } from "@line/bot-sdk";
 import path from "path";
 import { fileURLToPath } from "url";
-import { middleware, Client } from "@line/bot-sdk";
 
-/* ===== ESM用 __dirname生成 ===== */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/* ===== LINE設定 ===== */
-const config = {
-  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
-  channelSecret: process.env.CHANNEL_SECRET,
-};
+const {
+  CHANNEL_ACCESS_TOKEN,
+  CHANNEL_SECRET,
+  ADMIN_NOTIFY_USER_ID,
+  DAY7_2_IMAGE_URL,
+  PORT,
+} = process.env;
 
 const app = express();
+const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
-/* ===== 静的HTML配信（Day0〜Day7用）===== */
-app.use(express.static(__dirname));
+/* =========================
+   🔵 静的ページ配信
+========================= */
 
-/* ===== LINEクライアント ===== */
-const client = new Client(config);
+app.use("/ページ", express.static(path.join(__dirname, "ページ")));
+app.use(express.static(path.join(__dirname, "ページ")));
 
-/* ===== 3点フロー状態管理 ===== */
+app.get("/test", (_req, res) => {
+  res.send("VSH Static OK");
+});
+
+app.get("/", (_req, res) => res.send("VSH server running"));
+
+/* =========================
+   3点ステート管理
+========================= */
+
 const threePointsState = new Map();
 
-/* ===== Webhook ===== */
-app.post("/webhook", middleware(config), async (req, res) => {
+/* =========================
+   Webhook
+========================= */
+
+app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
   try {
-    await Promise.all(req.body.events.map(handleEvent));
+    const signature = req.headers["x-line-signature"];
+    const hash = crypto
+      .createHmac("sha256", CHANNEL_SECRET)
+      .update(req.body)
+      .digest("base64");
+
+    if (signature !== hash) return res.status(401).end();
+
+    const body = JSON.parse(req.body.toString());
+    await handleWebhook(body);
+
     res.status(200).end();
-  } catch (err) {
-    console.error("Webhook Error:", err);
-    res.status(500).end();
+  } catch (e) {
+    console.error(e);
+    res.status(200).end();
   }
 });
 
-/* ===== イベント処理 ===== */
-async function handleEvent(event) {
-  if (event.type !== "message" || event.message.type !== "text") {
-    return null;
+/* =========================
+   本体
+========================= */
+
+async function handleWebhook(body) {
+  for (const ev of body.events || []) {
+    if (!ev?.source?.userId) continue;
+
+    const userId = ev.source.userId;
+
+    if (ev.type === "message" && ev.message.type === "text") {
+      const text = ev.message.text.trim();
+
+      console.log("受信:", text);
+
+      // 🔥 登録希望トリガー（両対応）
+      if (text === "登録希望" || text === "text=登録希望") {
+        await sendDay7_2(userId);
+        return;
+      }
+
+      if (text === "3点返信開始") {
+        threePointsState.set(userId, { step: 1 });
+        await client.replyMessage(ev.replyToken, {
+          type: "text",
+          text: "① 氏名を入力してください",
+        });
+        return;
+      }
+
+      const state = threePointsState.get(userId);
+
+      if (state?.step === 1) {
+        state.name = text;
+        state.step = 2;
+
+        await client.replyMessage(ev.replyToken, {
+          type: "text",
+          text: "② あなたのFLP番号を入力してください",
+        });
+        return;
+      }
+
+      if (state?.step === 2) {
+        state.flp = text;
+        threePointsState.delete(userId);
+
+        await client.replyMessage(ev.replyToken, {
+          type: "text",
+          text: "登録確認が完了しました。",
+        });
+
+        await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
+          type: "text",
+          text: `【登録通知】\n氏名:${state.name}\nFLP:${state.flp}`,
+        });
+
+        return;
+      }
+    }
   }
-
-  const userId = event.source.userId;
-  const text = event.message.text;
-
-  /* ===== VSH_START ===== */
-  if (text === "VSH_START") {
-    threePointsState.set(userId, { step: 1 });
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "① 氏名を入力してください",
-    });
-  }
-
-  /* ===== 3点フロー ===== */
-  const state = threePointsState.get(userId);
-
-  if (!state) return null;
-
-  // ① 氏名
-  if (state.step === 1) {
-    state.name = text;
-    state.step = 2;
-    threePointsState.set(userId, state);
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "② あなたのFLP番号を入力してください",
-    });
-  }
-
-  // ② FLP番号
-  if (state.step === 2) {
-    state.flp = text;
-    state.step = 3;
-    threePointsState.set(userId, state);
-
-    return client.replyMessage(event.replyToken, [
-      {
-        type: "image",
-        originalContentUrl:
-          "https://res.cloudinary.com/dxegzwukb/image/upload/v1769679233/Day7-1_dpjx3u.png",
-        previewImageUrl:
-          "https://res.cloudinary.com/dxegzwukb/image/upload/v1769679233/Day7-1_dpjx3u.png",
-      },
-      {
-        type: "text",
-        text:
-          "登録を受け付けました。\n" +
-          "FLPのシステムへの登録完了が確認できるまで\n" +
-          "数日お待ちください。\n" +
-          "確認でき次第VSHを譲渡いたします。",
-      },
-    ]);
-  }
-
-  return null;
 }
 
-/* ===== サーバー起動 ===== */
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("VSH 完全版 起動");
+/* =========================
+   Day7-2送信
+========================= */
+
+async function sendDay7_2(userId) {
+  await client.pushMessage(userId, [
+    {
+      type: "flex",
+      altText: "3点返信開始",
+      contents: {
+        type: "bubble",
+        hero: {
+          type: "image",
+          url: DAY7_2_IMAGE_URL,
+          size: "full",
+          aspectRatio: "20:13",
+          aspectMode: "cover",
+        },
+        body: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            {
+              type: "text",
+              text: "登録が終わったら、ここから3点返信を開始します",
+              wrap: true,
+            },
+            {
+              type: "button",
+              style: "primary",
+              action: {
+                type: "message",
+                label: "3点をLINEで返信する",
+                text: "3点返信開始",
+              },
+            },
+          ],
+        },
+      },
+    },
+  ]);
+}
+
+app.listen(Number(PORT || 10000), () => {
+  console.log("VSH Day7 Stable Running");
 });
