@@ -187,5 +187,11 @@ async function safeReply(token, message) {
 
 /* =========================================
    起動
-=================
--
+========================================= */
+
+app.listen(Number(PORT || 10000), () => {
+  console.log("=================================");
+  console.log("VSH FULL STABLE RUNNING");
+  console.log("PORT:", PORT || 10000);
+  console.log("=================================");
+});
