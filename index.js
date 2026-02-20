@@ -81,7 +81,55 @@ async function handleWebhook(body) {
       const text = ev.message.text.trim();
 
      if (text === "登録希望") {
-  await showYellow(ev.replyToken, userId);
+  if (text === "Day7-2へ進む") {
+  await client.pushMessage(userId, [
+    {
+      type: "image",
+      originalContentUrl:
+        "https://res.cloudinary.com/dxegzwukb/image/upload/v1771291127/X41_s9psh6.png",
+      previewImageUrl:
+        "https://res.cloudinary.com/dxegzwukb/image/upload/v1771291127/X41_s9psh6.png",
+    },
+    {
+      type: "text",
+      text:
+`【VSH登録受付】
+
+FBO登録が全て完了しましたら画面下のスタートを押し、「あなたの氏名」と「あなたのFLP番号」を送信してください。
+
+【登録申請】方法は、
+・FBO登録申請書（WEB版）の入力
+・登録セットの「登録らくらく３本入アロエベラジュース１L」
+（12,420円・0.575CC）を購入して完了です
+
+クーリングオフ制度がありますので、安心して登録してください。
+
+あなたが登録すると、この✨Vera.Sky.Harmony✨があなたにプレゼントされます。
+
+○FBO登録申請書（WEB版）
+https://member.flpj.co.jp/memberregi/memberregi.php?subsys=wksv2200&gid=Wksv220000&eventid=C001
+
+○登録申請に必要な3点（申請書に入力します）
+・紹介者氏名
+・紹介者FLP番号
+・あなたのFLP番号
+
+○事前に用意するもの
+・ボーナス振込み用口座
+ここに毎月のボーナスが振込まれます
+・クレジットカード（VISA／MASTERカードのみ）
+登録セットの支払いに使います
+
+添付書類：
+・登録手順書
+https://sites.google.com/view/vsh-entry-guide/ホーム
+・スタートキットのファイル
+・販売ルールのファイル`
+    }
+  ]);
+  return;
+}
+       await showYellow(ev.replyToken, userId);
   return;
 }
 
