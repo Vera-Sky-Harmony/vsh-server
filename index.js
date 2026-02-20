@@ -135,10 +135,14 @@ async function handleWebhook(body) {
 }
 
 async function showYellow(replyToken, userId) {
-  await client.replyMessage(replyToken, {
-    type: "text",
-    text: "🌟1週間ありがとうございました！\n下の黄色ボタンを押してください。",
-  });
+  try {
+    await client.pushMessage(userId, {
+      type: "text",
+      text: "🌟1週間ありがとうございました！\n下の黄色ボタンを押してください。",
+    });
+  } catch (err) {
+    console.error("showYellow error:", err);
+  }
 }
 
 async function executeRegistration(userId) {
