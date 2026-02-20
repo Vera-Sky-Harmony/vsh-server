@@ -80,10 +80,10 @@ async function handleWebhook(body) {
     if (ev.type === "message" && ev.message.type === "text") {
       const text = ev.message.text.trim();
 
-      if (text === "登録希望") {
-        await showYellow(userId);
-        return;
-      }
+     if (text === "登録希望") {
+  await showYellow(ev.replyToken, userId);
+  return;
+}
 
       if (text === "登録確定") {
         await executeRegistration(userId);
@@ -134,8 +134,8 @@ async function handleWebhook(body) {
   }
 }
 
-async function showYellow(userId) {
-  await client.pushMessage(userId, {
+async function showYellow(replyToken, userId) {
+  await client.replyMessage(replyToken, {
     type: "text",
     text: "🌟1週間ありがとうございました！\n下の黄色ボタンを押してください。",
   });
