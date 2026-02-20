@@ -113,13 +113,13 @@ async function handleWebhook(body) {
       if (state?.step === 2) {
         state.flp = text;
 
-        await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
-          type: "text",
-          text:
-            `【登録完了通知】\n` +
-            `氏名:${state.name}\n` +
-            `FLP:${state.flp}`,
-        });
+        // await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
+//   type: "text",
+//   text:
+//     `【登録完了通知】\n` +
+//     `氏名:${state.name}\n` +
+//     `FLP:${state.flp}`,
+// });
 
         threePointsState.delete(userId);
 
@@ -136,12 +136,12 @@ async function handleWebhook(body) {
 
 async function showYellow(replyToken, userId) {
   try {
-    await client.pushMessage(userId, {
+    await client.replyMessage(replyToken, {
       type: "text",
       text: "🌟1週間ありがとうございました！\n下の黄色ボタンを押してください。",
     });
   } catch (err) {
-    console.error("showYellow error:", err);
+    console.error("showYellow error:", err.response?.data || err);
   }
 }
 
