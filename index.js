@@ -17,6 +17,15 @@ const app = express();
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
 /* =========================
+   管理用（今は固定値）
+   ※ 後で自動化可能
+========================= */
+
+const 紹介者氏名 = "紹介者氏名";
+const 紹介者FLP番号 = "203145165";
+const あなたのFLP番号 = "あなたのFLP番号";
+
+/* =========================
    静的ページ配信
 ========================= */
 
@@ -57,13 +66,13 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
       if (ev.message.type !== "text") continue;
 
       const text = ev.message.text.trim();
-      const userId = ev.source.userId;
 
       /* =========================
          Day7-2
       ========================= */
 
       if (text === "Day7-2へ進む") {
+
         await client.replyMessage(ev.replyToken, [
           {
             type: "image",
@@ -77,7 +86,7 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
             text:
 `【VSH登録受付】
 
-FBO登録が全て完了しましたら画面下のスタートを押し、「あなたの氏名」と「あなたのFLP番号」を送信してください。
+FBO登録が全て完了しましたら画面下のボタンを押し、「あなたの氏名」と「あなたのFLP番号」を送信してください。
 
 【登録申請】方法は、
 ・FBO登録申請書（WEB版）の入力
@@ -86,14 +95,91 @@ FBO登録が全て完了しましたら画面下のスタートを押し、「�
 
 クーリングオフ制度がありますので、安心して登録してください。
 
-あなたが登録すると、この✨Vera.Sky.Harmony✨があなたにプレゼントされます。`
+あなたが登録すると、この✨Vera.Sky.Harmony✨があなたにプレゼントされます。
+
+○FBO登録申請書（WEB版）
+https://member.flpj.co.jp/memberregi/memberregi.php?subsys=wksv2200&gid=Wksv220000&eventid=C001
+
+○登録申請に必要な3点
+・紹介者氏名：${紹介者氏名}
+・紹介者FLP番号：${紹介者FLP番号}
+・あなたのFLP番号：${あなたのFLP番号}
+
+○事前に用意するもの
+・ボーナス振込み用口座
+・クレジットカード（VISA／MASTERのみ）`
+          },
+          {
+            type: "flex",
+            altText: "登録完了をLINEで返信する",
+            contents: {
+              type: "bubble",
+              body: {
+                type: "box",
+                layout: "vertical",
+                contents: [
+                  {
+                    type: "text",
+                    text: "登録が完了しましたら",
+                    weight: "bold",
+                    size: "md"
+                  }
+                ]
+              },
+              footer: {
+                type: "box",
+                layout: "vertical",
+                contents: [
+                  {
+                    type: "button",
+                    style: "primary",
+                    action: {
+                      type: "message",
+                      label: "登録完了をLINEで返信する",
+                      text: "登録完了をLINEで返信する"
+                    }
+                  }
+                ]
+              }
+            }
           }
         ]);
+
         return;
       }
 
       /* =========================
-         登録希望（既存保持）
+         Day7-3
+      ========================= */
+
+      if (text === "登録完了をLINEで返信する") {
+
+        await client.replyMessage(ev.replyToken, [
+          {
+            type: "image",
+            originalContentUrl:
+              "https://res.cloudinary.com/dxegzwukb/image/upload/v1771508589/Day7-3%E9%81%A9%E7%94%A8_avaarn.png",
+            previewImageUrl:
+              "https://res.cloudinary.com/dxegzwukb/image/upload/v1771508589/Day7-3%E9%81%A9%E7%94%A8_avaarn.png",
+          },
+          {
+            type: "text",
+            text:
+`登録を受け付けました。
+
+FOREVERのシステムに
+FBO登録が確認されましたら
+✨Vera.Sky.Harmony✨システムを譲渡します。
+
+しばらくお待ちください。`
+          }
+        ]);
+
+        return;
+      }
+
+      /* =========================
+         既存保持
       ========================= */
 
       if (text === "登録希望") {
