@@ -1,62 +1,123 @@
-// ===== VSH 実運用 安定公開版 =====
-const express = require("express");
-const line = require("@line/bot-sdk");
-const path = require("path");
+import express from "express";
+import crypto from "crypto";
+import { Client } from "@line/bot-sdk";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const {
+  CHANNEL_ACCESS_TOKEN,
+  CHANNEL_SECRET,
+  PORT,
+} = process.env;
 
 const app = express();
+const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
-const config = {
-  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
-  channelSecret: process.env.CHANNEL_SECRET,
-};
+/* =========================
+   静的ページ配信
+========================= */
 
-const client = new line.Client(config);
+app.use(express.static(__dirname));
+app.use("/ページ", express.static(path.join(__dirname, "ページ")));
 
-// 静的公開
-app.use("/ページ", express.static(path.join(__dirname, "pages")));
+app.get("/test", (_req, res) => {
+  res.send("VSH Static OK");
+});
 
-// Webhook
-app.post("/webhook", line.middleware(config), async (req, res) => {
+app.get("/", (_req, res) => {
+  res.send("VSH server running");
+});
+
+/* =========================
+   Webhook
+========================= */
+
+app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
   try {
-    await Promise.all(req.body.events.map(handleEvent));
+    const signature = req.headers["x-line-signature"];
+
+    const hash = crypto
+      .createHmac("sha256", CHANNEL_SECRET)
+      .update(req.body)
+      .digest("base64");
+
+    if (signature !== hash) {
+      console.log("署名エラー");
+      return res.status(401).end();
+    }
+
+    const body = JSON.parse(req.body.toString());
+
+    for (const ev of body.events || []) {
+      if (!ev?.source?.userId) continue;
+      if (ev.type !== "message") continue;
+      if (ev.message.type !== "text") continue;
+
+      const text = ev.message.text.trim();
+      const userId = ev.source.userId;
+
+      /* =========================
+         Day7-2
+      ========================= */
+
+      if (text === "Day7-2へ進む") {
+        await client.replyMessage(ev.replyToken, [
+          {
+            type: "image",
+            originalContentUrl:
+              "https://res.cloudinary.com/dxegzwukb/image/upload/v1771291127/X41_s9psh6.png",
+            previewImageUrl:
+              "https://res.cloudinary.com/dxegzwukb/image/upload/v1771291127/X41_s9psh6.png",
+          },
+          {
+            type: "text",
+            text:
+`【VSH登録受付】
+
+FBO登録が全て完了しましたら画面下のスタートを押し、「あなたの氏名」と「あなたのFLP番号」を送信してください。
+
+【登録申請】方法は、
+・FBO登録申請書（WEB版）の入力
+・登録セットの「登録らくらく３本入アロエベラジュース１L」
+（12,420円・0.575CC）を購入して完了です
+
+クーリングオフ制度がありますので、安心して登録してください。
+
+あなたが登録すると、この✨Vera.Sky.Harmony✨があなたにプレゼントされます。`
+          }
+        ]);
+        return;
+      }
+
+      /* =========================
+         登録希望（既存保持）
+      ========================= */
+
+      if (text === "登録希望") {
+        await client.replyMessage(ev.replyToken, {
+          type: "text",
+          text: "🌟1週間ありがとうございました！\n下の黄色ボタンを押してください。",
+        });
+        return;
+      }
+
+    }
+
     res.status(200).end();
+
   } catch (err) {
-    console.error(err);
+    console.error("Webhookエラー:", err);
     res.status(500).end();
   }
 });
 
-async function handleEvent(event) {
+/* ========================= */
 
-  // ともだち追加 → Day0
-  if (event.type === "follow") {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text:
-        "▼Day0はこちら\nhttps://vsh-server.onrender.com/ページ/day0.html"
-    });
-  }
-
-  if (event.type !== "message" || event.message.type !== "text") {
-    return null;
-  }
-
-  const text = event.message.text.trim();
-
-  // 登録完了 → Day7-3
-  if (text.includes("登録完了")) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text:
-        "登録を受け付けました。\n\nFOREVERにFBO登録が確認されましたら\nVera.Sky.Harmonyシステムを譲渡します。\n\n▼確認ページ\nhttps://vsh-server.onrender.com/ページ/day7-3.html"
-    });
-  }
-
-  return null;
-}
-
-// ★ Render必須：0.0.0.0で待ち受け
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, "0.0.0.0", () => {
-  console.log("VSH 公開待受中 PORT:", PORT);
+app.listen(Number(PORT || 10000), () => {
+  console.log("=================================");
+  console.log("VSH Stable Version Running");
+  console.log("=================================");
 });
