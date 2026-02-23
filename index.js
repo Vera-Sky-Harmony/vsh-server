@@ -17,7 +17,7 @@ const app = express();
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
 /* =========================
-   管理値（後で自動化可能）
+   管理値
 ========================= */
 
 const 紹介者氏名 = "紹介者氏名";
@@ -28,14 +28,15 @@ const 紹介者FLP番号 = "203145165";
 ========================= */
 
 const userState = {};
-// userState[userId] = { step: "waitingName" | "waitingFLP", name: "" }
 
 /* =========================
    静的ページ配信
 ========================= */
 
-app.use(express.static(__dirname));
-app.use("/ページ", express.static(path.join(__dirname, "ページ")));
+// ルート方式（重要）
+app.get("/day7-2", (req, res) => {
+  res.sendFile(path.join(__dirname, "ページ", "day7-2.html"));
+});
 
 app.get("/", (_req, res) => {
   res.send("VSH server running");
@@ -70,94 +71,6 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
       const userId = ev.source.userId;
 
       /* =========================
-         Day7-2表示
-      ========================= */
-
-      if (text === "Day7-2へ進む") {
-
-        await client.replyMessage(ev.replyToken, [
-          {
-            type: "image",
-            originalContentUrl:
-              "https://res.cloudinary.com/dxegzwukb/image/upload/v1771291127/X41_s9psh6.png",
-            previewImageUrl:
-              "https://res.cloudinary.com/dxegzwukb/image/upload/v1771291127/X41_s9psh6.png",
-          },
-          {
-            type: "text",
-            text:
-`【VSH登録受付】
-
-FBO登録が全て完了しましたら画面下のスタートを
-押し、「あなたの氏名」と「あなたのFLP番号」を
-送信してください。
-
-【登録申請】方法は、
-・FBO登録申請書（WEB版）の入力
-・登録セットの「登録らくらく３本入アロエベラジュース１L」
-（12,420円・0.575CC）を購入して完了です
-
-クーリングオフ制度がありますので、安心して登録してください。
-
-あなたが登録すると、この✨Vera.Sky.Harmony✨があなたにプレゼントされます。
-
-○FBO登録申請書（WEB版）
-https://member.flpj.co.jp/memberregi/memberregi.php?subsys=wksv2200&gid=Wksv220000&eventid=C001
-
-○登録申請に必要な3点（申請書に入力します）
-・紹介者氏名：${紹介者氏名}
-・紹介者FLP番号：${紹介者FLP番号}
-・あなたのFLP番号：VSH Adminに入力された番号
-
-○事前に用意するもの
-・ボーナス振込み用口座
-ここに毎月のボーナスが振込まれます
-・クレジットカード（VISA／MASTERカードのみ）
-登録セットの支払いに使います
-
-添付書類：
-・登録手順書
-https://sites.google.com/view/vsh-entry-guide/%E3%83%9B%E3%83%BC%E3%83%A0`
-          },
-          {
-            type: "flex",
-            altText: "登録完了をLINEで送信する",
-            contents: {
-              type: "bubble",
-              body: {
-                type: "box",
-                layout: "vertical",
-                contents: [
-                  {
-                    type: "text",
-                    text: "登録が完了しましたら",
-                    weight: "bold"
-                  }
-                ]
-              },
-              footer: {
-                type: "box",
-                layout: "vertical",
-                contents: [
-                  {
-                    type: "button",
-                    style: "primary",
-                    action: {
-                      type: "message",
-                      label: "登録完了をLINEで送信する",
-                      text: "登録完了をLINEで送信する"
-                    }
-                  }
-                ]
-              }
-            }
-          }
-        ]);
-
-        return;
-      }
-
-      /* =========================
          登録完了 → 氏名入力へ
       ========================= */
 
@@ -169,7 +82,7 @@ https://sites.google.com/view/vsh-entry-guide/%E3%83%9B%E3%83%BC%E3%83%A0`
           text: "あなたの氏名を入力してください。"
         });
 
-        return;
+        continue;
       }
 
       /* =========================
@@ -185,7 +98,7 @@ https://sites.google.com/view/vsh-entry-guide/%E3%83%9B%E3%83%BC%E3%83%A0`
           text: "あなたのFLP番号を入力してください。"
         });
 
-        return;
+        continue;
       }
 
       /* =========================
@@ -217,9 +130,8 @@ FBO登録が確認されましたら
           }
         ]);
 
-        return;
+        continue;
       }
-
     }
 
     res.status(200).end();
