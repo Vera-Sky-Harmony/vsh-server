@@ -1,4 +1,4 @@
-// ===== VSH 実運用 最終安定版 =====
+// ===== VSH 実運用 安定公開版 =====
 const express = require("express");
 const line = require("@line/bot-sdk");
 const path = require("path");
@@ -12,7 +12,7 @@ const config = {
 
 const client = new line.Client(config);
 
-// 静的ページ公開（pagesフォルダ）
+// 静的公開
 app.use("/ページ", express.static(path.join(__dirname, "pages")));
 
 // Webhook
@@ -32,11 +32,11 @@ async function handleEvent(event) {
   if (event.type === "follow") {
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: "▼Day0はこちら\nhttps://vsh-server.onrender.com/ページ/day0.html"
+      text:
+        "▼Day0はこちら\nhttps://vsh-server.onrender.com/ページ/day0.html"
     });
   }
 
-  // テキスト以外は無視
   if (event.type !== "message" || event.message.type !== "text") {
     return null;
   }
@@ -55,7 +55,8 @@ async function handleEvent(event) {
   return null;
 }
 
+// ★ Render必須：0.0.0.0で待ち受け
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("VSH 最終安定版 起動");
+app.listen(PORT, "0.0.0.0", () => {
+  console.log("VSH 公開待受中 PORT:", PORT);
 });
