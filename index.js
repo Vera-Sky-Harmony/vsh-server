@@ -1,123 +1,62 @@
-import express from "express";
-import crypto from "crypto";
-import { Client } from "@line/bot-sdk";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const {
-  CHANNEL_ACCESS_TOKEN,
-  CHANNEL_SECRET,
-  PORT,
-} = process.env;
+// ===== VSH 実運用 最小安定版 =====
+require("dotenv").config();
+const express = require("express");
+const line = require("@line/bot-sdk");
+const path = require("path");
 
 const app = express();
-const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
-/* =========================
-   静的ページ配信
-========================= */
+const config = {
+  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
+  channelSecret: process.env.CHANNEL_SECRET,
+};
 
-app.use(express.static(__dirname));
-app.use("/ページ", express.static(path.join(__dirname, "ページ")));
+const client = new line.Client(config);
 
-app.get("/test", (_req, res) => {
-  res.send("VSH Static OK");
-});
+// ---- 静的ページ公開（Day0〜Day7-3）----
+app.use("/ページ", express.static(path.join(__dirname, "pages")));
 
-app.get("/", (_req, res) => {
-  res.send("VSH server running");
-});
-
-/* =========================
-   Webhook
-========================= */
-
-app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
+// ---- Webhook ----
+app.post("/webhook", line.middleware(config), async (req, res) => {
   try {
-    const signature = req.headers["x-line-signature"];
-
-    const hash = crypto
-      .createHmac("sha256", CHANNEL_SECRET)
-      .update(req.body)
-      .digest("base64");
-
-    if (signature !== hash) {
-      console.log("署名エラー");
-      return res.status(401).end();
-    }
-
-    const body = JSON.parse(req.body.toString());
-
-    for (const ev of body.events || []) {
-      if (!ev?.source?.userId) continue;
-      if (ev.type !== "message") continue;
-      if (ev.message.type !== "text") continue;
-
-      const text = ev.message.text.trim();
-      const userId = ev.source.userId;
-
-      /* =========================
-         Day7-2
-      ========================= */
-
-      if (text === "Day7-2へ進む") {
-        await client.replyMessage(ev.replyToken, [
-          {
-            type: "image",
-            originalContentUrl:
-              "https://res.cloudinary.com/dxegzwukb/image/upload/v1771291127/X41_s9psh6.png",
-            previewImageUrl:
-              "https://res.cloudinary.com/dxegzwukb/image/upload/v1771291127/X41_s9psh6.png",
-          },
-          {
-            type: "text",
-            text:
-`【VSH登録受付】
-
-FBO登録が全て完了しましたら画面下のスタートを押し、「あなたの氏名」と「あなたのFLP番号」を送信してください。
-
-【登録申請】方法は、
-・FBO登録申請書（WEB版）の入力
-・登録セットの「登録らくらく３本入アロエベラジュース１L」
-（12,420円・0.575CC）を購入して完了です
-
-クーリングオフ制度がありますので、安心して登録してください。
-
-あなたが登録すると、この✨Vera.Sky.Harmony✨があなたにプレゼントされます。`
-          }
-        ]);
-        return;
-      }
-
-      /* =========================
-         登録希望（既存保持）
-      ========================= */
-
-      if (text === "登録希望") {
-        await client.replyMessage(ev.replyToken, {
-          type: "text",
-          text: "🌟1週間ありがとうございました！\n下の黄色ボタンを押してください。",
-        });
-        return;
-      }
-
-    }
-
+    await Promise.all(req.body.events.map(handleEvent));
     res.status(200).end();
-
   } catch (err) {
-    console.error("Webhookエラー:", err);
+    console.error(err);
     res.status(500).end();
   }
 });
 
-/* ========================= */
+async function handleEvent(event) {
+  if (event.type !== "message" || event.message.type !== "text") {
+    return Promise.resolve(null);
+  }
 
-app.listen(Number(PORT || 10000), () => {
-  console.log("=================================");
-  console.log("VSH Stable Version Running");
-  console.log("=================================");
+  const userText = event.message.text.trim();
+
+  // ===== 登録完了検知 =====
+  if (userText.includes("登録完了")) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text:
+        "登録を受け付けました。\n\nFOREVERにFBO登録が確認されましたら\nVera.Sky.Harmonyシステムを譲渡します。\n\n▼確認ページ\nhttps://vsh-server.onrender.com/ページ/day7-3.html",
+    });
+  }
+
+  // ===== Day0起動ワード（壊さない）=====
+  if (userText.includes("スタート") || userText.includes("開始")) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text:
+        "▼Day0はこちら\nhttps://vsh-server.onrender.com/ページ/day0.html",
+    });
+  }
+
+  return Promise.resolve(null);
+}
+
+// ---- サーバー起動 ----
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("VSH 実運用版 起動中...");
 });
