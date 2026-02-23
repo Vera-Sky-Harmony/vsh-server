@@ -1,5 +1,4 @@
-// ===== VSH 実運用 安定版（壊さない）=====
-require("dotenv").config();
+// ===== VSH 実運用 最終安定版 =====
 const express = require("express");
 const line = require("@line/bot-sdk");
 const path = require("path");
@@ -13,10 +12,10 @@ const config = {
 
 const client = new line.Client(config);
 
-// ---- 静的ページ公開（既存維持：pages配下）----
+// 静的ページ公開（pagesフォルダ）
 app.use("/ページ", express.static(path.join(__dirname, "pages")));
 
-// ---- Webhook ----
+// Webhook
 app.post("/webhook", line.middleware(config), async (req, res) => {
   try {
     await Promise.all(req.body.events.map(handleEvent));
@@ -28,45 +27,35 @@ app.post("/webhook", line.middleware(config), async (req, res) => {
 });
 
 async function handleEvent(event) {
-  // ★ 既存の「ともだち追加 → Day0」ロジックはそのまま動きます
-  // （followイベント処理が既存にある場合はそのまま）
 
-  // ---- メッセージ以外は何もしない（既存動作を壊さない）----
+  // ともだち追加 → Day0
+  if (event.type === "follow") {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "▼Day0はこちら\nhttps://vsh-server.onrender.com/ページ/day0.html"
+    });
+  }
+
+  // テキスト以外は無視
   if (event.type !== "message" || event.message.type !== "text") {
     return null;
   }
 
-  const userText = event.message.text.trim();
+  const text = event.message.text.trim();
 
-  // ===== 追加：登録完了 → Day7-3 返信（最優先で判定）=====
-  if (userText === "登録完了" || userText.includes("登録完了")) {
+  // 登録完了 → Day7-3
+  if (text.includes("登録完了")) {
     return client.replyMessage(event.replyToken, {
       type: "text",
       text:
-        "登録を受け付けました。\n" +
-        "FOREVERに\n" +
-        "FBO登録が確認されましたら\n" +
-        "Vera.Sky.Harmonyシステムを譲渡します。\n\n" +
-        "▼確認ページ\n" +
-        "https://vsh-server.onrender.com/ページ/day7-3.html"
+        "登録を受け付けました。\n\nFOREVERにFBO登録が確認されましたら\nVera.Sky.Harmonyシステムを譲渡します。\n\n▼確認ページ\nhttps://vsh-server.onrender.com/ページ/day7-3.html"
     });
   }
 
-  // ===== 既存：Day0起動ワード（維持）=====
-  if (userText.includes("スタート") || userText.includes("開始")) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text:
-        "▼Day0はこちら\nhttps://vsh-server.onrender.com/ページ/day0.html",
-    });
-  }
-
-  // ★ 他の既存ロジックがあればここにそのまま残す
   return null;
 }
 
-// ---- サーバー起動 ----
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("VSH 実運用 安定版 起動");
+  console.log("VSH 最終安定版 起動");
 });
