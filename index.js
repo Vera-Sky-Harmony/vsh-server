@@ -30,14 +30,17 @@ const 紹介者FLP番号 = "203145165";
 const userState = {};
 
 /* =========================
-   静的ページ配信
+   静的ページ配信（最重要）
 ========================= */
 
-// ルート方式（重要）
-app.get("/day7-2", (req, res) => {
-  res.sendFile(path.join(__dirname, "ページ", "day7-2.html"));
-});
+// 日本語フォルダを直接配信
+app.use(express.static(path.join(__dirname, "ページ")));
 
+// /pages でも開けるように保険をかける
+app.use("/pages", express.static(path.join(__dirname, "ページ")));
+app.use("/ページ", express.static(path.join(__dirname, "ページ")));
+
+// 直接ルートアクセス
 app.get("/", (_req, res) => {
   res.send("VSH server running");
 });
@@ -70,9 +73,7 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
       const text = ev.message.text.trim();
       const userId = ev.source.userId;
 
-      /* =========================
-         登録完了 → 氏名入力へ
-      ========================= */
+      /* 登録完了 → 氏名入力へ */
 
       if (text === "登録完了をLINEで送信する") {
         userState[userId] = { step: "waitingName" };
@@ -85,9 +86,7 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
         continue;
       }
 
-      /* =========================
-         氏名受信
-      ========================= */
+      /* 氏名受信 */
 
       if (userState[userId]?.step === "waitingName") {
         userState[userId].name = text;
@@ -101,9 +100,7 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
         continue;
       }
 
-      /* =========================
-         FLP番号受信 → Day7-3
-      ========================= */
+      /* FLP番号受信 → Day7-3 */
 
       if (userState[userId]?.step === "waitingFLP") {
 
