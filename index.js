@@ -7,35 +7,21 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const {
-  CHANNEL_ACCESS_TOKEN,
-  CHANNEL_SECRET,
-  PORT,
-} = process.env;
+const { CHANNEL_ACCESS_TOKEN, CHANNEL_SECRET, PORT } = process.env;
 
 const app = express();
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
 /* =========================
-   静的ページ配信（既存維持）
+   静的ページ配信（日本語フォルダ固定）
 ========================= */
 
 app.use(express.static(__dirname));
 app.use("/ページ", express.static(path.join(__dirname, "ページ")));
 
-app.get("/test", (_req, res) => {
-  res.send("VSH Static OK");
-});
-
 app.get("/", (_req, res) => {
   res.send("VSH server running");
 });
-
-/* =========================
-   状態管理
-========================= */
-
-const userState = {};
 
 /* =========================
    Webhook
@@ -63,14 +49,12 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
       if (ev.message.type !== "text") continue;
 
       const text = ev.message.text.trim();
-      const userId = ev.source.userId;
 
       /* =========================
-         Day7-2 表示
+         Day7-2
       ========================= */
 
       if (text === "Day7-2へ進む") {
-
         await client.replyMessage(ev.replyToken, [
           {
             type: "image",
@@ -101,9 +85,9 @@ FBO登録が全て完了しましたら画面下のスタートを
 https://member.flpj.co.jp/memberregi/memberregi.php?subsys=wksv2200&gid=Wksv220000&eventid=C001
 
 ○登録申請に必要な3点（申請書に入力します）
-・紹介者氏名：紹介者氏名
-・紹介者FLP番号：203145165
-・あなたのFLP番号：VSH Adminから通知
+・紹介者氏名：紹介者氏名を表示させる
+・紹介者FLP番号：紹介者FLP番号を表示させる
+・あなたのFLP番号：VSH Adminから「あなたのFLP番号」を表示させる
 
 ○事前に用意するもの
 ・ボーナス振込み用口座
@@ -115,98 +99,36 @@ https://member.flpj.co.jp/memberregi/memberregi.php?subsys=wksv2200&gid=Wksv2200
 ・登録手順書
 https://sites.google.com/view/vsh-entry-guide/%E3%83%9B%E3%83%BC%E3%83%A0
 ・スタートキットのファイル：後で入力します
-・販売ルールのファイル：後で入力します`
-          },
-          {
-            type: "flex",
-            altText: "登録完了をLINEで送信する",
-            contents: {
-              type: "bubble",
-              body: {
-                type: "box",
-                layout: "vertical",
-                contents: [
-                  {
-                    type: "text",
-                    text: "登録が完了しましたら",
-                    weight: "bold"
-                  }
-                ]
-              },
-              footer: {
-                type: "box",
-                layout: "vertical",
-                contents: [
-                  {
-                    type: "button",
-                    style: "primary",
-                    action: {
-                      type: "message",
-                      label: "登録完了をLINEで送信する",
-                      text: "登録完了をLINEで送信する"
-                    }
-                  }
-                ]
-              }
-            }
+・販売ルールのファイル：後で入力します
+
+登録が完了しましたら
+「登録完了をLINEで送信する」をタップし、
+「あなたの氏名」→トーク欄から手動送信
+「あなたのFLP番号」→トーク欄から手動送信`
           }
         ]);
-
         return;
       }
 
       /* =========================
-         氏名入力
+         登録完了 → Day7-3
       ========================= */
 
       if (text === "登録完了をLINEで送信する") {
-        userState[userId] = { step: "waitingName" };
-
         await client.replyMessage(ev.replyToken, {
           type: "text",
-          text: "あなたの氏名を入力してください。"
-        });
-
-        return;
-      }
-
-      if (userState[userId]?.step === "waitingName") {
-        userState[userId].name = text;
-        userState[userId].step = "waitingFLP";
-
-        await client.replyMessage(ev.replyToken, {
-          type: "text",
-          text: "あなたのFLP番号を入力してください。"
-        });
-
-        return;
-      }
-
-      if (userState[userId]?.step === "waitingFLP") {
-
-        delete userState[userId];
-
-        await client.replyMessage(ev.replyToken, [
-          {
-            type: "image",
-            originalContentUrl:
-              "https://res.cloudinary.com/dxegzwukb/image/upload/v1771508589/Day7-3%E9%81%A9%E7%94%A8_avaarn.png",
-            previewImageUrl:
-              "https://res.cloudinary.com/dxegzwukb/image/upload/v1771508589/Day7-3%E9%81%A9%E7%94%A8_avaarn.png",
-          },
-          {
-            type: "text",
-            text:
+          text:
 `登録を受け付けました。
 
 FOREVERに
 FBO登録が確認されましたら
 Vera.Sky.Harmonyシステムを譲渡します。
 
-しばらくお待ちください。`
-          }
-        ]);
+しばらくお待ちください。
 
+▼確認ページ
+https://vsh-server.onrender.com/ページ/day7-3.html`
+        });
         return;
       }
     }
@@ -220,7 +142,5 @@ Vera.Sky.Harmonyシステムを譲渡します。
 });
 
 app.listen(Number(PORT || 10000), () => {
-  console.log("=================================");
-  console.log("VSH Stable Version Running");
-  console.log("=================================");
+  console.log("VSH Practical Version Running");
 });
