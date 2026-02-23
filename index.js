@@ -7,17 +7,20 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const { CHANNEL_ACCESS_TOKEN, CHANNEL_SECRET, PORT } = process.env;
+const {
+  CHANNEL_ACCESS_TOKEN,
+  CHANNEL_SECRET,
+  PORT = 10000
+} = process.env;
 
 const app = express();
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
 /* =========================
-   静的ページ配信（日本語フォルダ固定）
+   静的ページ配信（pages固定）
 ========================= */
 
-app.use(express.static(__dirname));
-app.use("/ページ", express.static(path.join(__dirname, "ページ")));
+app.use("/pages", express.static(path.join(__dirname, "pages")));
 
 app.get("/", (_req, res) => {
   res.send("VSH server running");
@@ -37,14 +40,13 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
       .digest("base64");
 
     if (signature !== hash) {
-      console.log("署名エラー");
       return res.status(401).end();
     }
 
     const body = JSON.parse(req.body.toString());
 
     for (const ev of body.events || []) {
-      if (!ev?.source?.userId) continue;
+
       if (ev.type !== "message") continue;
       if (ev.message.type !== "text") continue;
 
@@ -55,6 +57,7 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
       ========================= */
 
       if (text === "Day7-2へ進む") {
+
         await client.replyMessage(ev.replyToken, [
           {
             type: "image",
@@ -103,18 +106,20 @@ https://sites.google.com/view/vsh-entry-guide/%E3%83%9B%E3%83%BC%E3%83%A0
 
 登録が完了しましたら
 「登録完了をLINEで送信する」をタップし、
-「あなたの氏名」→トーク欄から手動送信
-「あなたのFLP番号」→トーク欄から手動送信`
+「あなたの氏名」→手動送信
+「あなたのFLP番号」→手動送信`
           }
         ]);
+
         return;
       }
 
       /* =========================
-         登録完了 → Day7-3
+         Day7-3誘導
       ========================= */
 
       if (text === "登録完了をLINEで送信する") {
+
         await client.replyMessage(ev.replyToken, {
           type: "text",
           text:
@@ -123,12 +128,12 @@ https://sites.google.com/view/vsh-entry-guide/%E3%83%9B%E3%83%BC%E3%83%A0
 FOREVERに
 FBO登録が確認されましたら
 Vera.Sky.Harmonyシステムを譲渡します。
-
 しばらくお待ちください。
 
 ▼確認ページ
-https://vsh-server.onrender.com/ページ/day7-3.html`
+https://vsh-server.onrender.com/pages/day7-3.html`
         });
+
         return;
       }
     }
@@ -136,11 +141,11 @@ https://vsh-server.onrender.com/ページ/day7-3.html`
     res.status(200).end();
 
   } catch (err) {
-    console.error("Webhookエラー:", err);
+    console.error(err);
     res.status(500).end();
   }
 });
 
-app.listen(Number(PORT || 10000), () => {
-  console.log("VSH Practical Version Running");
+app.listen(Number(PORT), () => {
+  console.log("VSH Stable Version Running");
 });
