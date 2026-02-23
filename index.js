@@ -1,151 +1,337 @@
+import { v2 as cloudinary } from "cloudinary";
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 import express from "express";
 import crypto from "crypto";
 import { Client } from "@line/bot-sdk";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const {
   CHANNEL_ACCESS_TOKEN,
   CHANNEL_SECRET,
-  PORT = 10000
+  INTRODUCER_NAME,
+  INTRODUCER_FLP,
+  ADMIN_NOTIFY_USER_ID,
+  ADMIN_TOKEN,
+  DAY7_1_IMAGE_URL,
+  DAY7_2_IMAGE_URL,
+  FLP_OFFICIAL_URL,
+  ENTRY_GUIDE_URL,
+  ASSIGNED_FLP_TIMEOUT_DAYS,
+  PORT,
 } = process.env;
+
+if (!CHANNEL_ACCESS_TOKEN || !CHANNEL_SECRET) {
+  console.error("ENV不足");
+  process.exit(1);
+}
 
 const app = express();
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
-/* =========================
-   静的ページ配信（pages固定）
-========================= */
+app.use("/pages", express.static("pages"));
 
-app.use("/pages", express.static(path.join(__dirname, "pages")));
+let flpUnused = [];
+let flpAssigned = new Map();
+let flpConsumed = new Map();
+const threePointsState = new Map();
 
-app.get("/", (_req, res) => {
-  res.send("VSH server running");
+const TIMEOUT_DAYS = Number(ASSIGNED_FLP_TIMEOUT_DAYS || 10);
+const TIMEOUT_MS = TIMEOUT_DAYS * 24 * 60 * 60 * 1000;
+
+app.get("/", (_req, res) => res.send("VSH server running"));
+
+/* ================= ADMIN ================= */
+
+app.get("/admin", (req, res) => {
+  if (req.query.token !== ADMIN_TOKEN) return res.status(403).send("Forbidden");
+
+  cleanupExpired();
+
+  res.send(`
+    <h2>VSH Admin</h2>
+    unused: ${flpUnused.length}<br>
+    assigned: ${flpAssigned.size}<br>
+    consumed: ${flpConsumed.size}<br><br>
+
+    <form method="POST" action="/admin/add?token=${ADMIN_TOKEN}">
+      <textarea name="list" rows="10" cols="40"></textarea><br>
+      <button>追加</button>
+    </form>
+  `);
 });
 
-/* =========================
-   Webhook
-========================= */
+app.post("/admin/add", express.urlencoded({ extended: false }), (req, res) => {
+  if (req.query.token !== ADMIN_TOKEN) return res.status(403).send("Forbidden");
+
+  const list = req.body.list
+    .split(/\r?\n/)
+    .map(v => v.trim())
+    .filter(Boolean);
+
+  for (const f of list) {
+    if (!flpUnused.includes(f)) flpUnused.push(f);
+  }
+
+  res.redirect(`/admin?token=${ADMIN_TOKEN}`);
+});
+
+/* ================= WEBHOOK ================= */
 
 app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
   try {
     const signature = req.headers["x-line-signature"];
-
     const hash = crypto
       .createHmac("sha256", CHANNEL_SECRET)
       .update(req.body)
       .digest("base64");
 
-    if (signature !== hash) {
-      return res.status(401).end();
-    }
+    if (signature !== hash) return res.status(401).end();
 
     const body = JSON.parse(req.body.toString());
-
-    for (const ev of body.events || []) {
-
-      if (ev.type !== "message") continue;
-      if (ev.message.type !== "text") continue;
-
-      const text = ev.message.text.trim();
-
-      /* =========================
-         Day7-2
-      ========================= */
-
-      if (text === "Day7-2へ進む") {
-
-        await client.replyMessage(ev.replyToken, [
-          {
-            type: "image",
-            originalContentUrl:
-              "https://res.cloudinary.com/dxegzwukb/image/upload/v1771291127/X41_s9psh6.png",
-            previewImageUrl:
-              "https://res.cloudinary.com/dxegzwukb/image/upload/v1771291127/X41_s9psh6.png",
-          },
-          {
-            type: "text",
-            text:
-`【VSH登録受付】
-
-FBO登録が全て完了しましたら画面下のスタートを
-押し、「あなたの氏名」と「あなたのFLP番号」を
-送信してください。
-
-【登録申請】方法は、
-・FBO登録申請書（WEB版）の入力
-・登録セットの「登録らくらく３本入アロエベラジュース１L」
-（12,420円・0.575CC）を購入して完了です
-
-クーリングオフ制度がありますので、安心して登録してください。
-
-あなたが登録すると、この✨Vera.Sky.Harmony✨があなたにプレゼントされます。
-
-○FBO登録申請書（WEB版）
-https://member.flpj.co.jp/memberregi/memberregi.php?subsys=wksv2200&gid=Wksv220000&eventid=C001
-
-○登録申請に必要な3点（申請書に入力します）
-・紹介者氏名：紹介者氏名を表示させる
-・紹介者FLP番号：紹介者FLP番号を表示させる
-・あなたのFLP番号：VSH Adminから「あなたのFLP番号」を表示させる
-
-○事前に用意するもの
-・ボーナス振込み用口座
-ここに毎月のボーナスが振込まれます
-・クレジットカード（VISA／MASTERカードのみ）
-登録セットの支払いに使います
-
-添付書類：
-・登録手順書
-https://sites.google.com/view/vsh-entry-guide/%E3%83%9B%E3%83%BC%E3%83%A0
-・スタートキットのファイル：後で入力します
-・販売ルールのファイル：後で入力します
-
-登録が完了しましたら
-「登録完了をLINEで送信する」をタップし、
-「あなたの氏名」→手動送信
-「あなたのFLP番号」→手動送信`
-          }
-        ]);
-
-        return;
-      }
-
-      /* =========================
-         Day7-3誘導
-      ========================= */
-
-      if (text === "登録完了をLINEで送信する") {
-
-        await client.replyMessage(ev.replyToken, {
-          type: "text",
-          text:
-`登録を受け付けました。
-
-FOREVERに
-FBO登録が確認されましたら
-Vera.Sky.Harmonyシステムを譲渡します。
-しばらくお待ちください。
-
-▼確認ページ
-https://vsh-server.onrender.com/pages/day7-3.html`
-        });
-
-        return;
-      }
-    }
-
+    await handleWebhook(body);
     res.status(200).end();
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).end();
+  } catch (e) {
+    console.error(e);
+    res.status(200).end();
   }
 });
 
-app.listen(Number(PORT), () => {
-  console.log("VSH Stable Version Running");
+/* ================= CORE ================= */
+
+async function handleWebhook(body) {
+  cleanupExpired();
+
+  for (const ev of body.events || []) {
+    if (!ev?.source?.userId) continue;
+    const userId = ev.source.userId;
+
+    if (ev.type === "message" && ev.message.type === "text") {
+      const text = ev.message.text.trim();
+
+      if (text === "登録希望") return showYellow(userId);
+      if (text === "登録確定") return executeRegistration(userId);
+      if (text === "3点返信開始") return startThreePoints(userId);
+
+      await handleConversation(userId, text);
+    }
+
+    if (ev.type === "message" && ev.message.type === "image") {
+      await handleScreenshot(userId, ev.message.id);
+    }
+  }
+}
+
+/* ================= YELLOW ================= */
+
+async function showYellow(userId) {
+  await client.pushMessage(userId, [
+    {
+      type: "text",
+      text:
+        "🌟1週間ありがとうございました！\n\n" +
+        "あなたが登録するとVSHがあなたにプレゼントされます。\n\n" +
+        "下の黄色ボタンを押してください。",
+    },
+    {
+      type: "flex",
+      altText: "登録希望",
+      contents: {
+        type: "bubble",
+        hero: {
+          type: "image",
+          url: DAY7_1_IMAGE_URL,
+          size: "full",
+          aspectMode: "cover",
+          aspectRatio: "20:13",
+        },
+        body: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            {
+              type: "button",
+              style: "primary",
+              action: {
+                type: "message",
+                label: "登録希望",
+                text: "登録確定",
+              },
+            },
+          ],
+        },
+      },
+    },
+  ]);
+}
+
+/* ================= REGISTRATION ================= */
+
+async function executeRegistration(userId) {
+  if (flpUnused.length === 0) {
+    await client.pushMessage(userId, {
+      type: "text",
+      text: "現在準備中です。紹介者へご連絡ください。",
+    });
+    return;
+  }
+
+  const flp = flpUnused.shift();
+  flpAssigned.set(userId, { flp, assignedAt: Date.now() });
+
+  await client.pushMessage(userId, [
+    buildBlueFlex(),
+    {
+      type: "text",
+      text:
+        `①紹介者氏名:${INTRODUCER_NAME}\n` +
+        `②紹介者FLP:${INTRODUCER_FLP}\n` +
+        `③あなたのFLP:${flp}`,
+    },
+    {
+      type: "text",
+      text: `登録手順\n${ENTRY_GUIDE_URL}\n\n公式\n${FLP_OFFICIAL_URL}`,
+    },
+  ]);
+
+  await client.pushMessage(ADMIN_NOTIFY_USER_ID, {
+    type: "text",
+    text: `【登録確定】\n${userId}\nFLP:${flp}`,
+  });
+}
+
+/* ================= BLUE ================= */
+
+function buildBlueFlex() {
+  return {
+    type: "flex",
+    altText: "3点返信",
+    contents: {
+      type: "bubble",
+      hero: {
+        type: "image",
+        url: DAY7_2_IMAGE_URL,
+        size: "full",
+        aspectMode: "cover",
+        aspectRatio: "20:13",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            action: {
+              type: "message",
+              label: "3点をLINEで返信する",
+              text: "3点返信開始",
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
+/* ================= 3POINT ================= */
+
+async function startThreePoints(userId) {
+  threePointsState.set(userId, { step: 1 });
+  await client.pushMessage(userId, { type: "text", text: "①氏名" });
+}
+
+async function handleConversation(userId, text) {
+  const s = threePointsState.get(userId);
+  if (!s) return;
+
+  if (s.step === 1) {
+    s.name = text;
+    s.step = 2;
+    return client.pushMessage(userId, { type: "text", text: "②FLP番号" });
+  }
+
+  if (s.step === 2) {
+    s.flp = text;
+    s.step = 3;
+    return client.pushMessage(userId, { type: "text", text: "③スクショ送信" });
+  }
+}
+
+async function handleScreenshot(userId, messageId) {
+  const state = threePointsState.get(userId);
+  if (!state || state.step !== 3) return;
+
+  threePointsState.delete(userId);
+
+  const assigned = flpAssigned.get(userId);
+
+  // LINEから画像取得
+  const stream = await client.getMessageContent(messageId);
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk);
+  }
+  const buffer = Buffer.concat(chunks);
+
+  // Cloudinaryへアップロード
+  const uploadResult = await new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder: "vsh_screenshots" },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+    uploadStream.end(buffer);
+  });
+
+  const imageUrl = uploadResult.secure_url;
+
+  // 在庫処理
+  flpAssigned.delete(userId);
+  flpConsumed.set(userId, assigned);
+
+  // Aへ画像付き通知
+  await client.pushMessage(ADMIN_NOTIFY_USER_ID, [
+    {
+      type: "text",
+      text:
+        "【3点完了】\n" +
+        `氏名:${state.name}\n` +
+        `入力FLP:${state.flp}\n` +
+        `割当FLP:${assigned}`,
+    },
+    {
+      type: "image",
+      originalContentUrl: imageUrl,
+      previewImageUrl: imageUrl,
+    },
+  ]);
+
+  await client.pushMessage(userId, {
+    type: "text",
+    text: "確認完了しました。ありがとうございます。",
+  });
+}
+
+
+/* ================= TIMEOUT ================= */
+
+function cleanupExpired() {
+  const now = Date.now();
+  for (const [uid, v] of flpAssigned.entries()) {
+    if (now - v.assignedAt > TIMEOUT_MS) {
+      flpAssigned.delete(uid);
+      flpUnused.push(v.flp);
+    }
+  }
+}
+
+app.listen(Number(PORT || 10000), () => {
+  console.log("VSH FULL PRODUCTION SYSTEM RUNNING");
 });
