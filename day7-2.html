@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Day7-2</title>
+
 <style>
 body{margin:0;font-family:sans-serif;background:#f4f6f8;}
 .container{background:#fff;padding:20px;max-width:600px;margin:auto;}
@@ -22,7 +23,13 @@ border-radius:8px;
 font-weight:bold;
 }
 .small{font-size:12px;color:#666;}
+.value{
+color:#d32f2f;
+font-weight:bold;
+font-size:16px;
+}
 </style>
+
 </head>
 <body>
 
@@ -58,9 +65,9 @@ FBO登録が全て完了しましたら画面下のスタートを押し、<br>
 
 <div class="section">
 ○登録申請に必要な3点（申請書に入力します）<br>
-・紹介者氏名：紹介者氏名を表示させる<br>
-・紹介者FLP番号：紹介者FLP番号を表示させる<br>
-・あなたのFLP番号：VSH Adminから表示
+・紹介者氏名：<span id="name" class="value">取得中...</span><br>
+・紹介者FLP番号：<span id="flp" class="value">取得中...</span><br>
+・あなたのFLP番号：<span id="myflp" class="value">取得中...</span>
 </div>
 
 <div class="section">
@@ -83,5 +90,42 @@ href="https://line.me/R/oaMessage/@591tvejt/?登録完了をLINEで送信する"
 </a>
 
 </div>
+
+<script>
+// =========================
+// URLパラメータ取得（完全版）
+// =========================
+function getParam(key) {
+  const url = new URL(window.location.href);
+  return url.searchParams.get(key);
+}
+
+// =========================
+// 値取得
+// =========================
+const name = getParam("name");
+const flp = getParam("flp");
+const myflp = getParam("myflp");
+
+// =========================
+// 表示処理（完全対応）
+// =========================
+document.getElementById("name").textContent =
+  name ? decodeURIComponent(name) : "未設定";
+
+document.getElementById("flp").textContent =
+  flp ? flp : "未設定";
+
+document.getElementById("myflp").textContent =
+  myflp ? myflp : "未設定";
+
+// =========================
+// デバッグ（必要なら確認）
+// =========================
+console.log("紹介者氏名:", name);
+console.log("紹介者FLP:", flp);
+console.log("あなたのFLP:", myflp);
+</script>
+
 </body>
 </html>
