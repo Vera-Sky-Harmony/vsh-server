@@ -22,12 +22,7 @@ text-decoration:none;
 border-radius:8px;
 font-weight:bold;
 }
-.small{font-size:12px;color:#666;}
-.value{
-color:#d32f2f;
-font-weight:bold;
-font-size:16px;
-}
+.value{color:#d32f2f;font-weight:bold;font-size:16px;}
 </style>
 
 </head>
@@ -40,52 +35,39 @@ font-size:16px;
 <h2>【VSH登録受付】</h2>
 
 <div class="section">
-FBO登録が全て完了しましたら画面下のスタートを押し、<br>
-「あなたの氏名」と「あなたのFLP番号」を送信してください。
+【登録申請】方法<br>
+FBO登録申請書（WEB版）の入力と登録セット購入で完了します。
 </div>
 
 <div class="section">
-【登録申請】方法は、<br>
-・FBO登録申請書（WEB版）の入力<br>
-・登録セットの「登録らくらく３本入アロエベラジュース１L」<br>
-（12,420円・0.575CC）を購入して完了です
+クーリングオフ制度がありますので安心して登録してください。<br>
+あなたが登録すると、この✨Vera.Sky.Harmony✨があなたにプレゼントされます。<br><br>
+
+<b>FBO登録申請が終わりましたら<br>
+画面下の「登録完了をLINEで送信する」ボタンを押し、</b><br><br>
+
+・あなたの氏名<br>
+・あなたのFLP番号<br>
+・登録セット購入がわかるスクリーンショット<br><br>
+
+を紹介者に送信してください。
 </div>
 
 <div class="section">
-クーリングオフ制度がありますので、安心して登録してください。<br>
-あなたが登録すると、この✨Vera.Sky.Harmony✨があなたにプレゼントされます。
-</div>
-
-<div class="section">
-○FBO登録申請書（WEB版）<br>
+○登録ページ<br>
 <a href="https://member.flpj.co.jp/memberregi/memberregi.php?subsys=wksv2200&gid=Wksv220000&eventid=C001" target="_blank">
 登録ページはこちら
 </a>
 </div>
 
 <div class="section">
-○登録申請に必要な3点（申請書に入力します）<br>
-・紹介者氏名：<span id="name" class="value">取得中...</span><br>
-・紹介者FLP番号：<span id="flp" class="value">取得中...</span><br>
-・あなたのFLP番号：<span id="myflp" class="value">取得中...</span>
+○登録申請に必要な3点<br>
+・紹介者氏名：<span id="name" class="value"></span><br>
+・紹介者FLP番号：<span id="flp" class="value"></span><br>
+・あなたのFLP番号：<span id="myflp" class="value"></span>
 </div>
 
-<div class="section">
-○事前に用意するもの<br>
-・ボーナス振込み用口座（毎月のボーナスが振込まれます）<br>
-・クレジットカード（VISA／MASTERカードのみ）
-</div>
-
-<div class="section small">
-添付書類：<br>
-・登録手順書<br>
-https://sites.google.com/view/vsh-entry-guide/%E3%83%9B%E3%83%BC%E3%83%A0<br>
-・スタートキットのファイル：後で入力します<br>
-・販売ルールのファイル：後で入力します
-</div>
-
-<a class="button"
-href="https://line.me/R/oaMessage/@591tvejt/?登録完了をLINEで送信する">
+<a class="button" onclick="startLINE()">
 登録完了をLINEで送信する
 </a>
 
@@ -93,38 +75,45 @@ href="https://line.me/R/oaMessage/@591tvejt/?登録完了をLINEで送信する"
 
 <script>
 // =========================
-// URLパラメータ取得（完全版）
+// URLパラメータ取得
 // =========================
-function getParam(key) {
-  const url = new URL(window.location.href);
-  return url.searchParams.get(key);
+const params = new URLSearchParams(window.location.search);
+
+const name = params.get("name");
+const flp = params.get("flp");
+const myflp = params.get("myflp");
+
+// 表示
+document.getElementById("name").textContent = name || "未設定";
+document.getElementById("flp").textContent = flp || "未設定";
+document.getElementById("myflp").textContent = myflp || "未設定";
+
+// =========================
+// LINE送信フロー（段階入力）
+// =========================
+function startLINE(){
+
+  // ① 氏名入力
+  const userName = prompt("あなたの氏名を入力してください");
+  if(!userName) return;
+
+  // ② FLP番号入力
+  const userFLP = prompt("あなたのFLP番号を入力してください");
+  if(!userFLP) return;
+
+  // ③ LINE送信内容作成
+  const text = `【登録完了】\n氏名：${userName}\nFLP番号：${userFLP}\n※続けてスクリーンショットを送信してください`;
+
+  // LINE起動
+  window.location.href =
+    "https://line.me/R/oaMessage/@591tvejt/?"
+    + encodeURIComponent(text);
+
+  // ④ Day7-3へ遷移（少し待ってから）
+  setTimeout(()=>{
+    window.location.href = "day7-3.html";
+  }, 3000);
 }
-
-// =========================
-// 値取得
-// =========================
-const name = getParam("name");
-const flp = getParam("flp");
-const myflp = getParam("myflp");
-
-// =========================
-// 表示処理（完全対応）
-// =========================
-document.getElementById("name").textContent =
-  name ? decodeURIComponent(name) : "未設定";
-
-document.getElementById("flp").textContent =
-  flp ? flp : "未設定";
-
-document.getElementById("myflp").textContent =
-  myflp ? myflp : "未設定";
-
-// =========================
-// デバッグ（必要なら確認）
-// =========================
-console.log("紹介者氏名:", name);
-console.log("紹介者FLP:", flp);
-console.log("あなたのFLP:", myflp);
 </script>
 
 </body>
