@@ -6,23 +6,52 @@
 <title>Day7-2</title>
 
 <style>
-body{margin:0;font-family:sans-serif;background:#f4f6f8;}
-.container{background:#fff;padding:20px;max-width:600px;margin:auto;}
-img{width:100%;border-radius:12px;}
-h2{margin-top:20px;}
-.section{margin-top:20px;font-size:14px;line-height:1.6;}
-.button{
-display:block;
-margin:30px auto;
-padding:15px;
-background:#06c755;
-color:#fff;
-text-align:center;
-text-decoration:none;
-border-radius:8px;
-font-weight:bold;
+body{
+  margin:0;
+  font-family:sans-serif;
+  background:#f4f6f8;
 }
-.value{color:#d32f2f;font-weight:bold;font-size:16px;}
+
+.container{
+  background:#fff;
+  padding:20px;
+  max-width:600px;
+  margin:auto;
+}
+
+img{
+  width:100%;
+  border-radius:12px;
+}
+
+h2{
+  margin-top:20px;
+}
+
+.section{
+  margin-top:20px;
+  font-size:14px;
+  line-height:1.6;
+}
+
+.button{
+  display:block;
+  margin:30px auto;
+  padding:15px;
+  background:#06c755;
+  color:#fff;
+  text-align:center;
+  text-decoration:none;
+  border-radius:8px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.value{
+  color:#d32f2f;
+  font-weight:bold;
+  font-size:16px;
+}
 </style>
 
 </head>
@@ -43,12 +72,13 @@ FBO登録申請書（WEB版）の入力と登録セット購入で完了しま�
 クーリングオフ制度がありますので安心して登録してください。<br>
 あなたが登録すると、この✨Vera.Sky.Harmony✨があなたにプレゼントされます。<br><br>
 
-<b>FBO登録申請が終わりましたら<br>
-画面下の「登録完了をLINEで送信する」ボタンを押し、</b><br><br>
+<b>
+FBO登録申請が終わりましたら<br>
+画面下の「登録完了をLINEで送信する」ボタンを押し、
+</b><br><br>
 
 ・あなたの氏名<br>
-・あなたのFLP番号<br>
-・登録セット購入がわかるスクリーンショット<br><br>
+・あなたのFLP番号<br><br>
 
 を紹介者に送信してください。
 </div>
@@ -61,10 +91,17 @@ FBO登録申請書（WEB版）の入力と登録セット購入で完了しま�
 </div>
 
 <div class="section">
-○登録申請に必要な3点<br>
-・紹介者氏名：<span id="name" class="value"></span><br>
-・紹介者FLP番号：<span id="flp" class="value"></span><br>
-・あなたのFLP番号：<span id="myflp" class="value"></span>
+○登録申請に必要な情報<br>
+
+・紹介者氏名：
+<span id="name" class="value"></span><br>
+
+・紹介者FLP番号：
+<span id="flp" class="value"></span><br>
+
+・あなたのFLP番号：
+<span id="myflp" class="value"></span>
+
 </div>
 
 <a class="button" onclick="startLINE()">
@@ -74,49 +111,51 @@ FBO登録申請書（WEB版）の入力と登録セット購入で完了しま�
 </div>
 
 <script>
-// =========================
+
 // URLパラメータ取得
-// =========================
 const params = new URLSearchParams(window.location.search);
 
-const name = params.get("name");
-const flp = params.get("flp");
+const name  = params.get("name");
+const flp   = params.get("flp");
 const myflp = params.get("myflp");
 
 // 表示
-document.getElementById("name").textContent = name || "未設定";
-document.getElementById("flp").textContent = flp || "未設定";
+document.getElementById("name").textContent  = name  || "未設定";
+document.getElementById("flp").textContent   = flp   || "未設定";
 document.getElementById("myflp").textContent = myflp || "未設定";
 
-// =========================
-// LINE送信フロー（段階入力）
-// =========================
+// LINE送信
 function startLINE(){
 
-// ① 氏名入力
-const userName = prompt("あなたの氏名を入力してください");
-if(!userName) return;
+  // 氏名入力
+  const userName = prompt("あなたの氏名を入力してください");
+  if(!userName) return;
 
-// ② FLP番号入力
-const userFLP = prompt("あなたのFLP番号を入力してください");
-if(!userFLP) return;
+  // FLP番号入力
+  const userFLP = prompt("あなたのFLP番号を入力してください");
+  if(!userFLP) return;
 
-// ③ LINE送信内容作成
-const text =
-【登録完了】 氏名：${userName} FLP番号：${userFLP};
+  // LINE送信内容
+  const text =
+`【登録完了】
 
-// LINE起動
-window.location.href =
-"https://line.me/R/oaMessage/@591tvejt/?"
-+ encodeURIComponent(text);
+氏名：${userName}
 
-// Day7-3へ移動
-setTimeout(()=>{
-window.location.href = "/pages/day7-3.html";
-}, 3000);
+FLP番号：${userFLP}`;
+
+  // LINE起動
+  window.location.href =
+    "https://line.me/R/oaMessage/@591tvejt/?"
+    + encodeURIComponent(text);
+
+  // Day7-3へ移動
+  setTimeout(() => {
+    window.location.href =
+      "https://vsh-server.onrender.com/pages/day7-3.html";
+  }, 3000);
 
 }
-}
+
 </script>
 
 </body>
