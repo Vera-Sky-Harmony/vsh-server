@@ -93,26 +93,29 @@ document.getElementById("myflp").textContent = myflp || "未設定";
 // =========================
 function startLINE(){
 
-  // ① 氏名入力
-  const userName = prompt("あなたの氏名を入力してください");
-  if(!userName) return;
+// ① 氏名入力
+const userName = prompt("あなたの氏名を入力してください");
+if(!userName) return;
 
-  // ② FLP番号入力
-  const userFLP = prompt("あなたのFLP番号を入力してください");
-  if(!userFLP) return;
+// ② FLP番号入力
+const userFLP = prompt("あなたのFLP番号を入力してください");
+if(!userFLP) return;
 
-  // ③ LINE送信内容作成
-  const text = `【登録完了】\n氏名：${userName}\nFLP番号：${userFLP}\n※続けてスクリーンショットを送信してください`;
+// ③ LINE送信内容作成
+const text =
+【登録完了】 氏名：${userName} FLP番号：${userFLP};
 
-  // LINE起動
-  window.location.href =
-    "https://line.me/R/oaMessage/@591tvejt/?"
-    + encodeURIComponent(text);
+// LINE起動
+window.location.href =
+"https://line.me/R/oaMessage/@591tvejt/?"
++ encodeURIComponent(text);
 
-  // ④ Day7-3へ遷移（少し待ってから）
-  setTimeout(()=>{
-   window.location.href = "/pages/day7-3.html";
-  }, 3000);
+// Day7-3へ移動
+setTimeout(()=>{
+window.location.href = "/pages/day7-3.html";
+}, 3000);
+
+}
 }
 </script>
 
