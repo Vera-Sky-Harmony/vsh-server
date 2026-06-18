@@ -108,6 +108,20 @@ FBO登録申請が終わりましたら<br>
 登録完了をLINEで送信する
 </a>
 
+<div id="nextArea" style="display:none;text-align:center;margin-top:30px;">
+
+<p>
+LINE送信後、下のボタンを押してください。
+</p>
+
+<a
+href="https://vsh-server.onrender.com/pages/day7-3.html"
+class="button">
+Day7-3へ進む
+</a>
+
+</div>
+
 </div>
 
 <script>
@@ -143,17 +157,15 @@ function startLINE(){
 
 FLP番号：${userFLP}`;
 
-  // LINE起動
-  window.location.href =
+  // LINEを開く
+  window.open(
     "https://line.me/R/oaMessage/@591tvejt/?"
-    + encodeURIComponent(text);
+    + encodeURIComponent(text),
+    "_blank"
+  );
 
-  // Day7-3へ移動
-  setTimeout(() => {
-    window.location.href =
-      "https://vsh-server.onrender.com/pages/day7-3.html";
-  }, 3000);
-
+  // Day7-3ボタン表示
+  document.getElementById("nextArea").style.display = "block";
 }
 
 </script>
