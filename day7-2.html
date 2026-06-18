@@ -36,7 +36,7 @@ h2{
 
 .button{
   display:block;
-  margin:30px auto;
+  margin:20px auto;
   padding:15px;
   background:#06c755;
   color:#fff;
@@ -73,8 +73,7 @@ FBO登録申請書（WEB版）の入力と登録セット購入で完了しま�
 あなたが登録すると、この✨Vera.Sky.Harmony✨があなたにプレゼントされます。<br><br>
 
 <b>
-FBO登録申請が終わりましたら<br>
-画面下の「登録完了をLINEで送信する」ボタンを押し、
+FBO登録申請が終わりましたら、
 </b><br><br>
 
 ・あなたの氏名<br>
@@ -108,19 +107,11 @@ FBO登録申請が終わりましたら<br>
 登録完了をLINEで送信する
 </a>
 
-<div id="nextArea" style="display:none;text-align:center;margin-top:30px;">
-
-<p>
-LINE送信後、下のボタンを押してください。
-</p>
-
 <a
-href="https://vsh-server.onrender.com/pages/day7-3.html"
-class="button">
+class="button"
+href="https://vsh-server.onrender.com/pages/day7-3.html">
 Day7-3へ進む
 </a>
-
-</div>
 
 </div>
 
@@ -141,15 +132,12 @@ document.getElementById("myflp").textContent = myflp || "未設定";
 // LINE送信
 function startLINE(){
 
-  // 氏名入力
   const userName = prompt("あなたの氏名を入力してください");
   if(!userName) return;
 
-  // FLP番号入力
   const userFLP = prompt("あなたのFLP番号を入力してください");
   if(!userFLP) return;
 
-  // LINE送信内容
   const text =
 `【登録完了】
 
@@ -157,15 +145,11 @@ function startLINE(){
 
 FLP番号：${userFLP}`;
 
-  // LINEを開く
   window.open(
     "https://line.me/R/oaMessage/@591tvejt/?"
     + encodeURIComponent(text),
     "_blank"
   );
-
-  // Day7-3ボタン表示
-  document.getElementById("nextArea").style.display = "block";
 }
 
 </script>
