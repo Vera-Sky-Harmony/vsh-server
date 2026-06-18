@@ -138,13 +138,17 @@ function startLINE(){
   const userFLP = prompt("あなたのFLP番号を入力してください");
   if(!userFLP) return;
 
-  const text =
+const text =
 `【登録完了】
 
 氏名：${userName}
 
-FLP番号：${userFLP}`;
+FLP番号：${userFLP}
 
+登録ありがとうございます。
+
+Day7-3はこちら
+https://vsh-server.onrender.com/pages/day7-3.html`; 
   window.open(
     "https://line.me/R/oaMessage/@591tvejt/?"
     + encodeURIComponent(text),
