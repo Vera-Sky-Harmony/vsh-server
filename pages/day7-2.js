@@ -59,7 +59,7 @@ document
 //==============================
 
 async function startLINE() {
-
+alert("startLINEが呼ばれました");
     // FLP番号取得確認
     if (!myFLP) {
 
