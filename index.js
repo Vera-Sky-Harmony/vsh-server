@@ -2,11 +2,39 @@ import express from "express";
 import crypto from "crypto";
 import { Client } from "@line/bot-sdk";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+/* =========================
+   Admin データ
+========================= */
 
+const DATA_DIR = path.join(__dirname, "data");
+const ADMIN_FILE = path.join(DATA_DIR, "root-admin.json");
+
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR);
+}
+
+if (!fs.existsSync(ADMIN_FILE)) {
+
+  fs.writeFileSync(
+    ADMIN_FILE,
+
+    JSON.stringify(
+      {
+        introducerName: "",
+        introducerFLP: "",
+        memberFLP: ""
+      },
+      null,
+      2
+    )
+  );
+
+}
 const {
   CHANNEL_ACCESS_TOKEN,
   CHANNEL_SECRET,
@@ -22,7 +50,7 @@ const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
 app.use(express.static(__dirname));
 app.use("/ページ", express.static(path.join(__dirname, "ページ")));
-
+app.use(express.json());
 app.get("/test", (_req, res) => {
   res.send("VSH Static OK");
 });
@@ -30,7 +58,136 @@ app.get("/test", (_req, res) => {
 app.get("/", (_req, res) => {
   res.send("VSH server running");
 });
+/* =========================
+   Admin
+========================= */
 
+app.get("/admin", (_req, res) => {
+  res.sendFile(path.join(__dirname, "admin.html"));
+});
+
+app.get("/api/admin", (_req, res) => {
+
+  const data = JSON.parse(
+    fs.readFileSync(ADMIN_FILE, "utf8")
+  );
+
+  res.json(data);
+
+});
+
+app.post("/api/admin", (req, res) => {
+
+  fs.writeFileSync(
+    ADMIN_FILE,
+    JSON.stringify(req.body, null, 2)
+  );
+
+  res.json({
+    success: true
+  });
+
+});
+
+/* =========================
+   次の未使用FLP取得
+========================= */
+
+app.get("/api/next-flp", (_req, res) => {
+
+  const data = JSON.parse(
+    fs.readFileSync(ADMIN_FILE, "utf8")
+  );
+
+  const item = data.flpList.find(
+    x => x.status === "未使用"
+  );
+
+  if (!item) {
+    return res.status(404).json({
+      success: false,
+      message: "未使用のFLP番号がありません"
+    });
+  }
+
+  res.json({
+    success: true,
+    introducerName: data.introducerName,
+    introducerFLP: data.introducerFLP,
+    myFLP: item.flp
+  });
+
+});
+
+/* =========================
+   FLP番号を使用中へ変更
+========================= */
+
+app.post("/api/use-flp", (req, res) => {
+
+  const data = JSON.parse(
+    fs.readFileSync(ADMIN_FILE, "utf8")
+  );
+
+  const item = data.flpList.find(
+    x => x.flp === req.body.flp
+  );
+
+  if (!item) {
+
+    return res.status(404).json({
+      success: false
+    });
+
+  }
+
+  item.status = "使用中";
+
+  fs.writeFileSync(
+    ADMIN_FILE,
+    JSON.stringify(data, null, 2)
+  );
+
+  res.json({
+    success: true
+  });
+
+});
+
+/* =========================
+   FLP番号を使用済へ変更
+========================= */
+
+app.post("/api/complete-flp", (req, res) => {
+
+  const data = JSON.parse(
+    fs.readFileSync(ADMIN_FILE, "utf8")
+  );
+
+  const item = data.flpList.find(
+    x => x.flp === req.body.flp
+  );
+
+  if (!item) {
+
+    return res.status(404).json({
+      success:false
+    });
+
+  }
+
+  item.status = "使用済";
+
+  fs.writeFileSync(
+    ADMIN_FILE,
+    JSON.stringify(data,null,2)
+  );
+
+  res.json({
+    success:true
+  });
+
+});
 /* =========================
    Webhook
 ========================= */
@@ -121,3 +278,6 @@ app.listen(Number(PORT || 10000), () => {
   console.log("VSH Stable Version Running");
   console.log("=================================");
 });
+
+
+
