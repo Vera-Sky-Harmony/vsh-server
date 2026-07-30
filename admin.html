@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+<title>VSH Root Admin</title>
+
+<style>
+
+body{
+
+    margin:0;
+    background:#f4f4f4;
+    font-family:Meiryo,sans-serif;
+
+}
+
+.wrapper{
+
+    max-width:700px;
+    margin:30px auto;
+    background:white;
+    border-radius:15px;
+    padding:30px;
+    box-shadow:0 0 15px rgba(0,0,0,.15);
+
+}
+
+h1{
+
+    text-align:center;
+    color:#c89b00;
+    margin-bottom:30px;
+
+}
+
+.item{
+
+    margin-bottom:25px;
+
+}
+
+label{
+
+    display:block;
+    font-weight:bold;
+    margin-bottom:8px;
+
+}
+
+input{
+
+    width:100%;
+    box-sizing:border-box;
+    font-size:18px;
+    padding:12px;
+    border:1px solid #999;
+    border-radius:8px;
+
+}
+
+.buttons{
+
+    display:flex;
+    justify-content:center;
+    gap:20px;
+    margin-top:35px;
+    flex-wrap:wrap;
+
+}
+
+button{
+
+    width:170px;
+    padding:15px;
+    font-size:18px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+
+}
+
+#load{
+
+    background:#666;
+    color:white;
+
+}
+
+#save{
+
+    background:#d4af37;
+    color:white;
+
+}
+
+#message{
+
+    margin-top:30px;
+    text-align:center;
+    font-weight:bold;
+    color:green;
+    font-size:18px;
+
+}
+
+.footer{
+
+    text-align:center;
+    margin-top:40px;
+    color:#666;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="wrapper">
+
+<h1>VSH Root Admin</h1>
+
+<div class="item">
+
+<label>紹介者氏名</label>
+
+<input
+id="introducerName"
+type="text">
+
+</div>
+
+<div class="item">
+
+<label>紹介者FLP番号</label>
+
+<input
+id="introducerFLP"
+type="text">
+
+</div>
+
+<div class="item">
+
+<label>あなたのFLP番号</label>
+
+<input
+id="memberFLP"
+type="text">
+
+</div>
+
+<div class="buttons">
+
+<button id="load">
+
+読込み
+
+</button>
+
+<button id="save">
+
+保存
+
+</button>
+
+</div>
+
+<div id="message"></div>
+
+<div class="footer">
+
+Vera Sky Harmony Version 1.0
+
+</div>
+
+</div>
+
+<script>
+
+async function loadData(){
+
+    const res=await fetch("/api/admin");
+
+    const data=await res.json();
+
+    document.getElementById("introducerName").value=data.introducerName||"";
+
+    document.getElementById("introducerFLP").value=data.introducerFLP||"";
+
+    document.getElementById("memberFLP").value=data.memberFLP||"";
+
+    document.getElementById("message").innerHTML="読込み完了";
+
+}
+
+async function saveData(){
+
+    const data={
+
+        introducerName:
+        document.getElementById("introducerName").value,
+
+        introducerFLP:
+        document.getElementById("introducerFLP").value,
+
+        memberFLP:
+        document.getElementById("memberFLP").value
+
+    };
+
+    await fetch("/api/admin",{
+
+        method:"POST",
+
+        headers:{
+            "Content-Type":"application/json"
+        },
+
+        body:JSON.stringify(data)
+
+    });
+
+    document.getElementById("message").innerHTML="保存しました";
+
+}
+
+document
+.getElementById("load")
+.onclick=loadData;
+
+document
+.getElementById("save")
+.onclick=saveData;
+
+loadData();
+
+</script>
+
+</body>
+
+</html>
