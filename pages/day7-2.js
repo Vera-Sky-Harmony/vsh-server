@@ -152,8 +152,7 @@ Day8（VSH譲渡）を送信します。`;
 
 setTimeout(() => {
 
-    window.location.href = "/ページ/day7-3.html";
-
+  window.location.href = "/pages/day7-3.html"; 
 }, 1000);
 
 } catch (err) {
