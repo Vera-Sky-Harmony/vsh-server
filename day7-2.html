@@ -6,157 +6,199 @@
 <title>Day7-2</title>
 
 <style>
+
 body{
-  margin:0;
-  font-family:sans-serif;
-  background:#f4f6f8;
+    margin:0;
+    background:#f4f6f8;
+    font-family:sans-serif;
 }
 
 .container{
-  background:#fff;
-  padding:20px;
-  max-width:600px;
-  margin:auto;
+    max-width:700px;
+    margin:auto;
+    background:#ffffff;
+    padding:20px;
 }
 
 img{
-  width:100%;
-  border-radius:12px;
+    width:100%;
+    border-radius:12px;
 }
 
 h2{
-  margin-top:20px;
+    margin-top:20px;
 }
 
 .section{
-  margin-top:20px;
-  font-size:14px;
-  line-height:1.6;
-}
-
-.button{
-  display:block;
-  margin:20px auto;
-  padding:15px;
-  background:#06c755;
-  color:#fff;
-  text-align:center;
-  text-decoration:none;
-  border-radius:8px;
-  font-weight:bold;
-  cursor:pointer;
+    margin-top:20px;
+    line-height:1.8;
+    font-size:15px;
 }
 
 .value{
-  color:#d32f2f;
-  font-weight:bold;
-  font-size:16px;
+    color:#d32f2f;
+    font-weight:bold;
+    font-size:17px;
 }
+
+.button{
+
+    display:block;
+
+    width:100%;
+
+    margin-top:25px;
+
+    padding:16px;
+
+    border:none;
+
+    border-radius:8px;
+
+    background:#06c755;
+
+    color:white;
+
+    text-align:center;
+
+    text-decoration:none;
+
+    font-size:18px;
+
+    font-weight:bold;
+
+    cursor:pointer;
+
+    box-sizing:border-box;
+
+}
+
+.button:hover{
+
+    opacity:0.9;
+
+}
+
+.notice{
+
+    margin-top:15px;
+
+    font-size:13px;
+
+    color:#666;
+
+}
+
 </style>
 
 </head>
+
 <body>
 
 <div class="container">
 
-<img src="https://res.cloudinary.com/dxegzwukb/image/upload/v1771291127/X41_s9psh6.png">
+<img
+src="https://res.cloudinary.com/dxegzwukb/image/upload/v1771291127/X41_s9psh6.png">
 
 <h2>【VSH登録受付】</h2>
 
 <div class="section">
+
 【登録申請】方法<br>
-FBO登録申請書（WEB版）の入力と登録セット購入で完了します。
+
+FBO登録申請書（WEB版）の入力と、
+
+登録セット購入で登録完了です。
+
 </div>
 
 <div class="section">
-クーリングオフ制度がありますので安心して登録してください。<br>
-あなたが登録すると、この✨Vera.Sky.Harmony✨があなたにプレゼントされます。<br><br>
 
-<b>
-FBO登録申請が終わりましたら、
-</b><br><br>
+クーリングオフ制度がありますので、
 
-・あなたの氏名<br>
-・あなたのFLP番号<br><br>
+安心して登録してください。
 
-を紹介者に送信してください。
+<br><br>
+
+あなたが登録すると
+
+✨Vera Sky Harmony✨
+
+がプレゼントされます。
+
 </div>
 
 <div class="section">
-○登録ページ<br>
-<a href="https://member.flpj.co.jp/memberregi/memberregi.php?subsys=wksv2200&gid=Wksv220000&eventid=C001" target="_blank">
+
+<b>登録申請に必要な情報</b>
+
+<br><br>
+
+紹介者氏名
+
+<br>
+
+<span id="name" class="value">読み込み中...</span>
+
+<br><br>
+
+紹介者FLP番号
+
+<br>
+
+<span id="flp" class="value">読み込み中...</span>
+
+<br><br>
+
+あなたのFLP番号
+
+<br>
+
+<span id="myflp" class="value">読み込み中...</span>
+
+</div>
+
+<div class="section">
+
+<a
+href="https://member.flpj.co.jp/memberregi/memberregi.php?subsys=wksv2200&gid=Wksv220000&eventid=C001"
+target="_blank">
+rel="noopener noreferrer"
 登録ページはこちら
+
 </a>
-</div>
-
-<div class="section">
-○登録申請に必要な情報<br>
-
-・紹介者氏名：
-<span id="name" class="value"></span><br>
-
-・紹介者FLP番号：
-<span id="flp" class="value"></span><br>
-
-・あなたのFLP番号：
-<span id="myflp" class="value"></span>
 
 </div>
 
-<a class="button" onclick="startLINE()">
+<button
+id="sendButton"
+class="button">
+
 登録完了をLINEで送信する
-</a>
+
+</button>
 
 <a
 class="button"
-href="https://vsh-server.onrender.com/pages/day7-3.html">
+href="/ページ/day7-3.html">
+
 Day7-3へ進む
+
 </a>
+
+<div class="notice">
+
+※紹介者がFBO登録完了を確認後、
+
+VSHが譲渡されます。
 
 </div>
 
-<script>
+</div>
 
-// URLパラメータ取得
-const params = new URLSearchParams(window.location.search);
-
-const name  = params.get("name");
-const flp   = params.get("flp");
-const myflp = params.get("myflp");
-
-// 表示
-document.getElementById("name").textContent  = name  || "未設定";
-document.getElementById("flp").textContent   = flp   || "未設定";
-document.getElementById("myflp").textContent = myflp || "未設定";
-
-// LINE送信
-function startLINE(){
-
-  const userName = prompt("あなたの氏名を入力してください");
-  if(!userName) return;
-
-  const userFLP = prompt("あなたのFLP番号を入力してください");
-  if(!userFLP) return;
-
-const text =
-`【登録完了】
-
-氏名：${userName}
-
-FLP番号：${userFLP}
-
-登録ありがとうございます。
-
-Day7-3はこちら
-https://vsh-server.onrender.com/pages/day7-3.html`; 
-  window.open(
-    "https://line.me/R/oaMessage/@591tvejt/?"
-    + encodeURIComponent(text),
-    "_blank"
-  );
-}
-
-</script>
+<script src="/ページ/day7-2.js"></script>
 
 </body>
 </html>
+
+
