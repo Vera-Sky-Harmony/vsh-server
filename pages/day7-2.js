@@ -51,49 +51,23 @@ window.onload = async function () {
     }
 
 };
-        if (!data.success) {
-
-            alert("未使用のFLP番号がありません。");
-
-            return;
-
-        }
-
-        document.getElementById("name").textContent =
-            data.introducerName;
-
-        document.getElementById("flp").textContent =
-            data.introducerFLP;
-
-        document.getElementById("myflp").textContent =
-            data.myFLP;
-
-        myFLP = data.myFLP;
-
-    } catch (err) {
-
-        console.error(err);
-
-        alert("サーバーへ接続できません。");
-
-    }
-
-};
 
 //==============================
 // LINE送信ボタン
 //==============================
 
 document
-.getElementById("sendButton")
-.addEventListener("click", startLINE);
+    .getElementById("sendButton")
+    .addEventListener("click", startLINE);
 
 //==============================
 // LINE送信
 //==============================
 
 async function startLINE() {
-alert("startLINEが呼ばれました");
+
+    alert("startLINEが呼ばれました");
+
     // FLP番号取得確認
     if (!myFLP) {
 
@@ -110,13 +84,14 @@ alert("startLINEが呼ばれました");
 
     const userName =
         prompt("あなたの氏名を入力してください。");
+
     if (!userName) {
 
-    button.disabled = false;
+        button.disabled = false;
 
-    return;
+        return;
 
-}
+    }
 
     try {
 
@@ -144,15 +119,15 @@ alert("startLINEが呼ばれました");
 
         const result = await res.json();
 
-      if (!result.success) {
+        if (!result.success) {
 
-    button.disabled = false;
+            button.disabled = false;
 
-    alert("FLP番号の更新に失敗しました。");
+            alert("FLP番号の更新に失敗しました。");
 
-    return;
+            return;
 
-} 
+        }
 
         //----------------------------------
         // LINEメッセージ作成
@@ -176,27 +151,24 @@ Day8（VSH譲渡）を送信します。`;
         //----------------------------------
 
         window.open(
+            "https://line.me/R/oaMessage/@591tvejt/?"
+            + encodeURIComponent(text),
+            "_blank"
+        );
 
-    "https://line.me/R/oaMessage/@591tvejt/?"
-    + encodeURIComponent(text),
+        setTimeout(() => {
 
-    "_blank"
+            window.location.href = "/pages/day7-3.html";
 
-);
+        }, 1000);
 
-setTimeout(() => {
+    } catch (err) {
 
-  window.location.href = "/pages/day7-3.html"; 
-}, 1000);
+        button.disabled = false;
 
-} catch (err) {
+        console.error(err);
 
-    button.disabled = false;
+        alert("通信エラーが発生しました。");
 
-    console.error(err);
+    }
 
-    alert("通信エラーが発生しました。");
-
-}
-
-}
