@@ -11,12 +11,46 @@ let myFLP = "";
 
 window.onload = async function () {
 
+    alert("① onload開始");
+
     try {
 
         const res = await fetch("/api/next-flp");
 
+        alert("② API取得成功");
+
         const data = await res.json();
 
+        alert("③ myFLP = " + data.myFLP);
+
+        if (!data.success) {
+
+            alert("未使用のFLP番号がありません。");
+
+            return;
+
+        }
+
+        document.getElementById("name").textContent =
+            data.introducerName;
+
+        document.getElementById("flp").textContent =
+            data.introducerFLP;
+
+        document.getElementById("myflp").textContent =
+            data.myFLP;
+
+        myFLP = data.myFLP;
+
+    } catch (err) {
+
+        console.error(err);
+
+        alert("サーバーへ接続できません。");
+
+    }
+
+};
         if (!data.success) {
 
             alert("未使用のFLP番号がありません。");
