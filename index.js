@@ -11,12 +11,7 @@ const __dirname = path.dirname(__filename);
    Admin データ
 ========================= */
 
-const DATA_DIR = path.join(__dirname, "data");
-const ADMIN_FILE = path.join(DATA_DIR, "root-admin.json");
-
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR);
-}
+const ADMIN_FILE = path.join(__dirname, "root-admin.json");
 
 if (!fs.existsSync(ADMIN_FILE)) {
 
