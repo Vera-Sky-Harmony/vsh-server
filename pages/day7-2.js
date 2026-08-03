@@ -1,27 +1,26 @@
 // ========================================
 // Day7-2.js
-// Vera Sky Harmony Version1.0
+// Vera Sky Harmony Version2.0
+// 完成版（全面差し替え）
 // ========================================
 
 let myFLP = "";
 
-//==============================
+//========================================
 // 初期表示
-//==============================
+//========================================
 
-window.onload = async function () {
-
-    alert("① onload開始");
+window.onload = async () => {
 
     try {
 
         const res = await fetch("/api/next-flp");
 
-        alert("② API取得成功");
+        if (!res.ok) {
+            throw new Error("API Error");
+        }
 
         const data = await res.json();
-
-        alert("③ myFLP = " + data.myFLP);
 
         if (!data.success) {
 
@@ -52,33 +51,30 @@ window.onload = async function () {
 
 };
 
-//==============================
-// LINE送信ボタン
-//==============================
+//========================================
+// ボタン
+//========================================
 
 document
     .getElementById("sendButton")
     .addEventListener("click", startLINE);
 
-//==============================
+//========================================
 // LINE送信
-//==============================
+//========================================
 
 async function startLINE() {
 
-    alert("startLINEが呼ばれました");
-
-    // FLP番号取得確認
     if (!myFLP) {
 
-        alert("FLP番号が取得できていません。ページを再読み込みしてください。");
+        alert("FLP番号が取得できていません。");
 
         return;
 
     }
 
-    // 二重クリック防止
-    const button = document.getElementById("sendButton");
+    const button =
+        document.getElementById("sendButton");
 
     button.disabled = true;
 
@@ -99,77 +95,79 @@ async function startLINE() {
         // FLP番号を使用中へ変更
         //----------------------------------
 
-        const res = await fetch("/api/use-flp", {
+        const useRes =
+            await fetch("/api/use-flp", {
 
-            method: "POST",
+                method: "POST",
 
-            headers: {
+                headers: {
+                    "Content-Type":
+                    "application/json"
+                },
 
-                "Content-Type": "application/json"
+                body: JSON.stringify({
 
-            },
+                    flp: myFLP
 
-            body: JSON.stringify({
+                })
 
-                flp: myFLP
+            });
 
-            })
+        const useResult =
+            await useRes.json();
 
-        });
+        if (!useResult.success) {
 
-        const result = await res.json();
-
-        if (!result.success) {
+            alert("FLP番号更新エラー");
 
             button.disabled = false;
-
-            alert("FLP番号の更新に失敗しました。");
 
             return;
 
         }
 
         //----------------------------------
-        // LINEメッセージ作成
+        // 紹介者LINE
         //----------------------------------
 
-        const text =
-`【VSH登録完了】
+        const introducerText =
+
+`【登録完了】
 
 氏名：${userName}
 
-FLP番号：${myFLP}
-
-登録ありがとうございます。
-
-紹介者がFBO登録完了を確認後、
-
-Day8（VSH譲渡）を送信します。`;
-
-        //----------------------------------
-        // LINE起動
-        //----------------------------------
+FLP番号：${myFLP}`;
 
         window.open(
+
             "https://line.me/R/oaMessage/@591tvejt/?"
-            + encodeURIComponent(text),
+            + encodeURIComponent(introducerText),
+
             "_blank"
+
         );
+
+        //----------------------------------
+        // Day7-3へ
+        //----------------------------------
 
         setTimeout(() => {
 
-            window.location.href = "/pages/day7-3.html";
+            window.location.href =
+                "/pages/day7-3.html";
 
-        }, 1000);
+        }, 800);
 
-    } catch (err) {
+    }
 
-        button.disabled = false;
+    catch (err) {
 
         console.error(err);
 
         alert("通信エラーが発生しました。");
 
-   } 
+        button.disabled = false;
 
-   } 
+    }
+
+}
