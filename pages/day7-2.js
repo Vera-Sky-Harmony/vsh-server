@@ -1,30 +1,23 @@
-// ========================================
-// Day7-2.js
-// Vera Sky Harmony Version2.0
-// 完成版（全面差し替え）
-// ========================================
-
-let myFLP = "";
-
 //========================================
+// day7-2.js
+// Vera Sky Harmony Version1.0
+//========================================
+
+//----------------------------------------
 // 初期表示
-//========================================
+//----------------------------------------
 
-window.onload = async () => {
+document.addEventListener("DOMContentLoaded", async () => {
 
     try {
 
         const res = await fetch("/api/next-flp");
 
-        if (!res.ok) {
-            throw new Error("API Error");
-        }
-
         const data = await res.json();
 
         if (!data.success) {
 
-            alert("未使用のFLP番号がありません。");
+            alert(data.message);
 
             return;
 
@@ -39,135 +32,81 @@ window.onload = async () => {
         document.getElementById("myflp").textContent =
             data.myFLP;
 
-        myFLP = data.myFLP;
-
     } catch (err) {
 
         console.error(err);
 
-        alert("サーバーへ接続できません。");
+        alert("初期データの取得に失敗しました。");
 
     }
 
-};
+});
 
-//========================================
-// ボタン
-//========================================
+//----------------------------------------
+// 「登録完了をLINEで送信する」
+//----------------------------------------
 
-document
-    .getElementById("sendButton")
-    .addEventListener("click", startLINE);
+document.getElementById("sendButton").addEventListener("click", async () => {
 
-//========================================
-// LINE送信
-//========================================
+    const name = prompt("あなたの氏名を入力してください");
 
-async function startLINE() {
+    if (!name || name.trim() === "") {
 
-    if (!myFLP) {
-
-        alert("FLP番号が取得できていません。");
+        alert("氏名を入力してください。");
 
         return;
 
     }
 
-    const button =
-        document.getElementById("sendButton");
-
-    button.disabled = true;
-
-    const userName =
-        prompt("あなたの氏名を入力してください。");
-
-    if (!userName) {
-
-        button.disabled = false;
-
-        return;
-
-    }
+    const flp = document.getElementById("myflp").textContent;
 
     try {
 
-        //----------------------------------
-        // FLP番号を使用中へ変更
-        //----------------------------------
+        const response = await fetch("/api/register", {
 
-        const useRes =
-            await fetch("/api/use-flp", {
+            method: "POST",
 
-                method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
 
-                headers: {
-                    "Content-Type":
-                    "application/json"
-                },
+            body: JSON.stringify({
 
-                body: JSON.stringify({
+                name: name.trim(),
 
-                    flp: myFLP
+                flp: flp
 
-                })
+            })
 
-            });
+        });
 
-        const useResult =
-            await useRes.json();
+        const data = await response.json();
 
-        if (!useResult.success) {
+        if (!data.success) {
 
-            alert("FLP番号更新エラー");
-
-            button.disabled = false;
+            alert(data.message);
 
             return;
 
         }
 
-        //----------------------------------
-        // 紹介者LINE
-        //----------------------------------
-
-        const introducerText =
-
+        alert(
 `【登録完了】
 
-氏名：${userName}
+氏名：${data.userName}
 
-FLP番号：${myFLP}`;
-
-        window.open(
-
-            "https://line.me/R/oaMessage/@591tvejt/?"
-            + encodeURIComponent(introducerText),
-
-            "_blank"
-
+FLP番号：${data.userFLP}`
         );
 
-        //----------------------------------
-        // Day7-3へ
-        //----------------------------------
+        // Day7-3へ移動
+        window.location.href = "/pages/day7-3.html";
 
-        setTimeout(() => {
-
-            window.location.href =
-                "/pages/day7-3.html";
-
-        }, 800);
-
-    }
-
-    catch (err) {
+    } catch (err) {
 
         console.error(err);
 
         alert("通信エラーが発生しました。");
 
-        button.disabled = false;
-
     }
 
-}
+});
