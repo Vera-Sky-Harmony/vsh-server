@@ -222,6 +222,35 @@ app.post("/api/complete-flp", (req, res) => {
 
 });
 /* =========================
+   第一世代登録者一覧取得
+========================= */
+
+app.get("/api/members", (_req, res) => {
+
+  try {
+
+    const data = JSON.parse(
+      fs.readFileSync(ADMIN_FILE, "utf8")
+    );
+
+    res.json({
+      success: true,
+      members: data.members || []
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      members: []
+    });
+
+  }
+
+});
+/* =========================
    登録受付
 ========================= */
 
@@ -258,7 +287,19 @@ app.post("/api/register", (req, res) => {
     }
 
     item.status = "使用済";
+if (!data.members) {
 
+  data.members = [];
+
+}
+
+data.members.push({
+
+  name: name,
+
+  flp: flp
+
+});
     fs.writeFileSync(
       ADMIN_FILE,
       JSON.stringify(data, null, 2)
