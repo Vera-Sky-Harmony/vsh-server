@@ -254,7 +254,7 @@ app.get("/api/members", (_req, res) => {
    登録受付
 ========================= */
 
-app.post("/api/register", (req, res) => {
+app.post("/api/register", async (req, res) => {
 
   try {
 
@@ -304,7 +304,7 @@ data.members.push({
       ADMIN_FILE,
       JSON.stringify(data, null, 2)
     );
-
+await pushToIntroducer(name, flp);
     res.json({
       success: true,
       userName: name,
@@ -350,7 +350,22 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
 
       const text = ev.message.text.trim();
       const userId = ev.source.userId;
+const data = JSON.parse(
+  fs.readFileSync(ADMIN_FILE, "utf8")
+);
 
+if (!data.introducerUserId) {
+
+  data.introducerUserId = userId;
+
+  fs.writeFileSync(
+    ADMIN_FILE,
+    JSON.stringify(data, null, 2)
+  );
+
+  console.log("紹介者UserID登録完了");
+
+}
       /* =========================
          Day7-2
       ========================= */
@@ -407,7 +422,42 @@ FBO登録が全て完了しましたら画面下のスタートを押し、「�
 });
 
 /* ========================= */
+/* =========================
+   紹介者へPushMessage
+========================= */
 
+async function pushToIntroducer(name, flp) {
+
+  try {
+
+    const data = JSON.parse(
+      fs.readFileSync(ADMIN_FILE, "utf8")
+    );
+
+    if (!data.introducerUserId) return;
+
+    await client.pushMessage(
+      data.introducerUserId,
+      {
+        type: "text",
+        text:
+`【第一世代登録完了】
+
+氏名：${name}
+
+FLP番号：${flp}
+
+Day8を送信してください。`
+      }
+    );
+
+  } catch (err) {
+
+    console.error(err);
+
+  }
+
+}
 app.listen(Number(PORT || 10000), () => {
   console.log("=================================");
   console.log("VSH Stable Version Running");
