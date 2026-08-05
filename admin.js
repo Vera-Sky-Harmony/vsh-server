@@ -221,3 +221,11 @@ async function loadMembers() {
     }
 
 }
+
+document
+.getElementById("friendButton")
+.addEventListener("click", async () => {
+
+    alert("この機能は次に実装します。");
+
+});
