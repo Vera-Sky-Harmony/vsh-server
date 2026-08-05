@@ -73,17 +73,55 @@ app.get("/api/admin", (_req, res) => {
 
 app.post("/api/admin", (req, res) => {
 
-  fs.writeFileSync(
-    ADMIN_FILE,
-    JSON.stringify(req.body, null, 2)
-  );
+  try {
 
-  res.json({
-    success: true
-  });
+    const body = {
+
+      introducerName:
+        req.body.introducerName || "",
+
+      introducerFLP:
+        req.body.introducerFLP || "",
+
+      flpList:
+        req.body.flpList || [],
+
+      members:
+        req.body.members || []
+
+    };
+
+    fs.writeFileSync(
+
+      ADMIN_FILE,
+
+      JSON.stringify(body, null, 2),
+
+      "utf8"
+
+    );
+
+    res.json({
+
+      success: true
+
+    });
+
+  }
+
+  catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+
+      success: false
+
+    });
+
+  }
 
 });
-
 /* =========================
    次の未使用FLP取得
 ========================= */
