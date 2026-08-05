@@ -1,1 +1,176 @@
+/* =======================================
+   admin.css
+   Vera Sky Harmony Version1.0
+======================================= */
 
+*{
+    box-sizing:border-box;
+}
+
+body{
+
+    margin:0;
+    padding:20px;
+
+    background:#eef3f8;
+
+    font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+    color:#333;
+
+}
+
+.container{
+
+    max-width:760px;
+
+    margin:auto;
+
+}
+
+h1{
+
+    text-align:center;
+
+    color:#003366;
+
+    margin-bottom:30px;
+
+}
+
+.card{
+
+    background:#ffffff;
+
+    border-radius:12px;
+
+    padding:20px;
+
+    margin-bottom:25px;
+
+    box-shadow:
+    0 2px 8px rgba(0,0,0,.10);
+
+}
+
+h2{
+
+    margin-top:0;
+
+    color:#003366;
+
+    border-left:6px solid #0b67c2;
+
+    padding-left:10px;
+
+}
+
+label{
+
+    display:block;
+
+    margin-top:18px;
+
+    margin-bottom:8px;
+
+    font-weight:bold;
+
+}
+
+input{
+
+    width:100%;
+
+    padding:12px;
+
+    font-size:17px;
+
+    border:1px solid #cccccc;
+
+    border-radius:8px;
+
+}
+
+button{
+
+    width:100%;
+
+    margin-top:20px;
+
+    padding:16px;
+
+    font-size:18px;
+
+    font-weight:bold;
+
+    color:#ffffff;
+
+    background:#06c755;
+
+    border:none;
+
+    border-radius:8px;
+
+    cursor:pointer;
+
+}
+
+button:hover{
+
+    opacity:.90;
+
+}
+
+table{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+    margin-top:15px;
+
+}
+
+th{
+
+    background:#003366;
+
+    color:#ffffff;
+
+    padding:10px;
+
+}
+
+td{
+
+    padding:10px;
+
+    border-bottom:1px solid #dddddd;
+
+    text-align:center;
+
+}
+
+#memberCount{
+
+    color:#d50000;
+
+    font-size:22px;
+
+    font-weight:bold;
+
+}
+
+.flpRow{
+
+    margin-bottom:10px;
+}
+
+.flpRow input{
+
+    width:100%;
+}
