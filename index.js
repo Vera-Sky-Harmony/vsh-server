@@ -350,22 +350,7 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
 
       const text = ev.message.text.trim();
       const userId = ev.source.userId;
-const data = JSON.parse(
-  fs.readFileSync(ADMIN_FILE, "utf8")
-);
 
-if (!data.introducerUserId) {
-
-  data.introducerUserId = userId;
-
-  fs.writeFileSync(
-    ADMIN_FILE,
-    JSON.stringify(data, null, 2)
-  );
-
-  console.log("紹介者UserID登録完了");
-
-}
       /* =========================
          Day7-2
       ========================= */
