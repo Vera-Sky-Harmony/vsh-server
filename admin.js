@@ -107,22 +107,26 @@ async function saveAdmin() {
         }
 
     }
+const old = await fetch("/api/admin");
+const oldData = await old.json();
 
-    const body = {
+const body = {
 
-        introducerName:
-            document.getElementById(
-                "introducerName"
-            ).value,
+    introducerName:
+        document.getElementById(
+            "introducerName"
+        ).value,
 
-        introducerFLP:
-            document.getElementById(
-                "introducerFLP"
-            ).value,
+    introducerFLP:
+        document.getElementById(
+            "introducerFLP"
+        ).value,
 
-        flpList: flpArray
+    flpList: flpArray,
 
-    };
+    members: oldData.members || []
+
+};
 
     try {
 
