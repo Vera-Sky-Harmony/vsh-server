@@ -153,7 +153,7 @@ async function saveAdmin() {
         if (data.success) {
 
             alert("保存しました。");
-
+loadMembers();
         }
 
     }
@@ -168,24 +168,52 @@ async function saveAdmin() {
 
 }
 
-//----------------------------------------
-// 第一世代一覧
-//----------------------------------------
 
-function loadMembers() {
-
-    document.getElementById(
-        "memberCount"
-    ).textContent = "0";
-
-    document.getElementById(
-        "memberTable"
-    ).innerHTML = "";
-
-}
 
 //----------------------------------------
 
 loadAdmin();
-
 loadMembers();
+/* =========================
+   第一世代登録者一覧
+========================= */
+
+async function loadMembers() {
+
+    try {
+
+        const res = await fetch("/api/members");
+
+        const data = await res.json();
+
+        if (!data.success) return;
+
+        const count = document.getElementById("memberCount");
+        const tbody = document.getElementById("memberTable");
+
+        count.textContent = data.members.length;
+
+        tbody.innerHTML = "";
+
+        data.members.forEach(member => {
+
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+                <td>${member.name}</td>
+                <td>${member.flp}</td>
+            `;
+
+            tbody.appendChild(tr);
+
+        });
+
+    }
+
+    catch (err) {
+
+        console.error(err);
+
+    }
+
+}
