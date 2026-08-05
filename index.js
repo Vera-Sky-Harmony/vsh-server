@@ -1,4 +1,4 @@
-import express from "express";
+mport express from "express";
 import crypto from "crypto";
 import { Client } from "@line/bot-sdk";
 import path from "path";
@@ -181,6 +181,67 @@ app.post("/api/complete-flp", (req, res) => {
   res.json({
     success:true
   });
+
+});
+/* =========================
+   登録受付
+========================= */
+
+app.post("/api/register", (req, res) => {
+
+  try {
+
+    const { name, flp } = req.body;
+
+    if (!name || !flp) {
+
+      return res.json({
+        success: false,
+        message: "氏名またはFLP番号がありません。"
+      });
+
+    }
+
+    const data = JSON.parse(
+      fs.readFileSync(ADMIN_FILE, "utf8")
+    );
+
+    const item = data.flpList.find(
+      x => x.flp === flp
+    );
+
+    if (!item) {
+
+      return res.json({
+        success: false,
+        message: "FLP番号が見つかりません。"
+      });
+
+    }
+
+    item.status = "使用済";
+
+    fs.writeFileSync(
+      ADMIN_FILE,
+      JSON.stringify(data, null, 2)
+    );
+
+    res.json({
+      success: true,
+      userName: name,
+      userFLP: flp
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      message: "登録処理エラー"
+    });
+
+  }
 
 });
 /* =========================
