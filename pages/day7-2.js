@@ -79,7 +79,9 @@ document.getElementById("sendButton").addEventListener("click", async () => {
             })
 
         });
-
+if (!response.ok) {
+    alert("HTTPエラー：" + response.status);
+}
         const data = await response.json();
 
         if (!data.success) {
