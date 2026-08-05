@@ -70,7 +70,40 @@ app.get("/api/admin", (_req, res) => {
   res.json(data);
 
 });
+/* =========================
+   紹介者UserID保存
+========================= */
 
+app.post("/api/introducer", (req, res) => {
+
+  try {
+
+    const data = JSON.parse(
+      fs.readFileSync(ADMIN_FILE, "utf8")
+    );
+
+    data.introducerUserId = req.body.userId;
+
+    fs.writeFileSync(
+      ADMIN_FILE,
+      JSON.stringify(data, null, 2)
+    );
+
+    res.json({
+      success: true
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      success: false
+    });
+
+  }
+
+});
 app.post("/api/admin", (req, res) => {
 
   try {
