@@ -226,6 +226,36 @@ document
 .getElementById("friendButton")
 .addEventListener("click", async () => {
 
-    alert("この機能は次に実装します。");
+    const userId = prompt("紹介者のLINE UserIDを入力してください。");
+
+    if (!userId) return;
+
+    const res = await fetch("/api/introducer", {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+
+            userId: userId
+
+        })
+
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+
+        alert("紹介者を登録しました。");
+
+    } else {
+
+        alert("登録失敗");
+
+    }
 
 });
