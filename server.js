@@ -82,6 +82,39 @@ app.get("/liff/invite.js", (req, res) => {
 });
 // サーバー確認
 app.get("/test", (req, res) => {
+    //========================================
+// 紹介者登録
+//========================================
+
+app.post("/api/introducer", (req, res) => {
+
+    try {
+
+        const { userId, displayName } = req.body;
+
+        const admin = loadRootAdmin();
+
+        admin.introducerUserId = userId;
+        admin.introducerName = displayName;
+
+        saveRootAdmin(admin);
+
+        res.json({
+            success: true
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+            success: false,
+            message: "紹介者登録エラー"
+        });
+
+    }
+
+});
     res.json({
         success: true,
         message: "VSH Server Running"
