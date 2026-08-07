@@ -65,7 +65,21 @@ app.get("/pages/day7-3.html", (req, res) => {
 app.get("/pages/day8.html", (req, res) => {
    res.sendFile(path.join(__dirname, "public", "pages", "day8.html"));
 });
+//========================================
+// LIFF 招待ページ
+//========================================
 
+app.get("/liff/invite", (req, res) => {
+    res.sendFile(
+        path.join(__dirname, "pages", "invite.html")
+    );
+});
+
+app.get("/liff/invite.js", (req, res) => {
+    res.sendFile(
+        path.join(__dirname, "pages", "invite.js")
+    );
+});
 // サーバー確認
 app.get("/test", (req, res) => {
     res.json({
