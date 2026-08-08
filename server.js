@@ -303,13 +303,17 @@ const exists = admin.members.find(
 
 if (!exists) {
 
-    admin.members.push({
+   admin.members.push({
 
     name: name,
-    flp: flp,
-    createdAt: new Date().toISOString()
 
-});
+    flp: flp,
+
+    createdAt: new Date().toISOString(),
+
+    status: "登録待ち"
+
+}); 
 
 }
 
