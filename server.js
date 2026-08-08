@@ -315,7 +315,7 @@ app.post("/api/register", async (req, res) => {
 
         });
 
-        });
+       
 
     } catch (err) {
 
