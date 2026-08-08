@@ -35,7 +35,6 @@ async function loadAdmin() {
     try {
 
         const res = await fetch("/api/admin");
-
         const data = await res.json();
 
         document.getElementById("introducerName").value =
@@ -48,27 +47,21 @@ async function loadAdmin() {
 
             data.flpList.forEach((item, index) => {
 
-                const box =
-                    document.getElementById(
-                        `flp${index + 1}`
-                    );
+                const box = document.getElementById(
+                    `flp${index + 1}`
+                );
 
                 if (box) {
-
                     box.value = item.flp;
-
                 }
 
             });
 
         }
 
-    }
-
-    catch (err) {
+    } catch (err) {
 
         console.error(err);
-
         alert("管理データ読込みエラー");
 
     }
@@ -90,16 +83,13 @@ async function saveAdmin() {
     for (let i = 1; i <= 30; i++) {
 
         const value =
-            document.getElementById(
-                `flp${i}`
-            ).value.trim();
+            document.getElementById(`flp${i}`).value.trim();
 
         if (value !== "") {
 
             flpArray.push({
 
                 flp: value,
-
                 status: "未使用"
 
             });
@@ -107,26 +97,23 @@ async function saveAdmin() {
         }
 
     }
-const old = await fetch("/api/admin");
-const oldData = await old.json();
 
-const body = {
+    const old = await fetch("/api/admin");
+    const oldData = await old.json();
 
-    introducerName:
-        document.getElementById(
-            "introducerName"
-        ).value,
+    const body = {
 
-    introducerFLP:
-        document.getElementById(
-            "introducerFLP"
-        ).value,
+        introducerName:
+            document.getElementById("introducerName").value,
 
-    flpList: flpArray,
+        introducerFLP:
+            document.getElementById("introducerFLP").value,
 
-    members: oldData.members || []
+        flpList: flpArray,
 
-};
+        members: oldData.members || []
+
+    };
 
     try {
 
@@ -139,10 +126,7 @@ const body = {
                 method: "POST",
 
                 headers: {
-
-                    "Content-Type":
-                    "application/json"
-
+                    "Content-Type": "application/json"
                 },
 
                 body: JSON.stringify(body)
@@ -151,18 +135,17 @@ const body = {
 
         );
 
-        const data =
-            await res.json();
+        const data = await res.json();
 
         if (data.success) {
 
             alert("保存しました。");
-loadMembers();
+
+            loadMembers();
+
         }
 
-    }
-
-    catch (err) {
+    } catch (err) {
 
         console.error(err);
 
@@ -172,15 +155,16 @@ loadMembers();
 
 }
 
-
-
+//----------------------------------------
+// 初期表示
 //----------------------------------------
 
 loadAdmin();
 loadMembers();
-/* =========================
-   第一世代登録者一覧
-========================= */
+
+//----------------------------------------
+// 第一世代登録者一覧
+//----------------------------------------
 
 async function loadMembers() {
 
@@ -192,8 +176,11 @@ async function loadMembers() {
 
         if (!data.success) return;
 
-        const count = document.getElementById("memberCount");
-        const tbody = document.getElementById("memberTable");
+        const count =
+            document.getElementById("memberCount");
+
+        const tbody =
+            document.getElementById("memberTable");
 
         count.textContent = data.members.length;
 
@@ -212,9 +199,7 @@ async function loadMembers() {
 
         });
 
-    }
-
-    catch (err) {
+    } catch (err) {
 
         console.error(err);
 
@@ -222,39 +207,38 @@ async function loadMembers() {
 
 }
 
+//----------------------------------------
+// VSHともだち追加
+//----------------------------------------
+
 document
 .getElementById("friendButton")
 .addEventListener("click", async () => {
 
-    const userId = prompt("紹介者のLINE UserIDを入力してください。");
+    const url = "https://line.me/R/ti/p/@591tvejt";
 
-    if (!userId) return;
+    try {
 
-    const res = await fetch("/api/introducer", {
+        await navigator.clipboard.writeText(url);
 
-        method: "POST",
+        alert(
+`VSH公式LINEをコピーしました。
 
-        headers: {
-            "Content-Type": "application/json"
-        },
+① LINEを開いてください。
 
-        body: JSON.stringify({
+② 友だち又はグループを開いてください。
 
-            userId: userId
+③ 貼り付けて送信してください。
 
-        })
+${url}`
+        );
 
-    });
+    } catch {
 
-    const data = await res.json();
-
-    if (data.success) {
-
-        alert("紹介者を登録しました。");
-
-    } else {
-
-        alert("登録失敗");
+        prompt(
+            "下記URLをコピーしてください。",
+            url
+        );
 
     }
 
