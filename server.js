@@ -81,8 +81,14 @@ app.get("/liff/invite.js", (req, res) => {
     );
 });
 // サーバー確認
+// サーバー確認
 app.get("/test", (req, res) => {
-    //========================================
+    res.json({
+        success: true,
+        message: "VSH Server Running"
+    });
+});
+//========================================
 // 紹介者登録
 //========================================
 
@@ -115,10 +121,7 @@ app.post("/api/introducer", (req, res) => {
     }
 
 });
-    res.json({
-        success: true,
-        message: "VSH Server Running"
-    });
+
 });
 //========================================
 // GET /api/next-flp
