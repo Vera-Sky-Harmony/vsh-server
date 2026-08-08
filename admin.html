@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>VSH ルートID管理画面</title>
 
@@ -15,142 +16,87 @@
 
 <div class="container">
 
-<h1>
+    <h1>
+        Vera Sky Harmony<br>
+        ルートID管理画面
+    </h1>
 
-Vera Sky Harmony<br>
+    <!-- 紹介者情報 -->
+    <div class="card">
 
-ルートID管理画面
+        <h2>紹介者情報</h2>
 
-</h1>
+        <label>紹介者氏名</label>
 
-<!-- 紹介者 -->
+        <input
+            type="text"
+            id="introducerName"
+            placeholder="細井 信孝">
 
-<div class="card">
+        <label>紹介者FLP番号</label>
 
-<h2>紹介者情報</h2>
+        <input
+            type="text"
+            id="introducerFLP"
+            placeholder="203145165">
 
-<label>
+    </div>
 
-紹介者氏名
+    <!-- FLP番号 -->
+    <div class="card">
 
-</label>
+        <h2>あなたのFLP番号</h2>
 
-<input
-type="text"
-id="introducerName"
-placeholder="細井 信孝">
+        <div id="flpList"></div>
 
-<label>
+        <button id="saveButton">
+            保存
+        </button>
 
-紹介者FLP番号
+    </div>
 
-</label>
+    <!-- VSHともだち追加 -->
+    <div class="card">
 
-<input
-type="text"
-id="introducerFLP"
-placeholder="203145165">
+        <h2>VSHともだち追加</h2>
 
-</div>
+        <button id="friendButton">
+            VSHともだち追加
+        </button>
 
-<!-- FLP番号 -->
+    </div>
 
-<div class="card">
+    <!-- 第一世代登録者 -->
+    <div class="card">
 
-<h2>
+        <h2>第一世代登録者</h2>
 
-あなたのFLP番号
+        <p>
+            登録人数
+            <span id="memberCount">0</span>
+            名
+        </p>
 
-</h2>
+        <table>
 
-<div id="flpList">
+            <thead>
+                <tr>
+                    <th>氏名</th>
+                    <th>FLP番号</th>
+                </tr>
+            </thead>
 
-</div>
+            <tbody id="memberTable">
+            </tbody>
 
-<button id="saveButton">
+        </table>
 
-保存
-
-</button>
-
-</div>
-
-<!-- VSH友だち追加 -->
-
-<div class="card">
-
-<h2>
-
-VSHともだち追加
-
-</h2>
-
-<button id="friendButton">
-
-VSHともだち追加
-
-</button>
-
-</div>
-
-<!-- 第一世代 -->
-
-<div class="card">
-
-<h2>
-
-第一世代登録者
-
-</h2>
-
-<p>
-
-登録人数
-
-<span id="memberCount">
-
-0
-
-</span>
-
-名
-
-</p>
-
-<table>
-
-<thead>
-
-<tr>
-
-<th>
-
-氏名
-
-</th>
-
-<th>
-
-FLP番号
-
-</th>
-
-</tr>
-
-</thead>
-
-<tbody id="memberTable">
-
-</tbody>
-
-</table>
-
-</div>
+    </div>
 
 </div>
 
 <script src="admin.js"></script>
+<script src="invite.js"></script>
 
 </body>
-
 </html>
