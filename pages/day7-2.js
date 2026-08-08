@@ -18,7 +18,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!data.success) {
 
             alert(data.message);
-
             return;
 
         }
@@ -43,7 +42,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 //----------------------------------------
-// 「登録完了をLINEで送信する」
+// 登録完了
 //----------------------------------------
 
 document.getElementById("sendButton").addEventListener("click", async () => {
@@ -58,7 +57,8 @@ document.getElementById("sendButton").addEventListener("click", async () => {
 
     }
 
-    const flp = document.getElementById("myflp").textContent;
+    const flp =
+        document.getElementById("myflp").textContent;
 
     try {
 
@@ -79,9 +79,15 @@ document.getElementById("sendButton").addEventListener("click", async () => {
             })
 
         });
-if (!response.ok) {
-    alert("HTTPエラー：" + response.status);
-}
+
+        if (!response.ok) {
+
+            alert("HTTPエラー：" + response.status);
+
+            return;
+
+        }
+
         const data = await response.json();
 
         if (!data.success) {
@@ -92,15 +98,10 @@ if (!response.ok) {
 
         }
 
-        alert(
-`【登録完了】
+        // 登録受付だけ表示
+        alert("登録を受け付けました。");
 
-氏名：${data.userName}
-
-FLP番号：${data.userFLP}`
-        );
-
-        // Day7-3へ移動
+        // Day7-3へ
         window.location.href = "/pages/day7-3.html";
 
     } catch (err) {
