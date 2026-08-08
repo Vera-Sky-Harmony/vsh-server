@@ -305,20 +305,15 @@ app.post("/api/register", async (req, res) => {
 
         }
 
-        // 新規登録者へ結果を返す
-        return res.json({
+              return res.json({
 
             success: true,
 
-            message: "登録受付が完了しました。",
+            message: "登録を受け付けました。",
 
-            introducerName: admin.introducerName,
+            nextPage: "/pages/day7-3.html"
 
-            introducerFLP: admin.introducerFLP,
-
-            userName: name,
-
-            userFLP: flp
+        });
 
         });
 
