@@ -288,11 +288,33 @@ app.post("/api/register", async (req, res) => {
 
         }
 
-        // 使用済へ変更
-        target.status = "使用済";
+       // 使用済へ変更
+target.status = "使用済";
 
-        // 保存
-        saveRootAdmin(admin);
+// membersが無ければ作成
+if (!admin.members) {
+    admin.members = [];
+}
+
+// 重複登録防止
+const exists = admin.members.find(
+    item => item.flp === flp
+);
+
+if (!exists) {
+
+    admin.members.push({
+
+    name: name,
+    flp: flp,
+    createdAt: new Date().toISOString()
+
+});
+
+}
+
+// 保存
+saveRootAdmin(admin);
 
         // 紹介者へPush Message
         try {
@@ -326,6 +348,40 @@ app.post("/api/register", async (req, res) => {
             success: false,
 
             message: "登録処理エラー"
+
+        });
+
+    }
+
+});
+//========================================
+// GET /api/members
+// 第一世代登録者一覧取得
+//========================================
+
+app.get("/api/members", (req, res) => {
+
+    try {
+
+        const admin = loadRootAdmin();
+
+        res.json({
+
+            success: true,
+
+            members: admin.members || []
+
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+
+            success: false,
+
+            members: []
 
         });
 
