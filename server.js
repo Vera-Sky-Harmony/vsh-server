@@ -81,7 +81,7 @@ app.get("/liff/invite.js", (req, res) => {
     );
 });
 // サーバー確認
-// サーバー確認
+
 app.get("/test", (req, res) => {
     res.json({
         success: true,
