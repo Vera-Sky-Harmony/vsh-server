@@ -525,31 +525,31 @@ VSHを譲渡いたします。
 📚 VSHライブラリ（Day0～Day7-2）
 
 Day0
-https://あなたのURL/day0
+https://vsh.onrender.com/pages/day0.html
 
 Day1
-https://あなたのURL/day1
+https://vsh.onrender.com/pages/day1.html
 
 Day2
-https://あなたのURL/day2
+https://vsh.onrender.com/pages/day2.html
 
 Day3
-https://あなたのURL/day3
+https://vsh.onrender.com/pages/day3.html
 
 Day4
-https://あなたのURL/day4
+https://vsh.onrender.com/pages/day4.html
 
 Day5
-https://あなたのURL/day5
+https://vsh.onrender.com/pages/day5.html
 
 Day6
-https://あなたのURL/day6
+https://vsh.onrender.com/pages/day6.html
 
 Day7-1
-https://あなたのURL/day7-1
+https://vsh.onrender.com/day7-1.html
 
 Day7-2
-https://あなたのURL/day7-2
+https://vsh.onrender.com/day7-2.html
 
 ━━━━━━━━━━━━━━━━━━
 
