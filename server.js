@@ -525,32 +525,31 @@ VSHを譲渡いたします。
 📚 VSHライブラリ（Day0～Day7-2）
 
 Day0
-https://vsh-serve.onrender.com/pages/day0.html
+https://vsh-server.onrender.com/pages/day0.html
 
 Day1
-https://vsh-serve.onrender.com/pages/day1.html
+https://vsh-server.onrender.com/pages/day1.html
 
 Day2
-https://vsh-serve.onrender.com/pages/day2.html
+https://vsh-server.onrender.com/pages/day2.html
 
 Day3
-https://vsh-serve.onrender.com/pages/day3.html
+https://vsh-server.onrender.com/pages/day3.html
 
 Day4
-https://vsh-serve.onrender.com/pages/day4.html
+https://vsh-server.onrender.com/pages/day4.html
 
 Day5
-https://vsh-serve.onrender.com/pages/day5.html
+https://vsh-server.onrender.com/pages/day5.html
 
 Day6
-https://vsh-serve.onrender.com/pages/day6.html
+https://vsh-server.onrender.com/pages/day6.html
 
 Day7-1
-https://vsh-serve.onrender.com/day7-1.html
+https://vsh-server.onrender.com/day7-1.html
 
 Day7-2
-https://vsh-serve.onrender.com/day7-2.html
-
+https://vsh-server.onrender.com/day7-2.html
 ━━━━━━━━━━━━━━━━━━
 
 今後はDay8以降が
