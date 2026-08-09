@@ -337,7 +337,7 @@ saveRootAdmin(admin);
 
             message: "登録を受け付けました。",
 
-            nextPage: "/pages/day7-3.html"
+            
 
         });
 
