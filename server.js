@@ -510,12 +510,51 @@ async function pushRegisterComplete(userName, userFLP) {
 
         }
 
-        const message =
-`【登録完了】
+       const message =
 
-氏名：${userName}
+`━━━━━━━━━━━━━━━━━━
 
-FLP番号：${userFLP}`;
+登録を受け付けました。
+
+紹介者がFLP本体システムで
+登録を確認後、
+VSHを譲渡いたします。
+
+━━━━━━━━━━━━━━━━━━
+
+📚 VSHライブラリ（Day0～Day7-2）
+
+Day0
+https://あなたのURL/day0
+
+Day1
+https://あなたのURL/day1
+
+Day2
+https://あなたのURL/day2
+
+Day3
+https://あなたのURL/day3
+
+Day4
+https://あなたのURL/day4
+
+Day5
+https://あなたのURL/day5
+
+Day6
+https://あなたのURL/day6
+
+Day7-1
+https://あなたのURL/day7-1
+
+Day7-2
+https://あなたのURL/day7-2
+
+━━━━━━━━━━━━━━━━━━
+
+今後はDay8以降が
+このLINEトークに届きます。`;
 
         await axios.post(
 
