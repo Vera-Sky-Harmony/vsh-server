@@ -1,6 +1,6 @@
 //========================================
 // day7-2.js
-// Vera Sky Harmony Version1.0
+// Vera Sky Harmony Version1.1
 //========================================
 
 //----------------------------------------
@@ -98,11 +98,18 @@ document.getElementById("sendButton").addEventListener("click", async () => {
 
         }
 
-        // 登録受付だけ表示
-        alert("登録を受け付けました。");
+        //----------------------------------------
+        // Day7-3はLINEで送信される
+        //----------------------------------------
 
-        // Day7-3へ
-        window.location.href = "/pages/day7-3.html";
+        alert(
+`登録を受け付けました。
+
+LINEをご確認ください。`
+        );
+
+        // Day7-3(Web)へは移動しない
+        return;
 
     } catch (err) {
 
