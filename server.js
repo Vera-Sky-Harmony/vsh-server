@@ -509,8 +509,7 @@ async function pushRegisterComplete(userName, userFLP) {
             return;
 
         }
-
-       const message =
+const message =
 
 `━━━━━━━━━━━━━━━━━━
 
@@ -550,10 +549,14 @@ https://vsh-server.onrender.com/day7-1.html
 
 Day7-2
 https://vsh-server.onrender.com/day7-2.html
+
 ━━━━━━━━━━━━━━━━━━
 
 今後はDay8以降が
-このLINEトークに届きます。`;
+このLINEトークに届きます。
+
+Vera Sky Harmony
+Version 1.1`;
 
         await axios.post(
 
