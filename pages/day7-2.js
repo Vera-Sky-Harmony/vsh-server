@@ -1,7 +1,13 @@
 //========================================
 // day7-2.js
-// Vera Sky Harmony Version1.1
+// Vera Sky Harmony Version1.2
 //========================================
+
+//----------------------------------------
+// LIFF UserID
+//----------------------------------------
+
+let lineUserId = "";
 
 //----------------------------------------
 // 初期表示
@@ -11,6 +17,34 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     try {
 
+        //----------------------------------------
+        // LIFF初期化
+        //----------------------------------------
+
+        await liff.init({
+
+            liffId: "ここにあなたのLIFF_ID"
+
+        });
+
+        if (liff.isLoggedIn()) {
+
+            const profile = await liff.getProfile();
+
+            lineUserId = profile.userId;
+
+        } else {
+
+            liff.login();
+
+            return;
+
+        }
+
+        //----------------------------------------
+        // 紹介者情報取得
+        //----------------------------------------
+
         const res = await fetch("/api/next-flp");
 
         const data = await res.json();
@@ -18,6 +52,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!data.success) {
 
             alert(data.message);
+
             return;
 
         }
@@ -57,6 +92,18 @@ document.getElementById("sendButton").addEventListener("click", async () => {
 
     }
 
+    //----------------------------------------
+    // LINE UserID確認
+    //----------------------------------------
+
+    if (!lineUserId) {
+
+        alert("LINE情報を取得できませんでした。");
+
+        return;
+
+    }
+
     const flp =
         document.getElementById("myflp").textContent;
 
@@ -67,14 +114,18 @@ document.getElementById("sendButton").addEventListener("click", async () => {
             method: "POST",
 
             headers: {
+
                 "Content-Type": "application/json"
+
             },
 
             body: JSON.stringify({
 
                 name: name.trim(),
 
-                flp: flp
+                flp: flp,
+
+                userId: lineUserId
 
             })
 
@@ -99,18 +150,19 @@ document.getElementById("sendButton").addEventListener("click", async () => {
         }
 
         //----------------------------------------
-        // Day7-3はLINEで送信される
+        // Day7-3はLINEへ送信
         //----------------------------------------
 
-       alert(
+        alert(
+
 `登録を受け付けました。
 
 LINEトークをご確認ください。
 
 ありがとうございました。`
-); 
 
-        // Day7-3(Web)へは移動しない
+        );
+
         return;
 
     } catch (err) {
