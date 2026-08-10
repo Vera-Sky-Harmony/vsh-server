@@ -102,11 +102,13 @@ document.getElementById("sendButton").addEventListener("click", async () => {
         // Day7-3はLINEで送信される
         //----------------------------------------
 
-        alert(
+       alert(
 `登録を受け付けました。
 
-LINEをご確認ください。`
-        );
+LINEトークをご確認ください。
+
+ありがとうございました。`
+); 
 
         // Day7-3(Web)へは移動しない
         return;
