@@ -249,17 +249,19 @@ app.post("/api/register", async (req, res) => {
 
     try {
 
-        const { name, flp } = req.body;
-
+        const { name, flp, userId } = req.body;
         // 入力チェック
-        if (!name || !flp) {
+       if (!name || !flp || !userId) {
 
-            return res.json({
-                success: false,
-                message: "氏名またはFLP番号がありません。"
-            });
+    return res.json({
 
-        }
+        success: false,
+
+        message: "登録情報が不足しています。"
+
+    });
+
+}
 
         // root-admin.json読込み
         const admin = loadRootAdmin();
@@ -323,7 +325,11 @@ saveRootAdmin(admin);
         // 紹介者へPush Message
         try {
 
-            await pushRegisterComplete(name, flp);
+           await pushRegisterComplete(
+    userId,
+    name,
+    flp
+);
 
         } catch (err) {
 
@@ -495,7 +501,11 @@ app.post("/webhook", async (req, res) => {
 // 紹介者へ【登録完了】を送信
 //========================================
 
-async function pushRegisterComplete(userName, userFLP) {
+async function pushRegisterComplete(
+    userId,
+    userName,
+    userFLP
+) {
 
     try {
 
@@ -564,7 +574,7 @@ Version 1.1`;
 
             {
 
-                to: admin.introducerUserId,
+               to: userId,
 
                 messages: [
 
