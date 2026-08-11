@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         await liff.init({
 
-            liffId: "ここにあなたのLIFF_ID"
+            liffId: "2010988787-rxeUMS83"
 
         });
 
