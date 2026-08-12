@@ -160,7 +160,9 @@ app.post("/api/admin", (req, res) => {
 ========================= */
 
 app.get("/api/next-flp", (_req, res) => {
-
+console.log("===== /api/next-flp =====");
+console.log("ADMIN_FILE =", ADMIN_FILE);
+console.log(fs.readFileSync(ADMIN_FILE, "utf8"));
   const data = JSON.parse(
     fs.readFileSync(ADMIN_FILE, "utf8")
   );
