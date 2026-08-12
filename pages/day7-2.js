@@ -30,11 +30,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             lineUserId = profile.userId;
 
-        } else {
+       } else {
 
-           
+    liff.login();
 
-            return;
+    return;
+
+}
 
         }
 
