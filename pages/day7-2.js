@@ -1,56 +1,30 @@
+// ========================================
+// Day7-2.js
+// Vera Sky Harmony Version2.0
+// 完成版（全面差し替え）
+// ========================================
+
+let myFLP = "";
+
 //========================================
-// day7-2.js
-// Vera Sky Harmony Version1.2
-//========================================
-
-//----------------------------------------
-// LIFF UserID
-//----------------------------------------
-
-let lineUserId = "";
-
-//----------------------------------------
 // 初期表示
-//----------------------------------------
+//========================================
 
-document.addEventListener("DOMContentLoaded", async () => {
+window.onload = async () => {
 
     try {
 
-        //----------------------------------------
-        // LIFF初期化
-        //----------------------------------------
-
-        await liff.init({
-    liffId: "2010988787-rxE0MS83"
-});
-        if (liff.isLoggedIn()) {
-
-            const profile = await liff.getProfile();
-
-            lineUserId = profile.userId;
-
-       } else {
-
-    liff.login();
-
-    return;
-
-}
-
-        }
-
-        //----------------------------------------
-        // 紹介者情報取得
-        //----------------------------------------
-
         const res = await fetch("/api/next-flp");
+
+        if (!res.ok) {
+            throw new Error("API Error");
+        }
 
         const data = await res.json();
 
         if (!data.success) {
 
-            alert(data.message);
+            alert("未使用のFLP番号がありません。");
 
             return;
 
@@ -65,105 +39,135 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("myflp").textContent =
             data.myFLP;
 
+        myFLP = data.myFLP;
+
     } catch (err) {
 
         console.error(err);
 
-        alert("初期データの取得に失敗しました。");
+        alert("サーバーへ接続できません。");
 
     }
 
-});
+};
 
-//----------------------------------------
-// 登録完了
-//----------------------------------------
+//========================================
+// ボタン
+//========================================
 
-document.getElementById("sendButton").addEventListener("click", async () => {
+document
+    .getElementById("sendButton")
+    .addEventListener("click", startLINE);
 
-    const name = prompt("あなたの氏名を入力してください");
+//========================================
+// LINE送信
+//========================================
 
-    if (!name || name.trim() === "") {
+async function startLINE() {
 
-        alert("氏名を入力してください。");
+    if (!myFLP) {
+
+        alert("FLP番号が取得できていません。");
 
         return;
 
     }
 
-    //----------------------------------------
-    // LINE UserID確認
-    //----------------------------------------
+    const button =
+        document.getElementById("sendButton");
 
-    if (!lineUserId) {
+    button.disabled = true;
 
-        alert("LINE情報を取得できませんでした。");
+    const userName =
+        prompt("あなたの氏名を入力してください。");
+
+    if (!userName) {
+
+        button.disabled = false;
 
         return;
 
     }
-
-    const flp =
-        document.getElementById("myflp").textContent;
 
     try {
 
-        const response = await fetch("/api/register", {
+        //----------------------------------
+        // FLP番号を使用中へ変更
+        //----------------------------------
 
-            method: "POST",
+        const useRes =
+            await fetch("/api/use-flp", {
 
-            headers: {
+                method: "POST",
 
-                "Content-Type": "application/json"
+                headers: {
+                    "Content-Type":
+                    "application/json"
+                },
 
-            },
+                body: JSON.stringify({
 
-            body: JSON.stringify({
+                    flp: myFLP
 
-                name: name.trim(),
+                })
 
-                flp: flp,
+            });
 
-                userId: lineUserId
+        const useResult =
+            await useRes.json();
 
-            })
+        if (!useResult.success) {
 
-        });
+            alert("FLP番号更新エラー");
 
-        if (!response.ok) {
-
-            alert("HTTPエラー：" + response.status);
-
-            return;
-
-        }
-
-        const data = await response.json();
-
-        if (!data.success) {
-
-            alert(data.message);
+            button.disabled = false;
 
             return;
 
         }
 
-        //----------------------------------------
-        // Day7-3はLINEへ送信
-        //----------------------------------------
+        //----------------------------------
+        // 紹介者LINE
+        //----------------------------------
 
-        alert("LINEをご確認ください。");
+        const introducerText =
 
-liff.closeWindow();
+`【登録完了】
 
-return;
+氏名：${userName}
 
-    } catch (err) {
+FLP番号：${myFLP}`;
+
+        window.open(
+
+            "https://line.me/R/oaMessage/@591tvejt/?"
+            + encodeURIComponent(introducerText),
+
+            "_blank"
+
+        );
+
+        //----------------------------------
+        // Day7-3へ
+        //----------------------------------
+
+        setTimeout(() => {
+
+            window.location.href =
+                "/pages/day7-3.html";
+
+        }, 800);
+
+    }
+
+    catch (err) {
 
         console.error(err);
 
         alert("通信エラーが発生しました。");
 
+        button.disabled = false;
+
     }
 
-});
+}
