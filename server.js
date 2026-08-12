@@ -249,7 +249,10 @@ app.post("/api/use-flp", (req, res) => {
 app.post("/api/register", async (req, res) => {
 
     try {
-
+console.log("===== /api/register =====");
+console.log(req.body);
+console.log("userId =", req.body.userId);
+console.log("=========================");
         const { name, flp, userId } = req.body;
         // 入力チェック
        if (!name || !flp || !userId) {
