@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         } else {
 
-            liff.login();
+           
 
             return;
 
