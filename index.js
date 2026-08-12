@@ -460,8 +460,7 @@ async function pushToIntroducer(name, flp, userId) {
   userId,
       {
         type: "text",
-        text:
-text: `登録を受け付けました。
+      text: `登録を受け付けました。
 
 紹介者がFLP本体システムで登録を確認後、
 VSHを譲渡いたします。
