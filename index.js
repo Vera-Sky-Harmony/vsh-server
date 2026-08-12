@@ -447,8 +447,7 @@ FBO登録が全て完了しましたら画面下のスタートを押し、「�
    紹介者へPushMessage
 ========================= */
 
-async function pushToIntroducer(name, flp) {
-
+async function pushToIntroducer(name, flp, userId) {
   try {
 
     const data = JSON.parse(
