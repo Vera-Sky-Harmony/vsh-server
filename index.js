@@ -423,7 +423,19 @@ FBO登録が全て完了しましたら画面下のスタートを押し、「�
       /* =========================
          登録希望（既存保持）
       ========================= */
+  /* =========================
+     登録完了 → Day7-3送信
+  ========================= */
 
+  if (text.startsWith("【登録完了】")) {
+
+    await client.pushMessage(userId, {
+      type: "text",
+      text: "Day7-3"
+    });
+
+    return;
+  }
       if (text === "登録希望") {
         await client.replyMessage(ev.replyToken, {
           type: "text",
