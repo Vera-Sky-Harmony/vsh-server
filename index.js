@@ -457,7 +457,7 @@ async function pushToIntroducer(name, flp, userId) {
     if (!data.introducerUserId) return;
 
     await client.pushMessage(
-      data.introducerUserId,
+  userId,
       {
         type: "text",
         text:
