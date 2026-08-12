@@ -364,11 +364,11 @@ app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
   try {
     const signature = req.headers["x-line-signature"];
 
-   const body = req.body.toString("utf8");
+   const rawBody = req.body.toString("utf8");
 
 const hash = crypto
   .createHmac("sha256", CHANNEL_SECRET)
-  .update(body)
+  .update(rawBody)
   .digest("base64");
     if (signature !== hash) {
       console.log("署名エラー");
