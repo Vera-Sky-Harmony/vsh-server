@@ -22,11 +22,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         //----------------------------------------
 
         await liff.init({
-
-            liffId: "2010988787-rxeUMS83"
-
-        });
-
+    liffId: "2010988787-rxE0MS83"
+});
         if (liff.isLoggedIn()) {
 
             const profile = await liff.getProfile();
