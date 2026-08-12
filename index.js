@@ -461,13 +461,12 @@ async function pushToIntroducer(name, flp, userId) {
       {
         type: "text",
         text:
-`【第一世代登録完了】
+text: `登録を受け付けました。
 
-氏名：${name}
+紹介者がFLP本体システムで登録を確認後、
+VSHを譲渡いたします。
 
-FLP番号：${flp}
-
-Day8を送信してください。`
+Day7-3`
       }
     );
 
