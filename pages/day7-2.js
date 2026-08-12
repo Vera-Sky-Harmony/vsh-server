@@ -153,17 +153,11 @@ document.getElementById("sendButton").addEventListener("click", async () => {
         // Day7-3はLINEへ送信
         //----------------------------------------
 
-        alert(
+        alert("LINEをご確認ください。");
 
-`登録を受け付けました。
+liff.closeWindow();
 
-LINEトークをご確認ください。
-
-ありがとうございました。`
-
-        );
-
-        return;
+return;
 
     } catch (err) {
 
