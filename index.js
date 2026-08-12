@@ -104,6 +104,56 @@ app.post("/api/introducer", (req, res) => {
   }
 
 });
+/* =========================
+   新規登録者 LINE UserID 保存
+========================= */
+
+app.post("/api/member", (req, res) => {
+
+  try {
+
+    const data = JSON.parse(
+      fs.readFileSync(ADMIN_FILE, "utf8")
+    );
+
+    if (!data.members) {
+      data.members = [];
+    }
+
+    data.members.push({
+
+      userId: req.body.userId,
+
+      name: "",
+
+      flp: "",
+
+      status: "Day0",
+
+      created: new Date().toISOString()
+
+    });
+
+    fs.writeFileSync(
+      ADMIN_FILE,
+      JSON.stringify(data, null, 2)
+    );
+
+    res.json({
+      success: true
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      success: false
+    });
+
+  }
+
+});
 app.post("/api/admin", (req, res) => {
 
   try {
