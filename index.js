@@ -386,7 +386,25 @@ const hash = crypto
 
       const text = ev.message.text.trim();
       const userId = ev.source.userId;
+/* =========================
+   登録完了 → Day7-3送信
+========================= */
 
+if (text.startsWith("【登録完了】")) {
+
+  await client.pushMessage(userId, {
+    type: "text",
+    text:
+`【Day7-3】
+
+登録を受け付けました。
+
+紹介者がFLP本体システムで登録を確認後、
+Vera Sky Harmony を譲渡いたします。`
+  });
+
+  return res.status(200).end();
+}
       /* =========================
          Day7-2
       ========================= */
