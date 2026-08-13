@@ -5,24 +5,14 @@
 // ========================================
 
 let myFLP = "";
-let userId = "";
+
 //========================================
 // 初期表示
 //========================================
 
 window.onload = async () => {
 
-    await liff.init({
-        liffId: "2010988787-rxeUMS83"
-    });
-
-    if (!liff.isLoggedIn()) {
-
-        liff.login();
-
-        return;
-
-    }
+    
 
     const profile = await liff.getProfile();
 
