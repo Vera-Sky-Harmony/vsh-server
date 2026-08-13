@@ -12,12 +12,7 @@ let myFLP = "";
 
 window.onload = async () => {
 
-    
-
-    const profile = await liff.getProfile();
-
-    userId = profile.userId;
-
+ 
     try {
 
         const res = await fetch("/api/next-flp");
