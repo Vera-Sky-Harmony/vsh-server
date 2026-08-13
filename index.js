@@ -158,21 +158,28 @@ app.post("/api/admin", (req, res) => {
 
   try {
 
-    const body = {
+const oldData = JSON.parse(
+  fs.readFileSync(ADMIN_FILE, "utf8")
+);
 
-      introducerName:
-        req.body.introducerName || "",
+const body = {
 
-      introducerFLP:
-        req.body.introducerFLP || "",
+  introducerName:
+    req.body.introducerName || "",
 
-      flpList:
-        req.body.flpList || [],
+  introducerFLP:
+    req.body.introducerFLP || "",
 
-      members:
-        req.body.members || []
+  flpList:
+    req.body.flpList || [],
 
-    };
+  members:
+    req.body.members || [],
+
+  introducerUserId:
+    oldData.introducerUserId || ""
+
+};
 
     fs.writeFileSync(
 
