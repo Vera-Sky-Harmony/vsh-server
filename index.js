@@ -507,43 +507,27 @@ if (!member) {
 /* =========================
    登録完了 → Day7-3送信
 ========================= */
-
 if (text.startsWith("【登録完了】")) {
 
-  const data = JSON.parse(
-    fs.readFileSync(ADMIN_FILE, "utf8")
-  );
+  await client.pushMessage(userId, {
+    type: "template",
+    altText: "Day7-3",
+    template: {
+      type: "buttons",
+      title: "登録を受け付けました",
+      text:
+        "紹介者がFLP本体システムで登録を確認後、Vera Sky Harmonyを譲渡いたします。",
+      actions: [
+        {
+          type: "uri",
+          label: "Day7-3を開く",
+          uri: "https://vsh-server.onrender.com/ページ/day7-3.html"
+        }
+      ]
+    }
+  });
 
-  // No1へ通知
-  if (data.introducerUserId) {
-
-    await client.pushMessage(
-      data.introducerUserId,
-      {
-        type: "text",
-        text:
-`【登録完了】
-
-氏名・FLP番号が送信されました。`
-      }
-    );
-
-  }
-
-// No2へDay7-3
-await client.pushMessage(
-  userId,
-  {
-    type: "text",
-    text:
-`【Day7-3】
-
-登録を受け付けました。
-
-紹介者がFLP本体システムで登録を確認後、
-Vera Sky Harmony を譲渡いたします。`
-  }
-);
+  await pushToIntroducer(userId, text);
 
   return res.status(200).end();
 }
