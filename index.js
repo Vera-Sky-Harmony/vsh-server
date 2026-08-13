@@ -436,6 +436,40 @@ const hash = crypto
 
       const text = ev.message.text.trim();
       const userId = ev.source.userId;
+      // LINE UserID 保存
+const data = JSON.parse(
+  fs.readFileSync(ADMIN_FILE, "utf8")
+);
+
+if (!data.members) {
+  data.members = [];
+}
+
+let member = data.members.find(
+  x => x.userId === userId
+);
+
+if (!member) {
+
+  data.members.push({
+
+    userId: userId,
+
+    name: "",
+
+    flp: "",
+
+    status: "Day0",
+
+    created: new Date().toISOString()
+
+  });
+
+  fs.writeFileSync(
+    ADMIN_FILE,
+    JSON.stringify(data, null, 2)
+  );
+} 
 /* =========================
    登録完了 → Day7-3送信
 ========================= */
