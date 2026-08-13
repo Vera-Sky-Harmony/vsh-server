@@ -143,9 +143,7 @@ const registerRes = await fetch("/api/register", {
         "Content-Type": "application/json"
     },
 
-  body: JSON.stringify({
-
-    userId: userId,
+ body: JSON.stringify({
 
     name: userName,
 
