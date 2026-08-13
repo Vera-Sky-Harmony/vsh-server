@@ -5,12 +5,28 @@
 // ========================================
 
 let myFLP = "";
-
+let userId = "";
 //========================================
 // 初期表示
 //========================================
 
 window.onload = async () => {
+
+    await liff.init({
+        liffId: "2010988787-rxeUMS83"
+    });
+
+    if (!liff.isLoggedIn()) {
+
+        liff.login();
+
+        return;
+
+    }
+
+    const profile = await liff.getProfile();
+
+    userId = profile.userId;
 
     try {
 
@@ -137,13 +153,15 @@ const registerRes = await fetch("/api/register", {
         "Content-Type": "application/json"
     },
 
-    body: JSON.stringify({
+  body: JSON.stringify({
 
-        name: userName,
+    userId: userId,
 
-        flp: myFLP
+    name: userName,
 
-    })
+    flp: myFLP
+
+})
 
 });
 
