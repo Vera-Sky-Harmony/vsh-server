@@ -491,10 +491,6 @@ FBO登録が全て完了しましたら画面下のスタートを押し、「�
       /* =========================
          登録希望（既存保持）
       ========================= */
-
-
-    return;
-  }
       if (text === "登録希望") {
         await client.replyMessage(ev.replyToken, {
           type: "text",
