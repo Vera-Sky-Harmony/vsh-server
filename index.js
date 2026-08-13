@@ -491,16 +491,7 @@ FBO登録が全て完了しましたら画面下のスタートを押し、「�
       /* =========================
          登録希望（既存保持）
       ========================= */
-  /* =========================
-     登録完了 → Day7-3送信
-  ========================= */
 
-  if (text.startsWith("【登録完了】")) {
-
-    await client.pushMessage(userId, {
-      type: "text",
-      text: "Day7-3"
-    });
 
     return;
   }
@@ -536,8 +527,8 @@ async function pushToIntroducer(name, flp, userId) {
 
     if (!data.introducerUserId) return;
 
-    await client.pushMessage(
-  userId,
+  await client.pushMessage(
+      data.introducerUserId,
       {
         type: "text",
       text: `登録を受け付けました。
