@@ -125,7 +125,39 @@ async function startLINE() {
             return;
 
         }
+//----------------------------------
+// 登録データ保存
+//----------------------------------
 
+const registerRes = await fetch("/api/register", {
+
+    method: "POST",
+
+    headers: {
+        "Content-Type": "application/json"
+    },
+
+    body: JSON.stringify({
+
+        name: userName,
+
+        flp: myFLP
+
+    })
+
+});
+
+const registerResult = await registerRes.json();
+
+if (!registerResult.success) {
+
+    alert(registerResult.message);
+
+    button.disabled = false;
+
+    return;
+
+}
         //----------------------------------
         // 紹介者LINE
         //----------------------------------
