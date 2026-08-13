@@ -514,9 +514,10 @@ if (text.startsWith("【登録完了】")) {
     {
       type: "image",
       originalContentUrl:
-        "https://res.cloudinary.com/dxegzwukb/image/upload/v1771508589/day7-3.png",
-      previewImageUrl:
-        "https://res.cloudinary.com/dxegzwukb/image/upload/v1771508589/day7-3.png"
+"https://res.cloudinary.com/dxegzwukb/image/upload/v1786601163/Day7-3%E9%81%A9%E7%94%A8_sjydub.png",
+
+previewImageUrl:
+"https://res.cloudinary.com/dxegzwukb/image/upload/v1786601163/Day7-3%E9%81%A9%E7%94%A8_sjydub.png",
     },
 
     {
