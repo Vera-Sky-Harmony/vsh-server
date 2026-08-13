@@ -529,17 +529,7 @@ if (text.startsWith("【登録完了】")) {
     {
       type: "text",
       text:
-`【Day7-3】
 
-登録を受け付けました。
-
-紹介者がFLP本体システムで登録を確認後、
-Vera Sky Harmony を譲渡いたします。`
-    }
-  );
-
-  return res.status(200).end();
-}
     type: "text",
     text:
 `【Day7-3】
