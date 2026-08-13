@@ -385,13 +385,33 @@ if (!data.members) {
 
 }
 
-data.members.push({
+const member = data.members.find(
+  x => x.userId === req.body.userId
+);
 
-  name: name,
+if (member) {
 
-  flp: flp
+  member.name = name;
+  member.flp = flp;
+  member.status = "登録完了";
 
-});
+} else {
+
+  data.members.push({
+
+    userId: req.body.userId,
+
+    name: name,
+
+    flp: flp,
+
+    status: "登録完了",
+
+    created: new Date().toISOString()
+
+  });
+
+}
     fs.writeFileSync(
       ADMIN_FILE,
       JSON.stringify(data, null, 2)
