@@ -436,6 +436,33 @@ const hash = crypto
 
       const text = ev.message.text.trim();
       const userId = ev.source.userId;
+       /* =========================
+   管理者登録
+========================= */
+
+if (text === "管理者登録") {
+
+  const data = JSON.parse(
+    fs.readFileSync(ADMIN_FILE, "utf8")
+  );
+
+  data.introducerUserId = userId;
+
+  fs.writeFileSync(
+    ADMIN_FILE,
+    JSON.stringify(data, null, 2)
+  );
+
+  await client.replyMessage(
+    ev.replyToken,
+    {
+      type: "text",
+      text: "管理者LINEを登録しました。"
+    }
+  );
+
+  return;
+}
       // LINE UserID 保存
 const data = JSON.parse(
   fs.readFileSync(ADMIN_FILE, "utf8")
@@ -476,7 +503,43 @@ if (!member) {
 
 if (text.startsWith("【登録完了】")) {
 
-  await client.pushMessage(userId, {
+  const data = JSON.parse(
+    fs.readFileSync(ADMIN_FILE, "utf8")
+  );
+
+  // No1へ通知
+  if (data.introducerUserId) {
+
+    await client.pushMessage(
+      data.introducerUserId,
+      {
+        type: "text",
+        text:
+`【登録完了】
+
+氏名・FLP番号が送信されました。`
+      }
+    );
+
+  }
+
+  // No2へDay7-3
+  await client.pushMessage(
+    userId,
+    {
+      type: "text",
+      text:
+`【Day7-3】
+
+登録を受け付けました。
+
+紹介者がFLP本体システムで登録を確認後、
+Vera Sky Harmony を譲渡いたします。`
+    }
+  );
+
+  return res.status(200).end();
+}
     type: "text",
     text:
 `【Day7-3】
