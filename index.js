@@ -45,7 +45,7 @@ const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
 app.use(express.static(__dirname));
 app.use("/ページ", express.static(path.join(__dirname, "ページ")));
-app.use(express.json());
+// app.use(express.json());
 app.get("/test", (_req, res) => {
   res.send("VSH Static OK");
 });
