@@ -509,27 +509,31 @@ if (!member) {
 ========================= */
 if (text.startsWith("【登録完了】")) {
 
-  await client.pushMessage(userId, {
-    type: "template",
-    altText: "Day7-3",
-    template: {
-      type: "buttons",
-      title: "登録を受け付けました",
-      text:
-        "紹介者がFLP本体システムで登録を確認後、Vera Sky Harmonyを譲渡いたします。",
-      actions: [
-        {
-          type: "uri",
-          label: "Day7-3を開く",
-          uri: "https://vsh-server.onrender.com/ページ/day7-3.html"
-        }
-      ]
-    }
-  });
+  await client.pushMessage(userId, [
 
-  await pushToIntroducer(userId, text);
+    {
+      type: "image",
+      originalContentUrl:
+        "https://res.cloudinary.com/dxegzwukb/image/upload/v1771508589/day7-3.png",
+      previewImageUrl:
+        "https://res.cloudinary.com/dxegzwukb/image/upload/v1771508589/day7-3.png"
+    },
+
+    {
+      type: "text",
+      text:
+`【Day7-3】
+
+登録を受け付けました。
+
+紹介者がFLP本体システムで登録を確認後、
+Vera Sky Harmony を譲渡いたします。`
+    }
+
+  ]);
 
   return res.status(200).end();
+
 }
       /* =========================
          Day7-2
