@@ -514,10 +514,9 @@ if (text.startsWith("【登録完了】")) {
     {
       type: "image",
       originalContentUrl:
-"https://res.cloudinary.com/dxegzwukb/image/upload/v1786601163/Day7-3%E9%81%A9%E7%94%A8_sjydub.png",
-
-previewImageUrl:
-"https://res.cloudinary.com/dxegzwukb/image/upload/v1786601163/Day7-3%E9%81%A9%E7%94%A8_sjydub.png",
+        "https://res.cloudinary.com/dxegzwukb/image/upload/v1786601163/Day7-3%E9%81%A9%E7%94%A8_sjydub.png",
+      previewImageUrl:
+        "https://res.cloudinary.com/dxegzwukb/image/upload/v1786601163/Day7-3%E9%81%A9%E7%94%A8_sjydub.png"
     },
 
     {
@@ -533,8 +532,10 @@ Vera Sky Harmony を譲渡いたします。`
 
   ]);
 
-  return res.status(200).end();
+  // 
+  await pushToIntroducer("", "", userId);
 
+  return res.status(200).end();
 }
       /* =========================
          Day7-2
