@@ -373,28 +373,34 @@ app.post("/api/register", async (req, res) => {
       fs.readFileSync(ADMIN_FILE, "utf8")
     );
 
-    const item = data.flpList.find(
-      x => x.flp === flp
-    );
+    //----------------------------------
+// FLP番号確認
+//----------------------------------
 
-    if (!item) {
+const item = data.flpList.find(
+    x => x.flp === flp
+);
 
-      return res.json({
+if (!item) {
+
+    return res.json({
+
         success: false,
+
         message: "FLP番号が見つかりません。"
-      });
 
-    }
-
-    item.status = "使用済";
-if (!data.members) {
-
-  data.members = [];
+    });
 
 }
 
 //----------------------------------
-// 第一世代登録者登録
+// FLP番号を使用済へ変更
+//----------------------------------
+
+item.status = "使用済";
+
+//----------------------------------
+// 第一世代登録者
 //----------------------------------
 
 if (!data.members) {
