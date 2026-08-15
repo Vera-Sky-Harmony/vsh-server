@@ -182,6 +182,7 @@ async function saveAdmin() {
             loadAdmin();
 
             loadMembers();
+alert("admin.js 読み込み完了");
 
         }
 
@@ -288,4 +289,3 @@ ${url}`);
     }
 
 });
-alert("admin.js 読み込み完了");
