@@ -107,12 +107,17 @@ async function saveAdmin() {
 
         if (value !== "") {
 
-            flpArray.push({
+          const oldItem = oldData.flpList.find(
+    x => x.flp === value
+);
 
-                flp: value,
-                status: "未使用"
+flpArray.push({
 
-            });
+    flp: value,
+
+    status: oldItem ? oldItem.status : "未使用"
+
+});
 
         }
 
