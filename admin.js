@@ -51,9 +51,29 @@ async function loadAdmin() {
                     `flp${index + 1}`
                 );
 
-                if (box) {
-                    box.value = item.flp;
-                }
+               if (box) {
+
+    if (item.status === "使用済") {
+
+        box.value = item.flp + "　【使用済】";
+
+        box.style.background = "#d9d9d9";
+
+    } else if (item.status === "使用中") {
+
+        box.value = item.flp + "　【使用中】";
+
+        box.style.background = "#fff3cd";
+
+    } else {
+
+        box.value = item.flp;
+
+        box.style.background = "#ffffff";
+
+    }
+
+}
 
             });
 
