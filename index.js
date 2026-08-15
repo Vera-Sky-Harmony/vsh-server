@@ -120,19 +120,27 @@ app.post("/api/member", (req, res) => {
       data.members = [];
     }
 
+   const exists = data.members.find(
+    x => x.userId === req.body.userId
+);
+
+if (!exists) {
+
     data.members.push({
 
-      userId: req.body.userId,
+        userId: req.body.userId,
 
-      name: "",
+        name: "",
 
-      flp: "",
+        flp: "",
 
-      status: "Day0",
+        status: "Day0",
 
-      created: new Date().toISOString()
+        created: new Date().toISOString()
 
     });
+
+}
 
     fs.writeFileSync(
       ADMIN_FILE,
