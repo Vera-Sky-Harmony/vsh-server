@@ -1,6 +1,7 @@
 // ========================================
 // admin.js
-// Vera Sky Harmony Version1.0
+// Vera Sky Harmony Version1.1
+// 完成版
 // ========================================
 
 //----------------------------------------
@@ -47,41 +48,47 @@ async function loadAdmin() {
 
             data.flpList.forEach((item, index) => {
 
-                const box = document.getElementById(
-                    `flp${index + 1}`
-                );
+                const box =
+                    document.getElementById(`flp${index + 1}`);
 
-               if (box) {
+                if (!box) return;
 
-    if (item.status === "使用済") {
+                if (item.status === "使用済") {
 
-        box.value = item.flp + "　【使用済】";
+                    box.value =
+                        item.flp + "　【使用済】";
 
-        box.style.background = "#d9d9d9";
+                    box.style.background = "#d9d9d9";
 
-    } else if (item.status === "使用中") {
+                }
 
-        box.value = item.flp + "　【使用中】";
+                else if (item.status === "使用中") {
 
-        box.style.background = "#fff3cd";
+                    box.value =
+                        item.flp + "　【使用中】";
 
-    } else {
+                    box.style.background = "#fff3cd";
 
-        box.value = item.flp;
+                }
 
-        box.style.background = "#ffffff";
+                else {
 
-    }
+                    box.value = item.flp;
 
-}
+                    box.style.background = "#ffffff";
+
+                }
 
             });
 
         }
 
-    } catch (err) {
+    }
+
+    catch (err) {
 
         console.error(err);
+
         alert("管理データ読込みエラー");
 
     }
@@ -98,33 +105,42 @@ document
 
 async function saveAdmin() {
 
+    const old =
+        await fetch("/api/admin");
+
+    const oldData =
+        await old.json();
+
     const flpArray = [];
 
     for (let i = 1; i <= 30; i++) {
 
         const value =
-            document.getElementById(`flp${i}`).value.trim();
+            document.getElementById(`flp${i}`)
+            .value
+            .replace("　【使用済】","")
+            .replace("　【使用中】","")
+            .trim();
 
-        if (value !== "") {
+        if (value === "") continue;
 
-          const oldItem = oldData.flpList.find(
-    x => x.flp === value
-);
+        const oldItem =
+            oldData.flpList.find(
+                x => x.flp === value
+            );
 
-flpArray.push({
+        flpArray.push({
 
-    flp: value,
+            flp: value,
 
-    status: oldItem ? oldItem.status : "未使用"
+            status:
+                oldItem
+                    ? oldItem.status
+                    : "未使用"
 
-});
-
-        }
+        });
 
     }
-
-    const old = await fetch("/api/admin");
-    const oldData = await old.json();
 
     const body = {
 
@@ -136,45 +152,95 @@ flpArray.push({
 
         flpList: flpArray,
 
-        members: oldData.members || []
+        members:
+            oldData.members || []
 
     };
 
     try {
 
-        const res = await fetch(
+        const res =
+            await fetch("/api/admin",{
 
-            "/api/admin",
+                method:"POST",
 
-            {
-
-                method: "POST",
-
-                headers: {
-                    "Content-Type": "application/json"
+                headers:{
+                    "Content-Type":"application/json"
                 },
 
-                body: JSON.stringify(body)
+                body:JSON.stringify(body)
 
-            }
+            });
 
-        );
+        const data =
+            await res.json();
 
-        const data = await res.json();
-
-        if (data.success) {
+        if(data.success){
 
             alert("保存しました。");
+
+            loadAdmin();
 
             loadMembers();
 
         }
 
-    } catch (err) {
+    }
+
+    catch(err){
 
         console.error(err);
 
         alert("保存エラー");
+
+    }
+
+}
+
+//----------------------------------------
+// 第一世代登録者一覧
+//----------------------------------------
+
+async function loadMembers() {
+
+    try {
+
+        const res =
+            await fetch("/api/members");
+
+        const data =
+            await res.json();
+
+        if(!data.success) return;
+
+        document.getElementById("memberCount")
+            .textContent =
+            data.members.length;
+
+        const tbody =
+            document.getElementById("memberTable");
+
+        tbody.innerHTML = "";
+
+        data.members.forEach(member=>{
+
+            const tr =
+                document.createElement("tr");
+
+            tr.innerHTML=`
+                <td>${member.name}</td>
+                <td>${member.flp}</td>
+            `;
+
+            tbody.appendChild(tr);
+
+        });
+
+    }
+
+    catch(err){
+
+        console.error(err);
 
     }
 
@@ -188,77 +254,31 @@ loadAdmin();
 loadMembers();
 
 //----------------------------------------
-// 第一世代登録者一覧
-//----------------------------------------
-
-async function loadMembers() {
-
-    try {
-
-        const res = await fetch("/api/members");
-
-        const data = await res.json();
-
-        if (!data.success) return;
-
-        const count =
-            document.getElementById("memberCount");
-
-        const tbody =
-            document.getElementById("memberTable");
-
-        count.textContent = data.members.length;
-
-        tbody.innerHTML = "";
-
-        data.members.forEach(member => {
-
-            const tr = document.createElement("tr");
-
-            tr.innerHTML = `
-                <td>${member.name}</td>
-                <td>${member.flp}</td>
-            `;
-
-            tbody.appendChild(tr);
-
-        });
-
-    } catch (err) {
-
-        console.error(err);
-
-    }
-
-}
-
-//----------------------------------------
 // VSHともだち追加
 //----------------------------------------
 
 document
 .getElementById("friendButton")
-.addEventListener("click", async () => {
+.addEventListener("click",async()=>{
 
-    const url = "https://line.me/R/ti/p/@591tvejt";
+    const url =
+        "https://line.me/R/ti/p/@591tvejt";
 
-    try {
+    try{
 
         await navigator.clipboard.writeText(url);
 
-        alert(
-`VSH公式LINEをコピーしました。
+        alert(`VSH公式LINEをコピーしました。
 
-① LINEを開いてください。
+① LINEを開く
+② 友だち又はグループ
+③ 貼り付けて送信
 
-② 友だち又はグループを開いてください。
+${url}`);
 
-③ 貼り付けて送信してください。
+    }
 
-${url}`
-        );
-
-    } catch {
+    catch{
 
         prompt(
             "下記URLをコピーしてください。",
