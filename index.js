@@ -169,7 +169,7 @@ app.post("/api/admin", (req, res) => {
 const oldData = JSON.parse(
   fs.readFileSync(ADMIN_FILE, "utf8")
 );
-
+console.log("req.body.members =", req.body.members);
 const body = {
 
   introducerName:
