@@ -385,21 +385,19 @@ if (!data.members) {
 
 }
 
-const member = data.members.find(
-  x => x.userId === req.body.userId
-);
+//----------------------------------
+// 第一世代登録者登録
+//----------------------------------
 
-if (member) {
+if (!data.members) {
 
-  member.name = name;
-  member.flp = flp;
-  member.status = "登録完了";
+    data.members = [];
 
-} else {
+}
 
-  data.members.push({
+data.members.push({
 
-    userId: req.body.userId,
+    userId: req.body.userId || "",
 
     name: name,
 
@@ -409,9 +407,7 @@ if (member) {
 
     created: new Date().toISOString()
 
-  });
-
-}
+});
     fs.writeFileSync(
       ADMIN_FILE,
       JSON.stringify(data, null, 2)
