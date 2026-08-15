@@ -652,4 +652,10 @@ app.listen(Number(PORT || 10000), () => {
 });
 
 
+app.get("/api/debug", (req, res) => {
 
+    const data = readAdmin();
+
+    res.json(data);
+
+});
