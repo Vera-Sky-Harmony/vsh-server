@@ -214,29 +214,33 @@ async function loadMembers() {
 
         if(!data.success) return;
 
-        document.getElementById("memberCount")
-            .textContent =
-            data.members.length;
+        const members =
+    data.members.filter(
+        x => x.status === "登録完了"
+    );
 
-        const tbody =
-            document.getElementById("memberTable");
+document.getElementById("memberCount")
+    .textContent =
+    members.length;
 
-        tbody.innerHTML = "";
+const tbody =
+    document.getElementById("memberTable");
 
-        data.members.forEach(member=>{
+tbody.innerHTML = "";
 
-            const tr =
-                document.createElement("tr");
+members.forEach(member => {
 
-            tr.innerHTML=`
-                <td>${member.name}</td>
-                <td>${member.flp}</td>
-            `;
+    const tr =
+        document.createElement("tr");
 
-            tbody.appendChild(tr);
+    tr.innerHTML = `
+        <td>${member.name}</td>
+        <td>${member.flp}</td>
+    `;
 
-        });
+    tbody.appendChild(tr);
 
+});
     }
 
     catch(err){
