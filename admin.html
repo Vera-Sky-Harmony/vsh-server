@@ -42,16 +42,30 @@
 
     </div>
 
-    <!-- FLP番号 -->
+    <!-- あなたのFLP番号 -->
     <div class="card">
 
         <h2>あなたのFLP番号</h2>
 
         <div id="flpList"></div>
 
-        <button id="saveButton">
-            保存
-        </button>
+        <div class="buttonArea">
+
+            <button id="backupButton">
+                バックアップ保存
+            </button>
+
+            <button id="restoreButton">
+                バックアップ読込
+            </button>
+
+            <input
+                type="file"
+                id="restoreFile"
+                accept=".json"
+                style="display:none;">
+
+        </div>
 
     </div>
 
@@ -72,18 +86,27 @@
         <h2>第一世代登録者</h2>
 
         <p>
+
             登録人数
+
             <span id="memberCount">0</span>
+
             名
+
         </p>
 
         <table>
 
             <thead>
+
                 <tr>
+
                     <th>氏名</th>
+
                     <th>FLP番号</th>
+
                 </tr>
+
             </thead>
 
             <tbody id="memberTable">
@@ -99,4 +122,5 @@
 <script src="invite.js"></script>
 
 </body>
+
 </html>
