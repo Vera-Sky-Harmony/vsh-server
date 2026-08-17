@@ -207,25 +207,28 @@ async function backupSave() {
 
         }
 
-        const body = {
+       const body = {
 
-            introducerName:
-                document
-                .getElementById("introducerName")
-                .value,
+    introducerName:
+        document
+        .getElementById("introducerName")
+        .value,
 
-            introducerFLP:
-                document
-                .getElementById("introducerFLP")
-                .value,
+    introducerFLP:
+        document
+        .getElementById("introducerFLP")
+        .value,
 
-            flpList:
-                flpArray,
+    flpList:
+        flpArray,
 
-            members:
-                oldData.members || []
+    members:
+        oldData.members || [],
 
-        };
+    introducerUserId:
+        oldData.introducerUserId || ""
+
+};
 
         //--------------------------------
         // root-admin.json 保存
