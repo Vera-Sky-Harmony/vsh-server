@@ -293,3 +293,105 @@ ${url}`);
     }
 
 });
+//========================================
+// バックアップ保存
+//========================================
+
+document
+.getElementById("backupButton")
+.addEventListener("click", backupSave);
+
+async function backupSave() {
+
+    const res =
+        await fetch("/api/admin");
+
+    const data =
+        await res.json();
+
+    const blob =
+        new Blob(
+            [
+                JSON.stringify(
+                    data,
+                    null,
+                    2
+                )
+            ],
+            {
+                type:"application/json"
+            }
+        );
+
+    const url =
+        URL.createObjectURL(blob);
+
+    const a =
+        document.createElement("a");
+
+    a.href = url;
+
+    a.download =
+        "root-admin-backup.json";
+
+    a.click();
+
+    URL.revokeObjectURL(url);
+
+    alert(
+        "バックアップを保存しました。"
+    );
+
+}
+//========================================
+// バックアップ読込
+//========================================
+
+document
+.getElementById("restoreButton")
+.addEventListener("click",()=>{
+
+    document
+    .getElementById("restoreFile")
+    .click();
+
+});
+
+document
+.getElementById("restoreFile")
+.addEventListener("change", restoreBackup);
+
+async function restoreBackup(e){
+
+    const file =
+        e.target.files[0];
+
+    if(!file) return;
+
+    const text =
+        await file.text();
+
+    const data =
+        JSON.parse(text);
+
+    await fetch("/api/admin",{
+
+        method:"POST",
+
+        headers:{
+            "Content-Type":
+            "application/json"
+        },
+
+        body:
+        JSON.stringify(data)
+
+    });
+
+    alert("バックアップを復元しました。");
+
+    loadAdmin();
+
+    loadMembers();
+
+}
