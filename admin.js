@@ -264,16 +264,20 @@ async function backupSave() {
         // バックアップ保存
         //--------------------------------
 
-        const blob =
-            new Blob(
+       const blob =
+    new Blob(
 
-                [
-                    JSON.stringify(
-                        body,
-                        null,
-                        2
-                    )
-                ],
+        [
+            JSON.stringify(
+                {
+                    ...body,
+                    introducerUserId:
+                        oldData.introducerUserId || ""
+                },
+                null,
+                2
+            )
+        ],
 
                 {
                     type:"application/json"
