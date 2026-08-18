@@ -38,6 +38,7 @@ const {
 } = process.env;
 
 const app = express();
+registerRoutes(app);
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 
 /* =========================
