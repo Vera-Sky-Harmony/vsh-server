@@ -120,7 +120,7 @@ app.post("/api/member", (req, res) => {
 
     if (!data.members) {
       data.members = [];
-    }
+   
 
    const exists = data.members.find(
     x => x.userId === req.body.userId
