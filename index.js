@@ -1,3 +1,4 @@
+import { registerRoutes } from "./register.js";
 import express from "express";
 import crypto from "crypto";
 import { Client } from "@line/bot-sdk";
