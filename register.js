@@ -9,3 +9,17 @@ export function registerRoutes(app) {
   });
 
 }
+export function registerRoutes(app) {
+
+  app.get("/register-test", (_req, res) => {
+    res.send("register.js OK");
+  });
+
+  app.post("/api/register", async (req, res) => {
+    res.json({
+      success: true,
+      message: "register.js connected"
+    });
+  });
+
+}
