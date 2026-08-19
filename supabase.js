@@ -16,9 +16,12 @@ export async function loadAdmin() {
     .eq("id", "root")
     .single();
 
-  if (error) throw error;
+ if (error) {
+  console.error(error);
+  return {};
+}
 
-  return data.data;
+return data?.data || {};
 
 }
 
