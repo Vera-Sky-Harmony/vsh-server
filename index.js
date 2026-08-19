@@ -341,7 +341,7 @@ app.post("/api/register", async (req, res) => {
 
     }
 
-    const data = JSON.parse(
+   const data = await loadAdmin();
       fs.readFileSync(ADMIN_FILE, "utf8")
     );
 
