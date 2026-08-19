@@ -118,9 +118,7 @@ app.post("/api/member", async (req, res) => {
 
   try {
 
-    const data = JSON.parse(
-      fs.readFileSync(ADMIN_FILE, "utf8")
-    );
+   const data = await loadAdmin();
 
     if (!data.members) {
       data.members = [];
