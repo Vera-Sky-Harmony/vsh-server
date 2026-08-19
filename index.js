@@ -448,16 +448,11 @@ const hash = crypto
 
 if (text === "管理者登録") {
 
-  const data = JSON.parse(
-    fs.readFileSync(ADMIN_FILE, "utf8")
-  );
+ const data = await loadAdmin();
 
-  data.introducerUserId = userId;
+data.introducerUserId = userId;
 
-  fs.writeFileSync(
-    ADMIN_FILE,
-    JSON.stringify(data, null, 2)
-  );
+await saveAdmin(data);
 
   await client.replyMessage(
     ev.replyToken,
