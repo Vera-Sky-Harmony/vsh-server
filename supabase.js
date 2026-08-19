@@ -10,6 +10,22 @@ export const supabase = createClient(
 );
 
 /* =========================
+   初期データ
+========================= */
+
+const EMPTY_ADMIN = {
+
+  introducerName: "",
+  introducerFLP: "",
+  introducerUserId: "",
+
+  flpList: [],
+
+  members: []
+
+};
+
+/* =========================
    管理データ読込み
 ========================= */
 
@@ -21,29 +37,33 @@ export async function loadAdmin() {
     .eq("id", "root")
     .single();
 
-  if (error) {
+  // データ取得成功
+  if (!error && data?.data) {
 
-    console.error("loadAdmin:", error);
-
-    return {
-      introducerName: "",
-      introducerFLP: "",
-      introducerUserId: "",
-      flpList: [],
-      members: []
-    };
+    return data.data;
 
   }
 
-  return data?.data || {
+  console.log("admin_data が存在しないため初期データを作成します。");
 
-    introducerName: "",
-    introducerFLP: "",
-    introducerUserId: "",
-    flpList: [],
-    members: []
+  // 初回のみ自動作成
+  const { error: insertError } = await supabase
+    .from("admin_data")
+    .upsert({
 
-  };
+      id: "root",
+
+      data: EMPTY_ADMIN
+
+    });
+
+  if (insertError) {
+
+    console.error(insertError);
+
+  }
+
+  return EMPTY_ADMIN;
 
 }
 
@@ -55,14 +75,17 @@ export async function saveAdmin(adminData) {
 
   const { error } = await supabase
     .from("admin_data")
-    .update({
+    .upsert({
+
+      id: "root",
+
       data: adminData
-    })
-    .eq("id", "root");
+
+    });
 
   if (error) {
 
-    console.error("saveAdmin:", error);
+    console.error(error);
 
     throw error;
 
