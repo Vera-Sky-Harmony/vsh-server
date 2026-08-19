@@ -299,7 +299,7 @@ const data = await loadAdmin();
    第一世代登録者一覧取得
 ========================= */
 
-app.get("/api/members", (_req, res) => {
+app.get("/api/members", async (_req, res) => {
 
   try {
 
