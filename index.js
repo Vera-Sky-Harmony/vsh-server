@@ -12,25 +12,7 @@ const __dirname = path.dirname(__filename);
    Admin データ
 ========================= */
 
-const ADMIN_FILE = path.join(__dirname, "root-admin.json");
 
-if (!fs.existsSync(ADMIN_FILE)) {
-
-  fs.writeFileSync(
-    ADMIN_FILE,
-
-    JSON.stringify(
-      {
-        introducerName: "",
-        introducerFLP: "",
-        memberFLP: ""
-      },
-      null,
-      2
-    )
-  );
-
-}
 const {
   CHANNEL_ACCESS_TOKEN,
   CHANNEL_SECRET,
