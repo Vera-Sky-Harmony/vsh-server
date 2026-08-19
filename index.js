@@ -595,7 +595,9 @@ FBO登録が全て完了しましたら画面下のスタートを押し、「�
    紹介者へPushMessage
 ========================= */
 
-
+async function pushToIntroducer(name, flp, userId) {
+  return;
+}
 app.listen(Number(PORT || 10000), () => {
   console.log("=================================");
   console.log("VSH Stable Version Running");
