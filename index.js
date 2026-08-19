@@ -176,18 +176,6 @@ app.post("/api/admin", async (req, res) => {
 
   try {
 
-    // 現在のデータを取得
-    const { data: row, error: readError } = await supabase
-      .from("admin_data")
-      .select("data")
-      .eq("id", "root")
-      .single();
-
-    if (readError) throw readError;
-
-    const oldData = row?.data || {};
-
-    // 保存データ作成
     const body = {
 
       introducerName:
@@ -196,39 +184,40 @@ app.post("/api/admin", async (req, res) => {
       introducerFLP:
         req.body.introducerFLP || "",
 
+      introducerUserId:
+        req.body.introducerUserId || "",
+
       flpList:
         req.body.flpList || [],
 
       members:
-        req.body.members || [],
-
-      introducerUserId:
-        oldData.introducerUserId || ""
+        req.body.members || []
 
     };
 
-    // Supabaseへ保存
-    const { error: updateError } = await supabase
-      .from("admin_data")
-      .update({
-        data: body
-      })
-      .eq("id", "root");
-
-    if (updateError) throw updateError;
+    await saveAdmin(body);
 
     res.json({
-      success: true
+
+      success:true
+
     });
 
-  } catch (err) {
+  }
+
+  catch(err){
 
     console.error(err);
 
     res.status(500).json({
-      success: false
+
+      success:false
+
     });
 
+  }
+
+});
   }
 
 });
