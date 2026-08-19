@@ -46,7 +46,7 @@ async function loadAdmin() {
 
         const data =
             await res.json();
-
+adminData = data;
         document.getElementById("introducerName").value =
             data.introducerName || "";
 
