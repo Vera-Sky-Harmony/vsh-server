@@ -179,37 +179,37 @@ async function backupSave() {
         const oldData =
             await old.json();
 
-        const flpArray = [];
+       const flpArray = [];
 
-        for (let i = 1; i <= 30; i++) {
+for (let i = 1; i <= 30; i++) {
 
-            const value =
-                document
-                .getElementById(`flp${i}`)
-                .value
-                .replace("　【使用済】","")
-                .replace("　【使用中】","")
-                .trim();
+    const value =
+        document
+        .getElementById(`flp${i}`)
+        .value
+        .replace("　【使用済】","")
+        .replace("　【使用中】","")
+        .trim();
 
-            if (value === "") continue;
+    if (value === "") continue;
 
-            const oldItem =
-                oldData.flpList.find(
-                    x => x.flp === value
-                );
+    const oldItem =
+        oldData.flpList.find(
+            x => x.flp === value
+        );
 
-            flpArray.push({
+    flpArray.push({
 
-                flp: value,
+        flp: value,
 
-                status:
-                    oldItem
-                        ? oldItem.status
-                        : "未使用"
+        status:
+            oldItem
+                ? oldItem.status
+                : "未使用"
 
-            });
+    });
 
-        }
+}
 
        const body = {
 
