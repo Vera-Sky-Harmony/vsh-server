@@ -61,62 +61,21 @@ app.get("/api/admin", async (_req, res) => {
 
   try {
 
-    const { data: row, error } = await supabase
-      .from("admin_data")
-      .select("data")
-      .eq("id", "root")
-      .single();
+    const data = await loadAdmin();
 
-    console.log("row =", row);
-    console.log("row.data =", row?.data);
+    res.json(data);
 
-    if (error) throw error;
+  }
 
-    // -------------------------------
-    // Supabaseが空なら root-admin.json を返す
-    // -------------------------------
-    if (
-      !row ||
-      !row.data ||
-      Object.keys(row.data).length === 0
-    ) {
-
-      const json = JSON.parse(
-        fs.readFileSync(ADMIN_FILE, "utf8")
-      );
-
-      console.log("root-admin.json =", json);
-
-      return res.json(json);
-
-    }
-
-    // -------------------------------
-    // Supabaseにデータがある
-    // -------------------------------
-    return res.json(row.data);
-
-  } catch (err) {
+  catch (err) {
 
     console.error(err);
 
-    try {
+    res.status(500).json({
 
-      const json = JSON.parse(
-        fs.readFileSync(ADMIN_FILE, "utf8")
-      );
+      success:false
 
-      console.log("root-admin.json =", json);
-
-      return res.json(json);
-
-    } catch {
-
-      return res.status(500).json({
-        success: false
-      });
-
-    }
+    });
 
   }
 
