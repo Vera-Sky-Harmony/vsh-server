@@ -64,13 +64,33 @@ app.get("/admin", (_req, res) => {
   res.sendFile(path.join(__dirname, "admin.html"));
 });
 
-app.get("/api/admin", (_req, res) => {
+/* =========================
+   Admin取得（Supabase）
+========================= */
 
-  const data = JSON.parse(
-    fs.readFileSync(ADMIN_FILE, "utf8")
-  );
+app.get("/api/admin", async (_req, res) => {
 
-  res.json(data);
+  try {
+
+    const { data: row, error } = await supabase
+      .from("admin_data")
+      .select("data")
+      .eq("id", "root")
+      .single();
+
+    if (error) throw error;
+
+    res.json(row.data);
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      success: false
+    });
+
+  }
 
 });
 /* =========================
