@@ -200,16 +200,15 @@ app.post("/api/admin", async (req, res) => {
 
   }
 
-  catch(err){
+catch (err) {
 
-    console.error(err);
+  console.error(err);
 
-    res.status(500).json({
+  res.status(500).json({
+    success: false
+  });
 
-      success:false
-
- 
-  }
+}
 
 });
 /* =========================
