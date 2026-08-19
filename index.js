@@ -340,11 +340,7 @@ app.post("/api/register", async (req, res) => {
       });
 
     }
-
-   const data = await loadAdmin();
-      fs.readFileSync(ADMIN_FILE, "utf8")
-    );
-
+const data = await loadAdmin();
     //----------------------------------
 // FLP番号確認
 //----------------------------------
