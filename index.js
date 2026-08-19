@@ -465,8 +465,7 @@ await saveAdmin(data);
   return;
 }
       // LINE UserID 保存
-const data = JSON.parse(
-const data = await loadAdmin(); 
+const data = await loadAdmin();
 
 if (!data.members) {
   data.members = [];
