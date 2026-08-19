@@ -77,6 +77,8 @@ app.get("/api/admin", async (_req, res) => {
   try {
 
     const { data: row, error } = await supabase
+       console.log("row =", row);
+console.log("row.data =", row?.data);
       .from("admin_data")
       .select("data")
       .eq("id", "root")
