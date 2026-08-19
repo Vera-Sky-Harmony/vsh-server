@@ -185,59 +185,61 @@ if (!exists) {
   }
 
 });
-app.post("/api/admin", (req, res) => {
+app.post("/api/admin", async (req, res) => {
 
   try {
 
-const oldData = JSON.parse(
-  fs.readFileSync(ADMIN_FILE, "utf8")
-);
-console.log("req.body.members =", req.body.members);
-const body = {
+    // 現在のデータを取得
+    const { data: row, error: readError } = await supabase
+      .from("admin_data")
+      .select("data")
+      .eq("id", "root")
+      .single();
 
-  introducerName:
-    req.body.introducerName || "",
+    if (readError) throw readError;
 
-  introducerFLP:
-    req.body.introducerFLP || "",
+    const oldData = row?.data || {};
 
-  flpList:
-    req.body.flpList || [],
+    // 保存データ作成
+    const body = {
 
-  members:
-    req.body.members || [],
+      introducerName:
+        req.body.introducerName || "",
 
-  introducerUserId:
-    oldData.introducerUserId || ""
+      introducerFLP:
+        req.body.introducerFLP || "",
 
-};
+      flpList:
+        req.body.flpList || [],
 
-    fs.writeFileSync(
+      members:
+        req.body.members || [],
 
-      ADMIN_FILE,
+      introducerUserId:
+        oldData.introducerUserId || ""
 
-      JSON.stringify(body, null, 2),
+    };
 
-      "utf8"
+    // Supabaseへ保存
+    const { error: updateError } = await supabase
+      .from("admin_data")
+      .update({
+        data: body
+      })
+      .eq("id", "root");
 
-    );
+    if (updateError) throw updateError;
 
     res.json({
-
       success: true
-
     });
 
-  }
-
-  catch (err) {
+  } catch (err) {
 
     console.error(err);
 
     res.status(500).json({
-
       success: false
-
     });
 
   }
