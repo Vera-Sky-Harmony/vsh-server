@@ -114,7 +114,7 @@ app.post("/api/introducer", async (req, res) => {
    新規登録者 LINE UserID 保存
 ========================= */
 
-app.post("/api/member", (req, res) => {
+app.post("/api/member", async (req, res) => {
 
   try {
 
