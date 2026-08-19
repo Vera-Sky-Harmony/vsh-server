@@ -599,35 +599,7 @@ FBO登録が全て完了しましたら画面下のスタートを押し、「�
    紹介者へPushMessage
 ========================= */
 
-async function pushToIntroducer(name, flp, userId) {
-  try {
 
-    const data = JSON.parse(
-      fs.readFileSync(ADMIN_FILE, "utf8")
-    );
-
-    if (!data.introducerUserId) return;
-
-  await client.pushMessage(
-      data.introducerUserId,
-      {
-        type: "text",
-      text: `登録を受け付けました。
-
-紹介者がFLP本体システムで登録を確認後、
-VSHを譲渡いたします。
-
-Day7-3`
-      }
-    );
-
-  } catch (err) {
-
-    console.error(err);
-
-  }
-
-}
 app.listen(Number(PORT || 10000), () => {
   console.log("=================================");
   console.log("VSH Stable Version Running");
