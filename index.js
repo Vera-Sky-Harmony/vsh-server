@@ -84,20 +84,15 @@ app.get("/api/admin", async (_req, res) => {
    紹介者UserID保存
 ========================= */
 
-app.post("/api/introducer", (req, res) => {
+app.post("/api/introducer", async (req, res) => {
 
   try {
 
-    const data = JSON.parse(
-      fs.readFileSync(ADMIN_FILE, "utf8")
-    );
+    const data = await loadAdmin();
 
     data.introducerUserId = req.body.userId;
 
-    fs.writeFileSync(
-      ADMIN_FILE,
-      JSON.stringify(data, null, 2)
-    );
+    await saveAdmin(data);
 
     res.json({
       success: true
