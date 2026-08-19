@@ -394,10 +394,7 @@ data.members.push({
     created: new Date().toISOString()
 
 });
-    fs.writeFileSync(
-      ADMIN_FILE,
-      JSON.stringify(data, null, 2)
-    );
+    await saveAdmin(data);
 await pushToIntroducer(name, flp, req.body.userId);
     res.json({
       success: true,
