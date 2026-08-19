@@ -466,8 +466,7 @@ await saveAdmin(data);
 }
       // LINE UserID 保存
 const data = JSON.parse(
-  fs.readFileSync(ADMIN_FILE, "utf8")
-);
+const data = await loadAdmin(); 
 
 if (!data.members) {
   data.members = [];
