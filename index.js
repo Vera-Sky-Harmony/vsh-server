@@ -391,12 +391,38 @@ data.members.push({
 
 });
     await saveAdmin(data);
-await pushToIntroducer(name, flp, req.body.userId);
-    res.json({
-      success: true,
-      userName: name,
-      userFLP: flp
-    });
+
+//----------------------------------
+// 登録成功を先に確定
+//----------------------------------
+
+res.json({
+  success: true,
+  userName: name,
+  userFLP: flp
+});
+
+//----------------------------------
+// 紹介者へのLINE通知
+// 通知失敗でも登録処理には影響させない
+//----------------------------------
+
+try {
+
+  await pushToIntroducer(
+    name,
+    flp,
+    req.body.userId
+  );
+
+} catch (pushErr) {
+
+  console.error(
+    "紹介者LINE通知エラー:",
+    pushErr
+  );
+
+}
 
   } catch (err) {
 
