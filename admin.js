@@ -179,37 +179,24 @@ async function backupSave() {
         const oldData =
             await old.json();
 
-       const flpArray = [];
+       const flpArray = adminData.flpList.map((item, index) => {
 
-for (let i = 1; i <= 30; i++) {
-
-    const value =
-        document
-        .getElementById(`flp${i}`)
+    const value = document
+        .getElementById(`flp${index + 1}`)
         .value
-        .replace("　【使用済】","")
-        .replace("　【使用中】","")
+        .replace("　【使用済】", "")
+        .replace("　【使用中】", "")
         .trim();
 
-    if (value === "") continue;
+    return {
 
-    const oldItem =
-        oldData.flpList.find(
-            x => x.flp === value
-        );
-
-    flpArray.push({
-
+        no: item.no,
         flp: value,
+        status: item.status
 
-        status:
-            oldItem
-                ? oldItem.status
-                : "未使用"
+    };
 
-    });
-
-}
+});
 
        const body = {
 
