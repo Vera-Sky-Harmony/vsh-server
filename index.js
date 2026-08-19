@@ -271,8 +271,7 @@ const data = await loadAdmin();
    FLP番号を使用済へ変更
 ========================= */
 
-app.post("/api/complete-flp", (req, res) => {
-
+app.post("/api/complete-flp", async (req, res) => {
   const data = JSON.parse(
     fs.readFileSync(ADMIN_FILE, "utf8")
   );
