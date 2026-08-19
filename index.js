@@ -146,10 +146,7 @@ if (!exists) {
 
 }
 
-    fs.writeFileSync(
-      ADMIN_FILE,
-      JSON.stringify(data, null, 2)
-    );
+    await saveAdmin(data);
 
     res.json({
       success: true
