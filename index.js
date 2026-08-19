@@ -208,11 +208,7 @@ app.post("/api/admin", async (req, res) => {
 
       success:false
 
-    });
-
-  }
-
-});
+ 
   }
 
 });
