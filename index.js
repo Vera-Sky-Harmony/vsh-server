@@ -371,25 +371,40 @@ item.status = "使用済";
 // 第一世代登録者
 //----------------------------------
 
-if (!data.members) {
+//----------------------------------
+// 第一世代登録者
+// 重複登録防止
+//----------------------------------
+
+if (!Array.isArray(data.members)) {
 
     data.members = [];
 
 }
 
-data.members.push({
+// 同じFLP番号がすでに登録されているか確認
+const alreadyRegistered = data.members.some(
+    member => String(member.flp) === String(flp)
+);
 
-    userId: req.body.userId || "",
+// 未登録の場合だけ追加
+if (!alreadyRegistered) {
 
-    name: name,
+    data.members.push({
 
-    flp: flp,
+        userId: req.body.userId || "",
 
-    status: "登録完了",
+        name: name,
 
-    created: new Date().toISOString()
+        flp: flp,
 
-});
+        status: "登録完了",
+
+        created: new Date().toISOString()
+
+    });
+
+}
     await saveAdmin(data);
 
 //----------------------------------
