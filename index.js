@@ -214,7 +214,7 @@ catch (err) {
 app.get("/api/next-flp", async (_req, res) => {
 console.log("===== /api/next-flp =====");
 console.log("ADMIN_FILE =", ADMIN_FILE);
-console.log(fs.readFileSync(ADMIN_FILE, "utf8"));
+
   const data = await loadAdmin();
 
   const item = data.flpList.find(
