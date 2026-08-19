@@ -241,7 +241,7 @@ console.log(fs.readFileSync(ADMIN_FILE, "utf8"));
    FLP番号を使用中へ変更
 ========================= */
 
-app.post("/api/use-flp", (req, res) => {
+app.post("/api/use-flp", async (req, res) => {
 
   const data = JSON.parse(
     fs.readFileSync(ADMIN_FILE, "utf8")
