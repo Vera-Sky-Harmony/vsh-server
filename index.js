@@ -243,9 +243,7 @@ console.log(fs.readFileSync(ADMIN_FILE, "utf8"));
 
 app.post("/api/use-flp", async (req, res) => {
 
-  const data = JSON.parse(
-    fs.readFileSync(ADMIN_FILE, "utf8")
-  );
+const data = await loadAdmin(); 
 
   const item = data.flpList.find(
     x => x.flp === req.body.flp
