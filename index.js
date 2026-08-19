@@ -303,9 +303,7 @@ app.get("/api/members", async (_req, res) => {
 
   try {
 
-    const data = JSON.parse(
-      fs.readFileSync(ADMIN_FILE, "utf8")
-    );
+    const data = await loadAdmin();
 
     res.json({
       success: true,
