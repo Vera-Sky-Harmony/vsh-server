@@ -6,6 +6,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { supabase } from "./supabase.js";
+import { loadAdmin, saveAdmin } from "./supabase.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 /* =========================
