@@ -618,11 +618,43 @@ Version 1.1`
       ]
     );
 
-    console.log(
+       console.log(
       "Day8 LINE送信成功:",
       member.name,
       member.flp
-  
+    );
+
+    //----------------------------------
+    // 正常終了
+    //----------------------------------
+
+    return res.json({
+      success: true,
+      name: member.name,
+      flp: member.flp,
+      status: member.status,
+      day8Sent: true
+    });
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "FBO登録確認・Day8送信エラー:",
+      err
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "登録確認またはDay8送信処理でエラーが発生しました。"
+    });
+
+  }
+
+});
+
 /* =========================
    登録受付
 ========================= */
