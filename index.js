@@ -515,6 +515,62 @@ if (!data.members) {
 ========================= */
 if (text.startsWith("【登録完了】")) {
 
+  //----------------------------------
+  // LINEメッセージから氏名・FLP番号取得
+  //----------------------------------
+
+  const nameMatch =
+    text.match(/氏名：(.+)/);
+
+  const flpMatch =
+    text.match(/FLP番号：([0-9]+)/);
+
+  const memberName =
+    nameMatch ? nameMatch[1].trim() : "";
+
+  const memberFLP =
+    flpMatch ? flpMatch[1].trim() : "";
+
+  //----------------------------------
+  // LINE User IDを登録者へ紐付け
+  //----------------------------------
+
+  const adminData = await loadAdmin();
+
+  if (!Array.isArray(adminData.members)) {
+    adminData.members = [];
+  }
+
+  const member = adminData.members.find(
+    x => String(x.flp) === String(memberFLP)
+  );
+
+  if (member) {
+
+    member.userId = userId;
+
+    await saveAdmin(adminData);
+
+    console.log(
+      "LINE User ID 保存成功:",
+      memberName,
+      memberFLP
+    );
+
+  } else {
+
+    console.log(
+      "LINE User ID 保存対象が見つかりません:",
+      memberName,
+      memberFLP
+    );
+
+  }
+
+  //----------------------------------
+  // Day7-3を本人へ送信
+  //----------------------------------
+
   await client.pushMessage(userId, [
 
     {
@@ -538,7 +594,10 @@ Vera Sky Harmony を譲渡いたします。`
 
   ]);
 
-  // 
+  //----------------------------------
+  // 既存処理
+  //----------------------------------
+
   await pushToIntroducer("", "", userId);
 
   return res.status(200).end();
