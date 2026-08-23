@@ -365,8 +365,8 @@ catch (err) {
 app.get("/api/next-flp", async (_req, res) => {
 console.log("===== /api/next-flp =====");
 
-
-  const data = await loadAdmin();
+  const data =
+    await cleanupExpiredPendingMembers();
 
   const item = data.flpList.find(
     x => x.status === "未使用"
