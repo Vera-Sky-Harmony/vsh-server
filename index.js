@@ -435,24 +435,7 @@ app.post("/api/confirm-member", async (req, res) => {
       member.userId,
       [
 
-        {
-          type: "image",
-
-          originalContentUrl:
-          originalContentUrl:
-  "https://res.cloudinary.com/dxegzwukb/image/upload/v1787477831/登録おめでとう_v6xuwt.png",
-
-previewImageUrl:
-  "https://res.cloudinary.com/dxegzwukb/image/upload/v1787477831/登録おめでとう_v6xuwt.png" 
-
-          previewImageUrl:
-           originalContentUrl:
-  "https://res.cloudinary.com/dxegzwukb/image/upload/v1787477831/登録おめでとう_v6xuwt.png",
-
-previewImageUrl:
-  "https://res.cloudinary.com/dxegzwukb/image/upload/v1787477831/登録おめでとう_v6xuwt.png" 
-        },
-
+       
         {
           type: "text",
 
@@ -639,131 +622,7 @@ Version 1.1`
       "Day8 LINE送信成功:",
       member.name,
       member.flp
-    );
-
-    //----------------------------------
-    // 正常終了
-    //----------------------------------
-
-    return res.json({
-      success: true,
-      name: member.name,
-      flp: member.flp,
-      status: member.status,
-      day8Sent: true
-    });
-
-  }
-
-  catch (err) {
-
-    console.error(
-      "FBO登録確認・Day8送信エラー:",
-      err
-    );
-
-    return res.status(500).json({
-      success: false,
-      message:
-        "登録確認またはDay8送信処理でエラーが発生しました。"
-    });
-
-  }
-
-});
-    }
-
-    //----------------------------------
-    // 最新管理データ取得
-    //----------------------------------
-
-    const data = await loadAdmin();
-
-    if (!Array.isArray(data.members)) {
-
-      data.members = [];
-
-    }
-
-    //----------------------------------
-    // 該当登録者を検索
-    //----------------------------------
-
-    const member = data.members.find(
-      x => String(x.flp) === String(flp)
-    );
-
-    if (!member) {
-
-      return res.status(404).json({
-        success: false,
-        message: "登録者が見つかりません。"
-      });
-
-    }
-
-    //----------------------------------
-    // すでに登録済の場合
-    //----------------------------------
-
-    if (member.status === "登録済") {
-
-      return res.json({
-        success: true,
-        message: "すでに登録済です。"
-      });
-
-    }
-
-    //----------------------------------
-    // 登録済へ変更
-    //----------------------------------
-
-    member.status = "登録済";
-
-    member.confirmed =
-      new Date().toISOString();
-
-    //----------------------------------
-    // Supabaseへ保存
-    //----------------------------------
-
-    await saveAdmin(data);
-
-    console.log(
-      "FBO登録確認:",
-      member.name,
-      member.flp
-    );
-
-    //----------------------------------
-    // 正常終了
-    //----------------------------------
-
-    res.json({
-      success: true,
-      name: member.name,
-      flp: member.flp,
-      status: member.status
-    });
-
-  }
-
-  catch (err) {
-
-    console.error(
-      "FBO登録確認エラー:",
-      err
-    );
-
-    res.status(500).json({
-      success: false,
-      message: "登録確認処理エラー"
-    });
-
-  }
-
-});
+  
 /* =========================
    登録受付
 ========================= */
