@@ -195,7 +195,20 @@ app.get("/", (_req, res) => {
 app.get("/admin", (_req, res) => {
   res.sendFile(path.join(__dirname, "admin.html"));
 });
+/* =========================
+   新規登録者本人用 Admin
+========================= */
 
+app.get("/member-admin", (_req, res) => {
+
+  res.sendFile(
+    path.join(
+      __dirname,
+      "member-admin.html"
+    )
+  );
+
+});
 /* =========================
    Admin取得（Supabase）
 ========================= */
