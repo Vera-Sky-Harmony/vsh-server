@@ -454,7 +454,8 @@ app.get("/api/members", async (_req, res) => {
 
   try {
 
-    const data = await loadAdmin();
+    const data =
+      await cleanupExpiredPendingMembers();
 
     res.json({
       success: true,
