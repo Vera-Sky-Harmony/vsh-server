@@ -436,14 +436,15 @@ app.post("/api/confirm-member", async (req, res) => {
   [
 
     {
-      type: "image",
+    {
+  type: "image",
 
-      originalContentUrl:
-        "https://res.cloudinary.com/dxegzwukb/image/upload/v1787477831/登録おめでとう_v6xuwt.png",
+  originalContentUrl:
+    "https://res.cloudinary.com/dxegzwukb/image/upload/v1787477831/vsh-day8-congratulations",
 
-      previewImageUrl:
-        "https://res.cloudinary.com/dxegzwukb/image/upload/v1787477831/登録おめでとう_v6xuwt.png"
-    },
+  previewImageUrl:
+    "https://res.cloudinary.com/dxegzwukb/image/upload/v1787477831/vsh-day8-congratulations"
+},
 
     {
       type: "text",
