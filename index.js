@@ -212,7 +212,8 @@ app.get("/api/admin", async (_req, res) => {
 
   try {
 
-    const data = await loadAdmin();
+    const data =
+      await cleanupExpiredPendingMembers();
 
     res.json(data);
 
