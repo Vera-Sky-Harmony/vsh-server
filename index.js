@@ -431,13 +431,22 @@ app.post("/api/confirm-member", async (req, res) => {
     // Day8を本人のLINEへ送信
     //----------------------------------
 
-    await client.pushMessage(
-      member.userId,
-      [
+   await client.pushMessage(
+  member.userId,
+  [
 
-       
-        {
-          type: "text",
+    {
+      type: "image",
+
+      originalContentUrl:
+        "https://res.cloudinary.com/dxegzwukb/image/upload/v1787477831/登録おめでとう_v6xuwt.png",
+
+      previewImageUrl:
+        "https://res.cloudinary.com/dxegzwukb/image/upload/v1787477831/登録おめでとう_v6xuwt.png"
+    },
+
+    {
+      type: "text",
 
           text:
 `━━━━━━━━━━━━━━━━━━
