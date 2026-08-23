@@ -32,7 +32,8 @@ async function cleanupExpiredPendingMembers() {
 
   try {
 
-    const data = await loadAdmin();
+   const data =
+  await cleanupExpiredPendingMembers();
 
     if (!Array.isArray(data.members)) {
       data.members = [];
