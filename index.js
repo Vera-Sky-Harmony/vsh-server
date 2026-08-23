@@ -474,6 +474,74 @@ app.get("/api/members", async (_req, res) => {
 
 });
 /* =========================
+   7日経過処理 テスト専用
+   ※テスト終了後に削除
+========================= */
+
+app.post("/api/test-expire-member", async (req, res) => {
+
+  try {
+
+    const { flp } = req.body;
+
+    const data = await loadAdmin();
+
+    if (!Array.isArray(data.members)) {
+      data.members = [];
+    }
+
+    const member = data.members.find(
+      x => String(x.flp) === String(flp)
+    );
+
+    if (!member) {
+
+      return res.status(404).json({
+        success: false,
+        message: "登録者が見つかりません。"
+      });
+
+    }
+
+    // 8日前の登録日時に変更
+    member.created =
+      new Date(
+        Date.now() - 8 * 24 * 60 * 60 * 1000
+      ).toISOString();
+
+    await saveAdmin(data);
+
+    console.log(
+      "期限切れテスト日時設定:",
+      member.name,
+      member.flp,
+      member.created
+    );
+
+    res.json({
+      success: true,
+      name: member.name,
+      flp: member.flp,
+      created: member.created
+    });
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "期限切れテスト設定エラー:",
+      err
+    );
+
+    res.status(500).json({
+      success: false
+    });
+
+  }
+
+});
+/* =========================
    第一世代登録確認
    確認中 → 登録済
 ========================= */
