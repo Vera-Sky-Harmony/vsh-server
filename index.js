@@ -213,13 +213,6 @@ app.get("/member-admin", (_req, res) => {
    Admin取得（Supabase）
 ========================= */
 
-/* =========================
-   Admin取得（Supabase）
-========================= */
-
-/* =========================
-   Admin取得（Supabase）
-========================= */
 
 app.get("/api/admin", async (_req, res) => {
 
