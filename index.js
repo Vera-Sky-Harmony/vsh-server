@@ -436,7 +436,7 @@ app.post("/api/confirm-member", async (req, res) => {
   [
 
     {
-    {
+    
   type: "image",
 
   originalContentUrl:
