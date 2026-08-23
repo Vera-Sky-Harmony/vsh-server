@@ -1,10 +1,7 @@
-// admin.js
-// Vera Sky Harmony Version1.3
-// Root Admin 永続保存対応 完成版
-//
 // ========================================
-// 既存機能を維持したまま
-// FLP番号30件を確実にSupabaseへ保存
+// admin.js
+// Vera Sky Harmony Version1.4
+// Root Admin 管理画面
 // ========================================
 
 
@@ -12,11 +9,13 @@
 // FLP入力欄30件作成
 //----------------------------------------
 
-const flpList = document.getElementById("flpList");
+const flpList =
+    document.getElementById("flpList");
 
 for (let i = 1; i <= 30; i++) {
 
-    const row = document.createElement("div");
+    const row =
+        document.createElement("div");
 
     row.className = "flpRow";
 
@@ -33,7 +32,7 @@ for (let i = 1; i <= 30; i++) {
 
 
 //----------------------------------------
-// 読み込んだ管理データを保持
+// 管理データ保持
 //----------------------------------------
 
 let adminData = {
@@ -55,7 +54,8 @@ async function loadAdmin() {
 
     try {
 
-        const res = await fetch("/api/admin");
+        const res =
+            await fetch("/api/admin");
 
         if (!res.ok) {
             throw new Error(
@@ -63,7 +63,8 @@ async function loadAdmin() {
             );
         }
 
-        const data = await res.json();
+        const data =
+            await res.json();
 
         adminData = {
 
@@ -90,7 +91,7 @@ async function loadAdmin() {
 
 
         //--------------------------------
-        // 紹介者情報表示
+        // 紹介者情報
         //--------------------------------
 
         document
@@ -105,13 +106,15 @@ async function loadAdmin() {
 
 
         //--------------------------------
-        // FLP番号30件表示
+        // FLP番号30件
         //--------------------------------
 
         for (let i = 1; i <= 30; i++) {
 
             const box =
-                document.getElementById(`flp${i}`);
+                document.getElementById(
+                    `flp${i}`
+                );
 
             if (!box) continue;
 
@@ -129,7 +132,6 @@ async function loadAdmin() {
                     "#ffffff";
 
                 continue;
-
             }
 
             const flp =
@@ -137,7 +139,6 @@ async function loadAdmin() {
 
             const status =
                 item.status || "未使用";
-
 
             if (status === "使用済") {
 
@@ -189,6 +190,231 @@ async function loadAdmin() {
 
 
 //----------------------------------------
+// FLP番号30件を保存用配列へ変換
+//----------------------------------------
+
+function createFLPArray() {
+
+    const result = [];
+
+    for (let i = 1; i <= 30; i++) {
+
+        const box =
+            document.getElementById(
+                `flp${i}`
+            );
+
+        let value =
+            box ? box.value : "";
+
+        value =
+            value
+            .replace(
+                "　【使用済】",
+                ""
+            )
+            .replace(
+                "　【使用中】",
+                ""
+            )
+            .trim();
+
+
+        const oldItem =
+            adminData.flpList.find(
+                x => Number(x.no) === i
+            )
+            ||
+            adminData.flpList[i - 1];
+
+
+        let status =
+            oldItem?.status ||
+            "未使用";
+
+
+        if (
+            box &&
+            box.value.includes(
+                "【使用済】"
+            )
+        ) {
+
+            status = "使用済";
+
+        }
+
+        else if (
+            box &&
+            box.value.includes(
+                "【使用中】"
+            )
+        ) {
+
+            status = "使用中";
+
+        }
+
+
+        result.push({
+
+            no: i,
+            flp: value,
+            status: status
+
+        });
+
+    }
+
+    return result;
+
+}
+
+
+//----------------------------------------
+// 管理データ保存
+//----------------------------------------
+
+document
+.getElementById("saveButton")
+.addEventListener(
+    "click",
+    saveAdmin
+);
+
+
+async function saveAdmin() {
+
+    try {
+
+        //--------------------------------
+        // 最新データ取得
+        //--------------------------------
+
+        const oldRes =
+            await fetch("/api/admin");
+
+        if (!oldRes.ok) {
+
+            throw new Error(
+                `保存前データ取得エラー HTTP ${oldRes.status}`
+            );
+
+        }
+
+        const oldData =
+            await oldRes.json();
+
+
+        //--------------------------------
+        // 保存データ
+        //--------------------------------
+
+        const body = {
+
+            introducerName:
+                document
+                .getElementById(
+                    "introducerName"
+                )
+                .value
+                .trim(),
+
+            introducerFLP:
+                document
+                .getElementById(
+                    "introducerFLP"
+                )
+                .value
+                .trim(),
+
+            introducerUserId:
+                oldData.introducerUserId
+                ||
+                adminData.introducerUserId
+                ||
+                "",
+
+            flpList:
+                createFLPArray(),
+
+            members:
+                Array.isArray(
+                    oldData.members
+                )
+                ? oldData.members
+                : []
+
+        };
+
+
+        //--------------------------------
+        // Supabaseへ保存
+        //--------------------------------
+
+        const res =
+            await fetch(
+                "/api/admin",
+                {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify(body)
+
+                }
+            );
+
+
+        const result =
+            await res.json();
+
+
+        if (
+            !res.ok ||
+            !result.success
+        ) {
+
+            throw new Error(
+                "管理データ保存失敗"
+            );
+
+        }
+
+
+        adminData = body;
+
+        alert(
+            "保存しました。"
+        );
+
+        await loadAdmin();
+        await loadMembers();
+
+    }
+
+    catch (err) {
+
+        console.error(
+            "管理データ保存エラー:",
+            err
+        );
+
+        alert(
+            "保存エラー"
+        );
+
+    }
+
+}
+
+
+//----------------------------------------
 // 第一世代登録者
 //----------------------------------------
 
@@ -219,11 +445,15 @@ async function loadMembers() {
                 : [];
 
 
+        //--------------------------------
+        // FBO登録者だけ表示
+        //--------------------------------
+
         const members =
             sourceMembers.filter(
-                x =>
-                    x.status ===
-                    "登録完了"
+                member =>
+                    member.name &&
+                    member.flp
             );
 
 
@@ -246,12 +476,120 @@ async function loadMembers() {
             const tr =
                 document.createElement("tr");
 
+
+            //--------------------------------
+            // 登録月日
+            //--------------------------------
+
+            let registeredDate = "";
+
+            if (member.created) {
+
+                const date =
+                    new Date(member.created);
+
+                registeredDate =
+                    date.toLocaleDateString(
+                        "ja-JP",
+                        {
+                            timeZone:
+                                "Asia/Tokyo"
+                        }
+                    );
+
+            }
+
+
+            //--------------------------------
+            // ステイタス
+            //--------------------------------
+
+            let status =
+                member.status || "確認中";
+
+            // 旧データ「登録完了」は
+            // 新仕様では「確認中」と表示
+            if (status === "登録完了") {
+
+                status = "確認中";
+
+            }
+
+
+            //--------------------------------
+            // ステイタス欄
+            //--------------------------------
+
+            let statusHTML = "";
+
+            if (status === "登録済") {
+
+                statusHTML =
+                    `<strong>登録済</strong>`;
+
+            }
+
+            else {
+
+                statusHTML = `
+                    <strong>確認中</strong>
+                    <br>
+                    <button
+                        class="confirmButton"
+                        data-flp="${member.flp}">
+                        登録確認
+                    </button>
+                `;
+
+            }
+
+
             tr.innerHTML = `
-                <td>${member.name || ""}</td>
-                <td>${member.flp || ""}</td>
+
+                <td>
+                    ${member.name || ""}
+                </td>
+
+                <td>
+                    ${member.flp || ""}
+                </td>
+
+                <td>
+                    ${registeredDate}
+                </td>
+
+                <td>
+                    ${statusHTML}
+                </td>
+
             `;
 
             tbody.appendChild(tr);
+
+        });
+
+
+        //--------------------------------
+        // 登録確認ボタン
+        //--------------------------------
+
+        document
+        .querySelectorAll(
+            ".confirmButton"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    const flp =
+                        button.dataset.flp;
+
+                    confirmMember(flp);
+
+                }
+            );
 
         });
 
@@ -270,450 +608,37 @@ async function loadMembers() {
 
 
 //----------------------------------------
-// FLP番号30件を保存用配列へ変換
+// 登録確認
 //----------------------------------------
 
-function createFLPArray() {
+async function confirmMember(flp) {
 
-    const result = [];
+    const ok =
+        confirm(
+            "FLP本体システムで登録を確認しましたか？"
+        );
 
-    for (let i = 1; i <= 30; i++) {
+    if (!ok) return;
 
-        const box =
-            document.getElementById(
-                `flp${i}`
-            );
-
-        let value =
-            box
-            ? box.value
-            : "";
-
-        value =
-            value
-            .replace(
-                "　【使用済】",
-                ""
-            )
-            .replace(
-                "　【使用中】",
-                ""
-            )
-            .trim();
-
-
-        //--------------------------------
-        // 現在の状態を保持
-        //--------------------------------
-
-        const oldItem =
-            adminData.flpList.find(
-                x => Number(x.no) === i
-            )
-            ||
-            adminData.flpList[i - 1];
-
-
-        let status =
-            oldItem?.status ||
-            "未使用";
-
-
-        //--------------------------------
-        // 画面表示からも状態確認
-        //--------------------------------
-
-        if (
-            box &&
-            box.value.includes(
-                "【使用済】"
-            )
-        ) {
-
-            status = "使用済";
-
-        }
-
-        else if (
-            box &&
-            box.value.includes(
-                "【使用中】"
-            )
-        ) {
-
-            status = "使用中";
-
-        }
-
-
-        result.push({
-
-            no: i,
-
-            flp: value,
-
-            status: status
-
-        });
-
-    }
-
-    return result;
-
-}
-
-
-//----------------------------------------
-// バックアップ保存
-//----------------------------------------
-
-document
-.getElementById("backupButton")
-.addEventListener(
-    "click",
-    backupSave
-);
-
-
-async function backupSave() {
 
     try {
 
-        //--------------------------------
-        // 現在のサーバーデータ取得
-        //--------------------------------
-
-        const old =
-            await fetch("/api/admin");
-
-        if (!old.ok) {
-
-            throw new Error(
-                `保存前データ取得エラー HTTP ${old.status}`
-            );
-
-        }
-
-        const oldData =
-            await old.json();
-
-
-        //--------------------------------
-        // FLP番号30件を必ず取得
-        //--------------------------------
-
-        const flpArray =
-            createFLPArray();
-
-
-        //--------------------------------
-        // 保存データ作成
-        //--------------------------------
-
-        const body = {
-
-            introducerName:
-                document
-                .getElementById(
-                    "introducerName"
-                )
-                .value
-                .trim(),
-
-            introducerFLP:
-                document
-                .getElementById(
-                    "introducerFLP"
-                )
-                .value
-                .trim(),
-
-            introducerUserId:
-                oldData.introducerUserId
-                ||
-                adminData.introducerUserId
-                ||
-                "",
-
-            flpList:
-                flpArray,
-
-            members:
-                Array.isArray(
-                    oldData.members
-                )
-                ? oldData.members
-                : (
-                    Array.isArray(
-                        adminData.members
-                    )
-                    ? adminData.members
-                    : []
-                )
-
-        };
-
-
-        //--------------------------------
-        // Supabaseへ保存
-        //--------------------------------
-
         const res =
             await fetch(
-                "/api/admin",
+                "/api/confirm-member",
                 {
 
-                    method:
-                        "POST",
+                    method: "POST",
 
                     headers: {
-
                         "Content-Type":
                             "application/json"
-
                     },
 
                     body:
-                        JSON.stringify(
-                            body
-                        )
-
-                }
-            );
-
-
-        let result;
-
-        try {
-
-            result =
-                await res.json();
-
-        }
-
-        catch {
-
-            throw new Error(
-                `保存応答エラー HTTP ${res.status}`
-            );
-
-        }
-
-
-        if (
-            !res.ok ||
-            !result.success
-        ) {
-
-            throw new Error(
-                `管理データ保存失敗 HTTP ${res.status}`
-            );
-
-        }
-
-
-        //--------------------------------
-        // 保存成功後
-        // ローカル保持データ更新
-        //--------------------------------
-
-        adminData = body;
-
-
-        //--------------------------------
-        // JSONバックアップ作成
-        //--------------------------------
-
-        const blob =
-            new Blob(
-                [
-                    JSON.stringify(
-                        body,
-                        null,
-                        2
-                    )
-                ],
-                {
-                    type:
-                        "application/json"
-                }
-            );
-
-
-        const url =
-            URL.createObjectURL(
-                blob
-            );
-
-
-        const a =
-            document.createElement(
-                "a"
-            );
-
-        a.href = url;
-
-        a.download =
-            "root-admin-backup.json";
-
-        a.click();
-
-
-        setTimeout(
-            () => {
-
-                URL.revokeObjectURL(
-                    url
-                );
-
-            },
-            1000
-        );
-
-
-        alert(
-            "バックアップを保存しました。"
-        );
-
-
-        //--------------------------------
-        // 保存内容を再読込み
-        //--------------------------------
-
-        await loadAdmin();
-
-        await loadMembers();
-
-    }
-
-    catch (err) {
-
-        console.error(
-            "バックアップ保存エラー:",
-            err
-        );
-
-        alert(
-            "バックアップ保存エラー"
-        );
-
-    }
-
-}
-
-
-//----------------------------------------
-// バックアップ読込
-//----------------------------------------
-
-document
-.getElementById("restoreButton")
-.addEventListener(
-    "click",
-    () => {
-
-        document
-        .getElementById(
-            "restoreFile"
-        )
-        .click();
-
-    }
-);
-
-
-document
-.getElementById("restoreFile")
-.addEventListener(
-    "change",
-    restoreBackup
-);
-
-
-async function restoreBackup(e) {
-
-    try {
-
-        const file =
-            e.target.files[0];
-
-        if (!file) return;
-
-
-        const text =
-            await file.text();
-
-
-        const data =
-            JSON.parse(text);
-
-
-        //--------------------------------
-        // 基本データ確認
-        //--------------------------------
-
-        if (
-            !data ||
-            typeof data !==
-                "object"
-        ) {
-
-            throw new Error(
-                "バックアップ形式エラー"
-            );
-
-        }
-
-
-        //--------------------------------
-        // FLPリスト形式を維持
-        //--------------------------------
-
-        if (
-            !Array.isArray(
-                data.flpList
-            )
-        ) {
-
-            data.flpList = [];
-
-        }
-
-
-        if (
-            !Array.isArray(
-                data.members
-            )
-        ) {
-
-            data.members = [];
-
-        }
-
-
-        //--------------------------------
-        // Supabaseへ復元
-        //--------------------------------
-
-        const res =
-            await fetch(
-                "/api/admin",
-                {
-
-                    method:
-                        "POST",
-
-                    headers: {
-
-                        "Content-Type":
-                            "application/json"
-
-                    },
-
-                    body:
-                        JSON.stringify(
-                            data
-                        )
+                        JSON.stringify({
+                            flp: flp
+                        })
 
                 }
             );
@@ -729,7 +654,8 @@ async function restoreBackup(e) {
         ) {
 
             alert(
-                "復元エラー"
+                result.message ||
+                "登録確認エラー"
             );
 
             return;
@@ -738,37 +664,23 @@ async function restoreBackup(e) {
 
 
         alert(
-            "バックアップを復元しました。"
+            "登録済にしました。"
         );
 
-
-        //--------------------------------
-        // 復元内容を再読込み
-        //--------------------------------
-
         await loadAdmin();
-
         await loadMembers();
-
-
-        //--------------------------------
-        // 同じファイルを
-        // 再選択可能にする
-        //--------------------------------
-
-        e.target.value = "";
 
     }
 
     catch (err) {
 
         console.error(
-            "バックアップ読込エラー:",
+            "登録確認エラー:",
             err
         );
 
         alert(
-            "バックアップ読込エラー"
+            "登録確認エラー"
         );
 
     }
@@ -781,7 +693,6 @@ async function restoreBackup(e) {
 //----------------------------------------
 
 loadAdmin();
-
 loadMembers();
 
 
@@ -803,7 +714,6 @@ document
             await navigator
             .clipboard
             .writeText(url);
-
 
             alert(
 `VSH公式LINEをコピーしました。
