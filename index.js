@@ -23,7 +23,157 @@ const {
 const app = express();
 registerRoutes(app);
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
+// ========================================
+// 7日経過した「確認中」登録者を自動整理
+// 登録者削除 ＋ FLP番号を未使用へ復元
+// ========================================
 
+async function cleanupExpiredPendingMembers() {
+
+  try {
+
+    const data = await loadAdmin();
+
+    if (!Array.isArray(data.members)) {
+      data.members = [];
+    }
+
+    if (!Array.isArray(data.flpList)) {
+      data.flpList = [];
+    }
+
+    const now = Date.now();
+
+    const sevenDays =
+      7 * 24 * 60 * 60 * 1000;
+
+    let changed = false;
+
+    const remainingMembers = [];
+
+    for (const member of data.members) {
+
+      //----------------------------------
+      // 「確認中」以外はそのまま残す
+      //----------------------------------
+
+      if (member.status !== "確認中") {
+
+        remainingMembers.push(member);
+        continue;
+
+      }
+
+      //----------------------------------
+      // 登録日時がない場合も削除しない
+      //----------------------------------
+
+      if (!member.created) {
+
+        remainingMembers.push(member);
+        continue;
+
+      }
+
+      const createdTime =
+        new Date(member.created).getTime();
+
+      //----------------------------------
+      // 日付異常の場合も削除しない
+      //----------------------------------
+
+      if (!Number.isFinite(createdTime)) {
+
+        remainingMembers.push(member);
+        continue;
+
+      }
+
+      const elapsed =
+        now - createdTime;
+
+      //----------------------------------
+      // まだ7日未満
+      //----------------------------------
+
+      if (elapsed < sevenDays) {
+
+        remainingMembers.push(member);
+        continue;
+
+      }
+
+      //----------------------------------
+      // 7日経過
+      // FLP番号を未使用へ戻す
+      //----------------------------------
+
+      const flpItem =
+        data.flpList.find(
+          x =>
+            String(x.flp) ===
+            String(member.flp)
+        );
+
+      if (flpItem) {
+
+        flpItem.status = "未使用";
+
+      }
+
+      //----------------------------------
+      // remainingMembersへ入れない
+      // ＝登録者削除
+      //----------------------------------
+
+      changed = true;
+
+      console.log(
+        "確認期限切れ登録者を自動削除:",
+        member.name,
+        member.flp
+      );
+
+      console.log(
+        "FLP番号を未使用へ復元:",
+        member.flp
+      );
+
+    }
+
+    //----------------------------------
+    // 変更があった場合だけ保存
+    //----------------------------------
+
+    if (changed) {
+
+      data.members =
+        remainingMembers;
+
+      await saveAdmin(data);
+
+      console.log(
+        "7日経過登録者の自動整理完了"
+      );
+
+    }
+
+    return data;
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "7日経過登録者の自動整理エラー:",
+      err
+    );
+
+    throw err;
+
+  }
+
+}
 /* =========================
    静的ページ配信
 ========================= */
