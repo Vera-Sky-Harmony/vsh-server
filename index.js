@@ -323,6 +323,121 @@ app.get("/api/members", async (_req, res) => {
 
 });
 /* =========================
+   第一世代登録確認
+   確認中 → 登録済
+========================= */
+
+app.post("/api/confirm-member", async (req, res) => {
+
+  try {
+
+    const { flp } = req.body;
+
+    //----------------------------------
+    // FLP番号確認
+    //----------------------------------
+
+    if (!flp) {
+
+      return res.status(400).json({
+        success: false,
+        message: "FLP番号がありません。"
+      });
+
+    }
+
+    //----------------------------------
+    // 最新管理データ取得
+    //----------------------------------
+
+    const data = await loadAdmin();
+
+    if (!Array.isArray(data.members)) {
+
+      data.members = [];
+
+    }
+
+    //----------------------------------
+    // 該当登録者を検索
+    //----------------------------------
+
+    const member = data.members.find(
+      x => String(x.flp) === String(flp)
+    );
+
+    if (!member) {
+
+      return res.status(404).json({
+        success: false,
+        message: "登録者が見つかりません。"
+      });
+
+    }
+
+    //----------------------------------
+    // すでに登録済の場合
+    //----------------------------------
+
+    if (member.status === "登録済") {
+
+      return res.json({
+        success: true,
+        message: "すでに登録済です。"
+      });
+
+    }
+
+    //----------------------------------
+    // 登録済へ変更
+    //----------------------------------
+
+    member.status = "登録済";
+
+    member.confirmed =
+      new Date().toISOString();
+
+    //----------------------------------
+    // Supabaseへ保存
+    //----------------------------------
+
+    await saveAdmin(data);
+
+    console.log(
+      "FBO登録確認:",
+      member.name,
+      member.flp
+    );
+
+    //----------------------------------
+    // 正常終了
+    //----------------------------------
+
+    res.json({
+      success: true,
+      name: member.name,
+      flp: member.flp,
+      status: member.status
+    });
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "FBO登録確認エラー:",
+      err
+    );
+
+    res.status(500).json({
+      success: false,
+      message: "登録確認処理エラー"
+    });
+
+  }
+
+});
+/* =========================
    登録受付
 ========================= */
 
