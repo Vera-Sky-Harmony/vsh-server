@@ -513,7 +513,7 @@ if (!alreadyRegistered) {
 
         flp: flp,
 
-        status: "登録完了",
+       status: "確認中",
 
         created: new Date().toISOString()
 
