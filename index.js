@@ -644,10 +644,10 @@ app.get("/api/member-admin/me", async (req, res) => {
     // セッション確認
     //----------------------------------
 
-    const session =
-      getMemberAdminSession(
-        sessionId
-      );
+   const session =
+  await getMemberAdminSession(
+    sessionId
+  );
 
     if (!session) {
 
