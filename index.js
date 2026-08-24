@@ -24,6 +24,17 @@ const app = express();
 registerRoutes(app);
 const client = new Client({ channelAccessToken: CHANNEL_ACCESS_TOKEN });
 // ========================================
+// 本人専用Adminトークン発行
+// ========================================
+
+function createMemberAdminToken() {
+
+  return crypto
+    .randomBytes(32)
+    .toString("hex");
+
+}
+// ========================================
 // 7日経過した「確認中」登録者を自動整理
 // 登録者削除 ＋ FLP番号を未使用へ復元
 // ========================================
