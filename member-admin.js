@@ -601,8 +601,9 @@ async function loadIntroducedMembers() {
         confirmButton.className =
           "button";
 
-        confirmButton.textContent =
-          "FBO登録を確認しました";
+        
+         confirmButton.textContent =
+  "登録確認";
 
         confirmButton.addEventListener(
           "click",
@@ -685,8 +686,9 @@ async function loadIntroducedMembers() {
                 confirmButton.disabled =
                   false;
 
-                confirmButton.textContent =
-                  "FBO登録を確認しました";
+                
+                  confirmButton.textContent =
+  "登録確認";
 
                 return;
               }
@@ -724,8 +726,9 @@ async function loadIntroducedMembers() {
               confirmButton.disabled =
                 false;
 
+              
               confirmButton.textContent =
-                "FBO登録を確認しました";
+  "登録確認";
 
             }
 
