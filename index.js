@@ -284,7 +284,88 @@ app.get("/", (_req, res) => {
 app.get("/admin", (_req, res) => {
   res.sendFile(path.join(__dirname, "admin.html"));
 });
+/* =========================
+   本人用Admin テスト入口
+   ※テスト終了後に削除
+========================= */
 
+app.get("/member-admin/test/:flp", async (req, res) => {
+
+  try {
+
+    const flp =
+      req.params.flp;
+
+    const data =
+      await loadAdmin();
+
+    if (!Array.isArray(data.members)) {
+      data.members = [];
+    }
+
+    const member =
+      data.members.find(
+        x =>
+          String(x.flp) ===
+          String(flp)
+      );
+
+    if (
+      !member ||
+      member.status !== "登録済" ||
+      !member.adminToken
+    ) {
+
+      return res.status(404).send(
+        "テスト対象の登録済メンバーが見つかりません。"
+      );
+
+    }
+
+    const sessionId =
+      createMemberAdminSession(
+        member.adminToken
+      );
+
+    res.cookie(
+      "vsh_member_session",
+      sessionId,
+      {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+
+        maxAge:
+          7 * 24 * 60 * 60 * 1000
+      }
+    );
+
+    console.log(
+      "本人用Adminテスト入室:",
+      member.name,
+      member.flp
+    );
+
+    return res.redirect(
+      "/member-admin"
+    );
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "本人用Adminテスト入室エラー:",
+      err
+    );
+
+    return res.status(500).send(
+      "テスト入室エラー"
+    );
+
+  }
+
+});
 /* =========================
    本人用Admin 入室処理
    本人専用トークン → 7日間セッション
