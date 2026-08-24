@@ -260,16 +260,101 @@ if (invalid) {
   }
 
 
+ //----------------------------------
+// 本人確認
+//----------------------------------
+
+if (!currentMember) {
+
+  alert(
+    "本人確認ができていません。"
+  );
+
+  return;
+
+}
+
+
+//----------------------------------
+// 登録前の最終確認
+//----------------------------------
+
+const confirmed =
+  confirm(
+    "5件のFLP番号を登録します。\n\n" +
+    "登録完了後は通常変更できません。\n" +
+    "よろしいですか？"
+  );
+
+if (!confirmed) {
+  return;
+}
+
+
+//----------------------------------
+// 保存ボタンを一時停止
+//----------------------------------
+
+const saveButton =
+  document.getElementById(
+    "saveButton"
+  );
+
+saveButton.disabled = true;
+
+saveButton.textContent =
+  "登録中...";
+
+
+//----------------------------------
+// 保存APIへ送信
+//----------------------------------
+
+try {
+
+  const response =
+    await fetch(
+      "/api/member-admin/flp",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+
+        credentials:
+          "same-origin",
+
+        body:
+          JSON.stringify({
+            numbers: numbers
+          })
+      }
+    );
+
+  const result =
+    await response.json();
+
+
   //----------------------------------
-  // 本人確認
-  // API接続後に有効化
+  // 保存失敗
   //----------------------------------
 
-  if (!currentMember) {
+  if (
+    !response.ok ||
+    !result.success
+  ) {
 
     alert(
-      "現在、本人確認APIの接続前です。"
+      result.message ||
+      "FLP番号を登録できませんでした。"
     );
+
+    saveButton.disabled = false;
+
+    saveButton.textContent =
+      "5件を登録する";
 
     return;
 
@@ -277,11 +362,61 @@ if (invalid) {
 
 
   //----------------------------------
-  // 次工程で保存APIを接続
+  // 保存成功
   //----------------------------------
 
+  for (let i = 1; i <= 5; i++) {
+
+    const input =
+      document.getElementById(
+        `flp${i}`
+      );
+
+    input.disabled = true;
+
+  }
+
+  document.getElementById(
+    "statusCount"
+  ).textContent =
+    "5 / 5 件";
+
+  document.getElementById(
+    "completeBox"
+  ).style.display =
+    "block";
+
+  saveButton.textContent =
+    "登録完了";
+
+  saveButton.disabled = true;
+
   alert(
-    "本人確認後にFLP番号を保存します。"
+    "5件のFLP番号を登録しました。"
   );
 
+}
+
+
+//----------------------------------
+// 通信エラー
+//----------------------------------
+
+catch (err) {
+
+  console.error(
+    "FLP番号登録エラー:",
+    err
+  );
+
+  alert(
+    "通信エラーが発生しました。もう一度お試しください。"
+  );
+
+  saveButton.disabled = false;
+
+  saveButton.textContent =
+    "5件を登録する";
+
+}
 }
