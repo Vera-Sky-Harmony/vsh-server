@@ -1564,6 +1564,175 @@ catch (err) {
 }
 
 });
+/* =====================================================
+   現在のVSH紹介者取得
+   Cookieから「誰のVSHか」を確認
+   ※ツリー管理は行わない
+===================================================== */
+
+app.get("/api/current-vsh-introducer", async (req, res) => {
+
+  try {
+
+    //----------------------------------
+    // Cookie取得
+    //----------------------------------
+
+    const cookieHeader =
+      req.headers.cookie || "";
+
+    const cookies =
+      Object.fromEntries(
+        cookieHeader
+          .split(";")
+          .map(x => x.trim())
+          .filter(Boolean)
+          .map(x => {
+
+            const index =
+              x.indexOf("=");
+
+            if (index === -1) {
+              return [x, ""];
+            }
+
+            return [
+              x.slice(0, index),
+              decodeURIComponent(
+                x.slice(index + 1)
+              )
+            ];
+
+          })
+      );
+
+    const introducerFLP =
+      cookies.vsh_introducer_flp;
+
+    //----------------------------------
+    // 紹介者Cookieがない場合
+    //----------------------------------
+
+    if (!introducerFLP) {
+
+      return res.json({
+        success: false,
+        message:
+          "VSH紹介者情報がありません。"
+      });
+
+    }
+
+    //----------------------------------
+    // 管理データ取得
+    //----------------------------------
+
+    const data =
+      await loadAdmin();
+
+    if (!Array.isArray(data.members)) {
+      data.members = [];
+    }
+
+    //----------------------------------
+    // 紹介者検索
+    //----------------------------------
+
+    const introducer =
+      data.members.find(
+        member =>
+          String(member.flp) ===
+          String(introducerFLP)
+      );
+
+    if (!introducer) {
+
+      return res.status(404).json({
+        success: false,
+        message:
+          "VSH紹介者が見つかりません。"
+      });
+
+    }
+
+    //----------------------------------
+    // VSH利用状態確認
+    //----------------------------------
+
+    if (
+      introducer.status !== "登録済" ||
+      introducer.vshActive !== true ||
+      introducer.snsActive !== true
+    ) {
+
+      return res.status(403).json({
+        success: false,
+        message:
+          "このVSHは現在利用できません。"
+      });
+
+    }
+
+    //----------------------------------
+    // 5件確認
+    //----------------------------------
+
+    if (
+      !Array.isArray(
+        introducer.flpNumbers
+      ) ||
+      introducer.flpNumbers.length !== 5
+    ) {
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "紹介用FLP番号5件がありません。"
+      });
+
+    }
+
+    //----------------------------------
+    // 正常
+    //----------------------------------
+
+    return res.json({
+
+      success: true,
+
+      introducer: {
+
+        name:
+          introducer.name,
+
+        flp:
+          introducer.flp,
+
+        flpNumbers:
+          introducer.flpNumbers
+
+      }
+
+    });
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "現在VSH紹介者取得エラー:",
+      err
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "VSH紹介者情報取得エラー"
+    });
+
+  }
+
+});
 /* =========================
    次の未使用FLP取得
 ========================= */
