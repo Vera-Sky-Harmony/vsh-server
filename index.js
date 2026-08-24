@@ -2002,36 +2002,282 @@ app.get("/api/next-flp", async (req, res) => {
 
 });
 
-/* =========================
+/* =====================================================
    FLP番号を使用中へ変更
-========================= */
+   ルートVSH ＋ 譲渡VSH対応
+   ※VSH側ではツリー管理を行わない
+===================================================== */
 
 app.post("/api/use-flp", async (req, res) => {
 
-const data = await loadAdmin(); 
+  try {
 
-  const item = data.flpList.find(
-    x => x.flp === req.body.flp
-  );
+    const targetFLP =
+      String(req.body.flp || "").trim();
 
-  if (!item) {
+    if (!targetFLP) {
 
-    return res.status(404).json({
-      success: false
+      return res.status(400).json({
+        success: false,
+        message:
+          "FLP番号がありません。"
+      });
+
+    }
+
+    //----------------------------------
+    // 最新管理データ取得
+    //----------------------------------
+
+    const data =
+      await loadAdmin();
+
+    if (!Array.isArray(data.flpList)) {
+      data.flpList = [];
+    }
+
+    if (!Array.isArray(data.members)) {
+      data.members = [];
+    }
+
+    //----------------------------------
+    // Cookie取得
+    //----------------------------------
+
+    const cookieHeader =
+      req.headers.cookie || "";
+
+    const cookies =
+      Object.fromEntries(
+        cookieHeader
+          .split(";")
+          .map(x => x.trim())
+          .filter(Boolean)
+          .map(x => {
+
+            const index =
+              x.indexOf("=");
+
+            if (index === -1) {
+              return [x, ""];
+            }
+
+            return [
+              x.slice(0, index),
+              decodeURIComponent(
+                x.slice(index + 1)
+              )
+            ];
+
+          })
+      );
+
+    const introducerFLP =
+      cookies.vsh_introducer_flp;
+
+
+    /* ==================================
+       ケース1
+       譲渡されたVSH
+    ================================== */
+
+    if (introducerFLP) {
+
+      //----------------------------------
+      // VSH所有者を検索
+      //----------------------------------
+
+      const introducer =
+        data.members.find(
+          member =>
+            String(member.flp) ===
+            String(introducerFLP)
+        );
+
+      if (!introducer) {
+
+        return res.status(404).json({
+          success: false,
+          message:
+            "VSH紹介者が見つかりません。"
+        });
+
+      }
+
+      //----------------------------------
+      // VSH利用可能状態確認
+      //----------------------------------
+
+      if (
+        introducer.status !== "登録済" ||
+        introducer.vshActive !== true ||
+        introducer.snsActive !== true
+      ) {
+
+        return res.status(403).json({
+          success: false,
+          message:
+            "このVSHは現在利用できません。"
+        });
+
+      }
+
+      //----------------------------------
+      // 紹介者の5件に含まれるか
+      //----------------------------------
+
+      if (
+        !Array.isArray(
+          introducer.flpNumbers
+        ) ||
+        !introducer.flpNumbers.some(
+          flp =>
+            String(flp) ===
+            String(targetFLP)
+        )
+      ) {
+
+        return res.status(400).json({
+          success: false,
+          message:
+            "このVSHのFLP番号ではありません。"
+        });
+
+      }
+
+      //----------------------------------
+      // すでに登録済みか確認
+      //----------------------------------
+
+      const alreadyUsed =
+        data.members.some(
+          member =>
+            String(member.flp) ===
+              String(targetFLP)
+        );
+
+      if (alreadyUsed) {
+
+        return res.status(409).json({
+          success: false,
+          message:
+            "このFLP番号はすでに使用されています。"
+        });
+
+      }
+
+      /*
+       * 譲渡VSHの5件については、
+       * RootのflpListを書き換えない。
+       *
+       * 実際の登録確定は /api/register で行う。
+       */
+
+      console.log(
+        "譲渡VSH FLP使用開始:",
+        introducer.name,
+        introducer.flp,
+        targetFLP
+      );
+
+      return res.json({
+
+        success: true,
+
+        source:
+          "member",
+
+        introducerName:
+          introducer.name,
+
+        introducerFLP:
+          introducer.flp,
+
+        flp:
+          targetFLP
+
+      });
+
+    }
+
+
+    /* ==================================
+       ケース2
+       ルートVSH
+       従来処理を維持
+    ================================== */
+
+    const item =
+      data.flpList.find(
+        x =>
+          String(x.flp) ===
+          String(targetFLP)
+      );
+
+    if (!item) {
+
+      return res.status(404).json({
+        success: false,
+        message:
+          "FLP番号が見つかりません。"
+      });
+
+    }
+
+    //----------------------------------
+    // 未使用だけ使用中にする
+    //----------------------------------
+
+    if (item.status !== "未使用") {
+
+      return res.status(409).json({
+        success: false,
+        message:
+          "このFLP番号は現在使用できません。"
+      });
+
+    }
+
+    item.status =
+      "使用中";
+
+    await saveAdmin(data);
+
+    console.log(
+      "ルートVSH FLP使用開始:",
+      targetFLP
+    );
+
+    return res.json({
+
+      success: true,
+
+      source:
+        "root",
+
+      flp:
+        targetFLP
+
     });
 
   }
 
-  item.status = "使用中";
+  catch (err) {
 
- await saveAdmin(data); 
+    console.error(
+      "FLP使用開始エラー:",
+      err
+    );
 
-  res.json({
-    success: true
-  });
+    return res.status(500).json({
+      success: false,
+      message:
+        "FLP番号更新エラー"
+    });
+
+  }
 
 });
-
 /* =========================
    FLP番号を使用済へ変更
 ========================= */
