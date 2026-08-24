@@ -658,7 +658,12 @@ console.log(
   await getMemberAdminSession(
     sessionId
   );
-
+console.log(
+  "本人Admin Session確認:",
+  session
+    ? "成功"
+    : "失敗"
+);
     if (!session) {
 
       return res.status(401).json({
