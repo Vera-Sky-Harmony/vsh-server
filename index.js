@@ -527,13 +527,13 @@ app.get("/member-admin/enter/:token", async (req, res) => {
     }
 
     //----------------------------------
-    // 7日間セッション発行
-    //----------------------------------
+// 7日間セッション発行
+//----------------------------------
 
-    const sessionId =
-      createMemberAdminSession(
-        member.adminToken
-      );
+const sessionId =
+  await createMemberAdminSession(
+    member.adminToken
+  );
 
     //----------------------------------
     // Cookieへ保存
