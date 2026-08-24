@@ -581,12 +581,165 @@ async function loadIntroducedMembers() {
       status.appendChild(statusValue);
 
 
-      box.appendChild(name);
+           box.appendChild(name);
       box.appendChild(flp);
       box.appendChild(status);
 
-      area.appendChild(box);
 
+      //----------------------------------
+      // 確認中の場合だけ
+      // FBO登録確認ボタンを表示
+      //----------------------------------
+
+      if (member.status !== "登録済") {
+
+        const confirmButton =
+          document.createElement(
+            "button"
+          );
+
+        confirmButton.className =
+          "button";
+
+        confirmButton.textContent =
+          "FBO登録を確認しました";
+
+        confirmButton.addEventListener(
+          "click",
+          async () => {
+
+            //----------------------------------
+            // 最終確認
+            //----------------------------------
+
+            const confirmed =
+              confirm(
+                `${member.name}さんのFBO登録を\n` +
+                `FLP本体システムで確認しましたか？\n\n` +
+                `FLP番号：${member.flp}\n\n` +
+                `確認するとDay8が本人のLINEへ送信されます。`
+              );
+
+            if (!confirmed) {
+              return;
+            }
+
+
+            //----------------------------------
+            // 二重押下防止
+            //----------------------------------
+
+            confirmButton.disabled =
+              true;
+
+            confirmButton.textContent =
+              "確認処理中...";
+
+
+            try {
+
+              //----------------------------------
+              // 本人Admin専用確認API
+              //----------------------------------
+
+              const response =
+                await fetch(
+                  "/api/member-admin/confirm-member",
+                  {
+                    method: "POST",
+
+                    headers: {
+                      "Content-Type":
+                        "application/json"
+                    },
+
+                    credentials:
+                      "same-origin",
+
+                    body:
+                      JSON.stringify({
+                        flp:
+                          member.flp
+                      })
+                  }
+                );
+
+              const result =
+                await response.json();
+
+
+              //----------------------------------
+              // エラー
+              //----------------------------------
+
+              if (
+                !response.ok ||
+                !result.success
+              ) {
+
+                alert(
+                  result.message ||
+                  "FBO登録確認ができませんでした。"
+                );
+
+                confirmButton.disabled =
+                  false;
+
+                confirmButton.textContent =
+                  "FBO登録を確認しました";
+
+                return;
+              }
+
+
+              //----------------------------------
+              // 正常終了
+              //----------------------------------
+
+              alert(
+                `${member.name}さんのFBO登録を確認しました。\n\n` +
+                `Day8を本人のLINEへ送信しました。`
+              );
+
+
+              //----------------------------------
+              // 一覧を再読み込み
+              //----------------------------------
+
+              await loadIntroducedMembers();
+
+            }
+
+            catch (err) {
+
+              console.error(
+                "FBO登録確認エラー:",
+                err
+              );
+
+              alert(
+                "通信エラーが発生しました。"
+              );
+
+              confirmButton.disabled =
+                false;
+
+              confirmButton.textContent =
+                "FBO登録を確認しました";
+
+            }
+
+          }
+        );
+
+        box.appendChild(
+          confirmButton
+        );
+
+      }
+
+
+      area.appendChild(box);
     });
 
   }
