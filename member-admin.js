@@ -458,3 +458,143 @@ catch (err) {
 
 }
 }
+// ========================================
+// 紹介した方の登録状況を取得
+// ========================================
+
+async function loadIntroducedMembers() {
+
+  const area =
+    document.getElementById(
+      "introducedMembers"
+    );
+
+  if (!area) {
+    return;
+  }
+
+  try {
+
+    const response =
+      await fetch(
+        "/api/member-admin/introduced-members",
+        {
+          method: "GET",
+          credentials: "same-origin"
+        }
+      );
+
+    const result =
+      await response.json();
+
+    if (
+      !response.ok ||
+      !result.success
+    ) {
+
+      area.innerHTML =
+        "<p>登録状況を取得できませんでした。</p>";
+
+      return;
+    }
+
+    const members =
+      Array.isArray(result.members)
+        ? result.members
+        : [];
+
+    if (members.length === 0) {
+
+      area.innerHTML =
+        "<p>現在、登録確認待ちの方はいません。</p>";
+
+      return;
+    }
+
+    area.innerHTML = "";
+
+    members.forEach(member => {
+
+      const box =
+        document.createElement("div");
+
+      box.style.padding =
+        "15px 0";
+
+      box.style.borderBottom =
+        "1px solid #ddd";
+
+      const name =
+        document.createElement("div");
+
+      name.innerHTML =
+        '<span class="label">氏名</span><br>';
+
+      const nameValue =
+        document.createElement("strong");
+
+      nameValue.textContent =
+        member.name || "－";
+
+      name.appendChild(nameValue);
+
+
+      const flp =
+        document.createElement("div");
+
+      flp.style.marginTop =
+        "10px";
+
+      flp.innerHTML =
+        '<span class="label">FLP番号</span><br>';
+
+      const flpValue =
+        document.createElement("strong");
+
+      flpValue.textContent =
+        member.flp || "－";
+
+      flp.appendChild(flpValue);
+
+
+      const status =
+        document.createElement("div");
+
+      status.style.marginTop =
+        "10px";
+
+      status.innerHTML =
+        '<span class="label">状態</span><br>';
+
+      const statusValue =
+        document.createElement("strong");
+
+      statusValue.textContent =
+        member.status || "確認中";
+
+      status.appendChild(statusValue);
+
+
+      box.appendChild(name);
+      box.appendChild(flp);
+      box.appendChild(status);
+
+      area.appendChild(box);
+
+    });
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "紹介者登録状況取得エラー:",
+      err
+    );
+
+    area.innerHTML =
+      "<p>登録状況を取得できませんでした。</p>";
+
+  }
+
+}
