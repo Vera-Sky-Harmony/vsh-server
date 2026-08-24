@@ -422,21 +422,65 @@ app.get("/member-admin", (_req, res) => {
    本人用Admin 本人確認API
 ========================= */
 
-app.post("/api/member-admin/me", async (req, res) => {
+/* =========================
+   本人用Admin 本人確認API
+   7日間Cookieセッション方式
+========================= */
+
+app.get("/api/member-admin/me", async (req, res) => {
 
   try {
 
-    const { token } = req.body;
-
     //----------------------------------
-    // トークン確認
+    // Cookie取得
     //----------------------------------
 
-    if (!token) {
+    const cookieHeader =
+      req.headers.cookie || "";
 
-      return res.status(400).json({
+    const cookies =
+      Object.fromEntries(
+        cookieHeader
+          .split(";")
+          .map(x => x.trim())
+          .filter(Boolean)
+          .map(x => {
+
+            const index =
+              x.indexOf("=");
+
+            if (index === -1) {
+              return [x, ""];
+            }
+
+            return [
+              x.slice(0, index),
+              decodeURIComponent(
+                x.slice(index + 1)
+              )
+            ];
+
+          })
+      );
+
+    const sessionId =
+      cookies.vsh_member_session;
+
+    //----------------------------------
+    // セッション確認
+    //----------------------------------
+
+    const session =
+      getMemberAdminSession(
+        sessionId
+      );
+
+    if (!session) {
+
+      return res.status(401).json({
         success: false,
-        message: "本人確認情報がありません。"
+        message:
+          "本人確認の有効期限が切れているか、本人確認情報がありません。"
       });
 
     }
@@ -445,27 +489,31 @@ app.post("/api/member-admin/me", async (req, res) => {
     // 最新管理データ取得
     //----------------------------------
 
-    const data = await loadAdmin();
+    const data =
+      await loadAdmin();
 
     if (!Array.isArray(data.members)) {
       data.members = [];
     }
 
     //----------------------------------
-    // トークンから本人を検索
+    // セッションのトークンから本人検索
     //----------------------------------
 
-    const member = data.members.find(
-      x =>
-        x.adminToken &&
-        String(x.adminToken) === String(token)
-    );
+    const member =
+      data.members.find(
+        x =>
+          x.adminToken &&
+          String(x.adminToken) ===
+            String(session.adminToken)
+      );
 
     if (!member) {
 
       return res.status(401).json({
         success: false,
-        message: "本人確認ができませんでした。"
+        message:
+          "本人情報が見つかりません。"
       });
 
     }
@@ -485,11 +533,12 @@ app.post("/api/member-admin/me", async (req, res) => {
     }
 
     //----------------------------------
-    // 必要な本人情報だけ返す
+    // 本人情報を返す
     //----------------------------------
 
     return res.json({
       success: true,
+
       member: {
         name: member.name,
         flp: member.flp
@@ -507,7 +556,8 @@ app.post("/api/member-admin/me", async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: "本人確認処理エラー"
+      message:
+        "本人確認処理エラー"
     });
 
   }
