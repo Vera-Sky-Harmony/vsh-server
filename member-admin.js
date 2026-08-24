@@ -88,7 +88,45 @@ window.addEventListener(
         "memberFLP"
       ).textContent =
         currentMember.flp;
+//----------------------------------
+// 保存済みFLP番号5件を再表示
+//----------------------------------
 
+if (
+  Array.isArray(currentMember.flpNumbers) &&
+  currentMember.flpNumbers.length === 5
+) {
+
+  for (let i = 1; i <= 5; i++) {
+
+    const input =
+      document.getElementById(
+        `flp${i}`
+      );
+
+    input.value =
+      currentMember.flpNumbers[i - 1];
+
+    input.disabled = true;
+
+  }
+
+  document.getElementById(
+    "statusCount"
+  ).textContent =
+    "5 / 5 件";
+
+  document.getElementById(
+    "completeBox"
+  ).style.display =
+    "block";
+
+  saveButton.textContent =
+    "登録完了";
+
+  saveButton.disabled = true;
+
+}
     }
 
     catch (err) {
