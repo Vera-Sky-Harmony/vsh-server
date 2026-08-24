@@ -1683,11 +1683,45 @@ FBO登録後は、
 
 Vera Sky Harmony
 Version 1.1`
-        }
+    },
 
-      ]
-    );
+    //----------------------------------
+    // 本人専用管理画面ボタン
+    //----------------------------------
 
+    {
+      type: "template",
+
+      altText:
+        "VSH あなたの管理画面",
+
+      template: {
+
+        type: "buttons",
+
+        text:
+          "スターターキットを受け取り、5人分の「あなたのFLP番号」を確認できましたら、下のボタンから管理画面へ進んでください。",
+
+        actions: [
+
+          {
+            type: "uri",
+
+            label:
+              "あなたの管理画面を開く",
+
+            uri:
+              `https://vsh-server.onrender.com/member-admin/enter/${member.adminToken}`
+          }
+
+        ]
+
+      }
+
+    }
+
+  ]
+);
        console.log(
       "Day8 LINE送信成功:",
       member.name,
