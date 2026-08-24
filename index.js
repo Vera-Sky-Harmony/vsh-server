@@ -2728,131 +2728,421 @@ Version 1.1`
 
 });
 
-/* =========================
+/* =====================================================
    登録受付
-========================= */
+   ルートVSH ＋ 譲渡VSH対応
+   ※VSH側ではツリー管理を行わない
+===================================================== */
 
 app.post("/api/register", async (req, res) => {
 
   try {
 
-    const { name, flp } = req.body;
+    const name =
+      String(req.body.name || "").trim();
+
+    const flp =
+      String(req.body.flp || "").trim();
+
+    //----------------------------------
+    // 基本確認
+    //----------------------------------
 
     if (!name || !flp) {
 
-      return res.json({
+      return res.status(400).json({
         success: false,
-        message: "氏名またはFLP番号がありません。"
+        message:
+          "氏名またはFLP番号がありません。"
       });
 
     }
-const data = await loadAdmin();
+
     //----------------------------------
-// FLP番号確認
-//----------------------------------
+    // 最新管理データ取得
+    //----------------------------------
 
-const item = data.flpList.find(
-    x => x.flp === flp
-);
+    const data =
+      await loadAdmin();
 
-if (!item) {
+    if (!Array.isArray(data.flpList)) {
+      data.flpList = [];
+    }
 
-    return res.json({
+    if (!Array.isArray(data.members)) {
+      data.members = [];
+    }
 
+    //----------------------------------
+    // Cookie取得
+    //----------------------------------
+
+    const cookieHeader =
+      req.headers.cookie || "";
+
+    const cookies =
+      Object.fromEntries(
+        cookieHeader
+          .split(";")
+          .map(x => x.trim())
+          .filter(Boolean)
+          .map(x => {
+
+            const index =
+              x.indexOf("=");
+
+            if (index === -1) {
+              return [x, ""];
+            }
+
+            return [
+              x.slice(0, index),
+              decodeURIComponent(
+                x.slice(index + 1)
+              )
+            ];
+
+          })
+      );
+
+    const introducerFLP =
+      cookies.vsh_introducer_flp;
+
+
+    /* ==================================
+       ケース1
+       譲渡されたVSHからの登録
+    ================================== */
+
+    if (introducerFLP) {
+
+      //----------------------------------
+      // 紹介者本人を確認
+      //----------------------------------
+
+      const introducer =
+        data.members.find(
+          member =>
+            String(member.flp) ===
+            String(introducerFLP)
+        );
+
+      if (!introducer) {
+
+        return res.status(404).json({
+          success: false,
+          message:
+            "VSH紹介者が見つかりません。"
+        });
+
+      }
+
+      //----------------------------------
+      // VSH利用状態確認
+      //----------------------------------
+
+      if (
+        introducer.status !== "登録済" ||
+        introducer.vshActive !== true ||
+        introducer.snsActive !== true
+      ) {
+
+        return res.status(403).json({
+          success: false,
+          message:
+            "このVSHは現在利用できません。"
+        });
+
+      }
+
+      //----------------------------------
+      // この紹介者の5件か確認
+      //----------------------------------
+
+      if (
+        !Array.isArray(
+          introducer.flpNumbers
+        ) ||
+        !introducer.flpNumbers.some(
+          number =>
+            String(number) ===
+            String(flp)
+        )
+      ) {
+
+        return res.status(400).json({
+          success: false,
+          message:
+            "このVSHのFLP番号ではありません。"
+        });
+
+      }
+
+      //----------------------------------
+      // 同じFLP番号の重複登録防止
+      //----------------------------------
+
+      const alreadyRegistered =
+        data.members.some(
+          member =>
+            String(member.flp) ===
+            String(flp)
+        );
+
+      if (alreadyRegistered) {
+
+        return res.status(409).json({
+          success: false,
+          message:
+            "このFLP番号はすでに登録されています。"
+        });
+
+      }
+
+      //----------------------------------
+      // 新規登録者を保存
+      //
+      // vshIntroducerFLP は
+      // このVSHの直接の紹介者を示すだけ。
+      // ツリー管理には使用しない。
+      //----------------------------------
+
+      data.members.push({
+
+        userId:
+          req.body.userId || "",
+
+        name:
+          name,
+
+        flp:
+          flp,
+
+        status:
+          "確認中",
+
+        vshIntroducerFLP:
+          introducer.flp,
+
+        vshIntroducerName:
+          introducer.name,
+
+        created:
+          new Date().toISOString()
+
+      });
+
+      //----------------------------------
+      // 永続保存
+      //----------------------------------
+
+      await saveAdmin(data);
+
+      console.log(
+        "譲渡VSH 登録受付:",
+        introducer.name,
+        introducer.flp,
+        "→",
+        name,
+        flp
+      );
+
+      //----------------------------------
+      // 登録成功を先に返す
+      //----------------------------------
+
+      res.json({
+
+        success: true,
+
+        source:
+          "member",
+
+        userName:
+          name,
+
+        userFLP:
+          flp
+
+      });
+
+      //----------------------------------
+      // 紹介者へのLINE通知
+      // 失敗しても登録には影響させない
+      //----------------------------------
+
+      try {
+
+        await pushToIntroducer(
+          name,
+          flp,
+          req.body.userId
+        );
+
+      }
+      catch (pushErr) {
+
+        console.error(
+          "紹介者LINE通知エラー:",
+          pushErr
+        );
+
+      }
+
+      return;
+
+    }
+
+
+    /* ==================================
+       ケース2
+       ルートVSH
+       従来方式を維持
+    ================================== */
+
+    //----------------------------------
+    // RootのFLP番号確認
+    //----------------------------------
+
+    const item =
+      data.flpList.find(
+        x =>
+          String(x.flp) ===
+          String(flp)
+      );
+
+    if (!item) {
+
+      return res.status(404).json({
         success: false,
+        message:
+          "FLP番号が見つかりません。"
+      });
 
-        message: "FLP番号が見つかりません。"
+    }
 
-    });
+    //----------------------------------
+    // 重複登録防止
+    //----------------------------------
 
-}
+    const alreadyRegistered =
+      data.members.some(
+        member =>
+          String(member.flp) ===
+          String(flp)
+      );
 
-//----------------------------------
-// FLP番号を使用済へ変更
-//----------------------------------
+    if (alreadyRegistered) {
 
-item.status = "使用済";
+      return res.status(409).json({
+        success: false,
+        message:
+          "このFLP番号はすでに登録されています。"
+      });
 
-//----------------------------------
-// 第一世代登録者
-//----------------------------------
+    }
 
-//----------------------------------
-// 第一世代登録者
-// 重複登録防止
-//----------------------------------
+    //----------------------------------
+    // Root FLPを使用済へ
+    //----------------------------------
 
-if (!Array.isArray(data.members)) {
+    item.status =
+      "使用済";
 
-    data.members = [];
-
-}
-
-// 同じFLP番号がすでに登録されているか確認
-const alreadyRegistered = data.members.some(
-    member => String(member.flp) === String(flp)
-);
-
-// 未登録の場合だけ追加
-if (!alreadyRegistered) {
+    //----------------------------------
+    // 登録者追加
+    //----------------------------------
 
     data.members.push({
 
-        userId: req.body.userId || "",
+      userId:
+        req.body.userId || "",
 
-        name: name,
+      name:
+        name,
 
-        flp: flp,
+      flp:
+        flp,
 
-       status: "確認中",
+      status:
+        "確認中",
 
-        created: new Date().toISOString()
+      created:
+        new Date().toISOString()
 
     });
 
-}
+    //----------------------------------
+    // 永続保存
+    //----------------------------------
+
     await saveAdmin(data);
 
-//----------------------------------
-// 登録成功を先に確定
-//----------------------------------
+    console.log(
+      "ルートVSH 登録受付:",
+      name,
+      flp
+    );
 
-res.json({
-  success: true,
-  userName: name,
-  userFLP: flp
-});
+    //----------------------------------
+    // 登録成功を先に返す
+    //----------------------------------
 
-//----------------------------------
-// 紹介者へのLINE通知
-// 通知失敗でも登録処理には影響させない
-//----------------------------------
+    res.json({
 
-try {
+      success: true,
 
-  await pushToIntroducer(
-    name,
-    flp,
-    req.body.userId
-  );
+      source:
+        "root",
 
-} catch (pushErr) {
+      userName:
+        name,
 
-  console.error(
-    "紹介者LINE通知エラー:",
-    pushErr
-  );
+      userFLP:
+        flp
 
-}
-
-  } catch (err) {
-
-    console.error(err);
-
-    res.status(500).json({
-      success: false,
-      message: "登録処理エラー"
     });
+
+    //----------------------------------
+    // 紹介者へのLINE通知
+    //----------------------------------
+
+    try {
+
+      await pushToIntroducer(
+        name,
+        flp,
+        req.body.userId
+      );
+
+    }
+    catch (pushErr) {
+
+      console.error(
+        "紹介者LINE通知エラー:",
+        pushErr
+      );
+
+    }
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "登録受付エラー:",
+      err
+    );
+
+    if (!res.headersSent) {
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "登録処理エラー"
+      });
+
+    }
 
   }
 
