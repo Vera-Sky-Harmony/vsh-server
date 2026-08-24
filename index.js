@@ -35,6 +35,40 @@ function createMemberAdminToken() {
 
 }
 // ========================================
+// 本人用Admin セッション管理
+// ========================================
+
+const memberAdminSessions =
+  new Map();
+
+
+// ========================================
+// 本人用Admin セッション発行
+// ========================================
+
+function createMemberAdminSession(
+  adminToken
+) {
+
+  const sessionId =
+    crypto
+      .randomBytes(32)
+      .toString("hex");
+
+  memberAdminSessions.set(
+    sessionId,
+    {
+      adminToken: adminToken,
+
+      created:
+        Date.now()
+    }
+  );
+
+  return sessionId;
+
+}
+// ========================================
 // 7日経過した「確認中」登録者を自動整理
 // 登録者削除 ＋ FLP番号を未使用へ復元
 // ========================================
