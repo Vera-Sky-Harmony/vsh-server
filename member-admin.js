@@ -225,20 +225,24 @@ async function saveFLPNumbers() {
   // 数字確認
   //----------------------------------
 
-  const invalid =
-    numbers.some(
-      x => !/^[0-9]+$/.test(x)
-    );
+  //----------------------------------
+// FLP番号 9桁確認
+//----------------------------------
 
-  if (invalid) {
+const invalid =
+  numbers.some(
+    x => !/^[0-9]{9}$/.test(x)
+  );
 
-    alert(
-      "FLP番号は数字のみで入力してください。"
-    );
+if (invalid) {
 
-    return;
+  alert(
+    "FLP番号は9桁の数字で入力してください。"
+  );
 
-  }
+  return;
+
+}
 
 
   //----------------------------------
