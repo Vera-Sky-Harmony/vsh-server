@@ -731,13 +731,18 @@ console.log(
     //----------------------------------
 
     return res.json({
-      success: true,
+  success: true,
 
-      member: {
-        name: member.name,
-        flp: member.flp
-      }
-    });
+  member: {
+    name: member.name,
+    flp: member.flp,
+
+    flpNumbers:
+      Array.isArray(member.flpNumbers)
+        ? member.flpNumbers
+        : []
+  }
+});
 
   }
 
