@@ -432,7 +432,12 @@ app.get("/member-admin/test/:flp", async (req, res) => {
           7 * 24 * 60 * 60 * 1000
       }
     );
-
+console.log(
+  "本人Admin Cookie発行:",
+  sessionId
+    ? "成功"
+    : "失敗"
+);
     console.log(
       "本人用Adminテスト入室:",
       member.name,
