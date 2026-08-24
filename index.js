@@ -886,6 +886,102 @@ app.post("/api/member-admin/flp", async (req, res) => {
 
 });
 /* =========================
+   本人用Admin
+   FLP番号5件 テスト解除
+   ※テスト終了後に削除
+========================= */
+
+app.get("/api/test-reset-member-flp/:flp", async (req, res) => {
+
+  try {
+
+    const flp =
+      req.params.flp;
+
+    //----------------------------------
+    // 管理データ取得
+    //----------------------------------
+
+    const data =
+      await loadAdmin();
+
+    if (!Array.isArray(data.members)) {
+      data.members = [];
+    }
+
+    //----------------------------------
+    // 対象者検索
+    //----------------------------------
+
+    const member =
+      data.members.find(
+        x =>
+          String(x.flp) ===
+          String(flp)
+      );
+
+    if (!member) {
+
+      return res.status(404).send(
+        "登録者が見つかりません。"
+      );
+
+    }
+
+    //----------------------------------
+    // 登録した5件だけ削除
+    //----------------------------------
+
+    delete member.flpNumbers;
+
+    delete member.flpNumbersRegisteredAt;
+
+    //----------------------------------
+    // 保存
+    //----------------------------------
+
+    await saveAdmin(data);
+
+    console.log(
+      "本人FLP番号5件 テスト解除:",
+      member.name,
+      member.flp
+    );
+
+    //----------------------------------
+    // 結果表示
+    //----------------------------------
+
+    return res.send(
+`テスト解除成功
+
+氏名：${member.name}
+FBO番号：${member.flp}
+
+本人用Adminに登録した
+「あなたのFLP番号」5件を削除しました。
+
+本人情報・FBO登録済状態・
+本人専用Adminトークンは保持しています。`
+    );
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "本人FLP番号5件 テスト解除エラー:",
+      err
+    );
+
+    return res.status(500).send(
+      "テスト解除エラー"
+    );
+
+  }
+
+});
+/* =========================
    Admin取得（Supabase）
 ========================= */
 
