@@ -49,6 +49,27 @@ const memberAdminSessions =
 function createMemberAdminSession(
   adminToken
 ) {
+
+  const sessionId =
+    crypto
+      .randomBytes(32)
+      .toString("hex");
+
+  memberAdminSessions.set(
+    sessionId,
+    {
+      adminToken: adminToken,
+
+      created:
+        Date.now()
+    }
+  );
+
+  return sessionId;
+
+}
+
+
 // ========================================
 // 本人用Admin セッション確認
 // 有効期限：7日間
@@ -89,24 +110,6 @@ function getMemberAdminSession(
   }
 
   return session;
-
-}
-  const sessionId =
-    crypto
-      .randomBytes(32)
-      .toString("hex");
-
-  memberAdminSessions.set(
-    sessionId,
-    {
-      adminToken: adminToken,
-
-      created:
-        Date.now()
-    }
-  );
-
-  return sessionId;
 
 }
 // ========================================
