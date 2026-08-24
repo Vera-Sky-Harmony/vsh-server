@@ -287,7 +287,129 @@ app.get("/admin", (_req, res) => {
 /* =========================
    新規登録者本人用 Admin
 ========================= */
+/* =========================
+   本人用Admin 入室処理
+   本人専用トークン → 7日間セッション
+========================= */
 
+app.get("/member-admin/enter/:token", async (req, res) => {
+
+  try {
+
+    const token =
+      req.params.token;
+
+    //----------------------------------
+    // トークン確認
+    //----------------------------------
+
+    if (!token) {
+
+      return res.status(400).send(
+        "本人確認情報がありません。"
+      );
+
+    }
+
+    //----------------------------------
+    // 登録者データ取得
+    //----------------------------------
+
+    const data =
+      await loadAdmin();
+
+    if (!Array.isArray(data.members)) {
+      data.members = [];
+    }
+
+    //----------------------------------
+    // 本人専用トークンから登録者確認
+    //----------------------------------
+
+    const member =
+      data.members.find(
+        x =>
+          x.adminToken &&
+          String(x.adminToken) ===
+            String(token)
+      );
+
+    if (!member) {
+
+      return res.status(401).send(
+        "本人確認ができませんでした。"
+      );
+
+    }
+
+    //----------------------------------
+    // 登録済のみ利用可能
+    //----------------------------------
+
+    if (member.status !== "登録済") {
+
+      return res.status(403).send(
+        "FBO登録確認が完了していません。"
+      );
+
+    }
+
+    //----------------------------------
+    // 7日間セッション発行
+    //----------------------------------
+
+    const sessionId =
+      createMemberAdminSession(
+        member.adminToken
+      );
+
+    //----------------------------------
+    // Cookieへ保存
+    //----------------------------------
+
+    res.cookie(
+      "vsh_member_session",
+      sessionId,
+      {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+
+        maxAge:
+          7 * 24 * 60 * 60 * 1000
+      }
+    );
+
+    console.log(
+      "本人用Adminセッション発行:",
+      member.name,
+      member.flp
+    );
+
+    //----------------------------------
+    // 本人用Adminへ移動
+    //----------------------------------
+
+    return res.redirect(
+      "/member-admin"
+    );
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "本人用Admin入室エラー:",
+      err
+    );
+
+    return res.status(500).send(
+      "本人用Admin入室処理エラー"
+    );
+
+  }
+
+});
 app.get("/member-admin", (_req, res) => {
 
   res.sendFile(
