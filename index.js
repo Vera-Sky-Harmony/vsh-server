@@ -762,6 +762,182 @@ console.log(
   }
 
 });
+/* =====================================================
+   本人用Admin
+   自分が直接紹介した方の登録状況取得
+   ※ツリー管理は行わない
+===================================================== */
+
+app.get(
+  "/api/member-admin/introduced-members",
+  async (req, res) => {
+
+    try {
+
+      //----------------------------------
+      // Cookie取得
+      //----------------------------------
+
+      const cookieHeader =
+        req.headers.cookie || "";
+
+      const cookies =
+        Object.fromEntries(
+          cookieHeader
+            .split(";")
+            .map(x => x.trim())
+            .filter(Boolean)
+            .map(x => {
+
+              const index =
+                x.indexOf("=");
+
+              if (index === -1) {
+                return [x, ""];
+              }
+
+              return [
+                x.slice(0, index),
+                decodeURIComponent(
+                  x.slice(index + 1)
+                )
+              ];
+
+            })
+        );
+
+      const sessionId =
+        cookies.vsh_member_session;
+
+      //----------------------------------
+      // 本人セッション確認
+      //----------------------------------
+
+      const session =
+        await getMemberAdminSession(
+          sessionId
+        );
+
+      if (!session) {
+
+        return res.status(401).json({
+          success: false,
+          message:
+            "本人確認の有効期限が切れているか、本人確認情報がありません。"
+        });
+
+      }
+
+      //----------------------------------
+      // 最新管理データ取得
+      //----------------------------------
+
+      const data =
+        await loadAdmin();
+
+      if (!Array.isArray(data.members)) {
+        data.members = [];
+      }
+
+      //----------------------------------
+      // セッションから本人検索
+      //----------------------------------
+
+      const currentMember =
+        data.members.find(
+          member =>
+            member.adminToken &&
+            String(member.adminToken) ===
+              String(session.adminToken)
+        );
+
+      if (!currentMember) {
+
+        return res.status(401).json({
+          success: false,
+          message:
+            "本人情報が見つかりません。"
+        });
+
+      }
+
+      //----------------------------------
+      // 登録済本人のみ利用可能
+      //----------------------------------
+
+      if (
+        currentMember.status !==
+        "登録済"
+      ) {
+
+        return res.status(403).json({
+          success: false,
+          message:
+            "FBO登録確認が完了していません。"
+        });
+
+      }
+
+      //----------------------------------
+      // この本人が直接紹介した登録者だけ取得
+      //----------------------------------
+
+      const introducedMembers =
+        data.members
+          .filter(
+            member =>
+              String(
+                member.vshIntroducerFLP || ""
+              ) ===
+              String(currentMember.flp)
+          )
+          .map(
+            member => ({
+
+              name:
+                member.name,
+
+              flp:
+                member.flp,
+
+              status:
+                member.status || "確認中"
+
+            })
+          );
+
+      //----------------------------------
+      // 正常終了
+      //----------------------------------
+
+      return res.json({
+
+        success: true,
+
+        members:
+          introducedMembers
+
+      });
+
+    }
+
+    catch (err) {
+
+      console.error(
+        "紹介した方の登録状況取得エラー:",
+        err
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "登録状況の取得でエラーが発生しました。"
+      });
+
+    }
+
+  }
+);
 /* =========================
    本人用Admin
    FLP番号5件保存API
