@@ -1171,7 +1171,155 @@ app.get("/api/admin", async (_req, res) => {
 /* =========================
    紹介者UserID保存
 ========================= */
+/* =====================================================
+   VSH紹介者情報取得API
+   第2世代以降の紹介者識別用
+===================================================== */
 
+app.get("/api/vsh-introducer/:flp", async (req, res) => {
+
+  try {
+
+    const introducerFLP =
+      String(req.params.flp || "").trim();
+
+    //----------------------------------
+    // FLP番号確認
+    //----------------------------------
+
+    if (!introducerFLP) {
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "紹介者FLP番号がありません。"
+      });
+
+    }
+
+    //----------------------------------
+    // 最新管理データ取得
+    //----------------------------------
+
+    const data =
+      await loadAdmin();
+
+    if (!Array.isArray(data.members)) {
+      data.members = [];
+    }
+
+    //----------------------------------
+    // 紹介者を検索
+    //----------------------------------
+
+    const introducer =
+      data.members.find(
+        member =>
+          String(member.flp) ===
+            introducerFLP
+      );
+
+    if (!introducer) {
+
+      return res.status(404).json({
+        success: false,
+        message:
+          "紹介者が見つかりません。"
+      });
+
+    }
+
+    //----------------------------------
+    // 登録済FBOのみ
+    //----------------------------------
+
+    if (introducer.status !== "登録済") {
+
+      return res.status(403).json({
+        success: false,
+        message:
+          "紹介者のFBO登録確認が完了していません。"
+      });
+
+    }
+
+    //----------------------------------
+    // VSH開始済みか確認
+    //----------------------------------
+
+    if (
+      introducer.vshActive !== true ||
+      introducer.snsActive !== true
+    ) {
+
+      return res.status(403).json({
+        success: false,
+        message:
+          "このVSHはまだ紹介活動を開始していません。"
+      });
+
+    }
+
+    //----------------------------------
+    // 5件確認
+    //----------------------------------
+
+    if (
+      !Array.isArray(
+        introducer.flpNumbers
+      ) ||
+      introducer.flpNumbers.length !== 5
+    ) {
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "紹介用FLP番号5件が登録されていません。"
+      });
+
+    }
+
+    //----------------------------------
+    // 正常
+    //----------------------------------
+
+    return res.json({
+
+      success: true,
+
+      introducer: {
+
+        name:
+          introducer.name,
+
+        flp:
+          introducer.flp,
+
+        flpNumbers:
+          introducer.flpNumbers
+
+      }
+
+    });
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "VSH紹介者情報取得エラー:",
+      err
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "VSH紹介者情報取得エラー"
+    });
+
+  }
+
+});
 app.post("/api/introducer", async (req, res) => {
 
   try {
