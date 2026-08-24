@@ -960,17 +960,41 @@ app.post("/api/member-admin/flp", async (req, res) => {
     // FLP番号5件を本人へ保存
     //----------------------------------
 
-    member.flpNumbers =
-      numbers;
+   //----------------------------------
+// 本人のFLP番号5件を保存
+//----------------------------------
 
-    member.flpNumbersRegisteredAt =
-      new Date().toISOString();
+member.flpNumbers =
+  numbers;
 
-    //----------------------------------
-    // Supabaseへ保存
-    //----------------------------------
+member.flpNumbersRegisteredAt =
+  new Date().toISOString();
 
-    await saveAdmin(data);
+
+//----------------------------------
+// VSH・SNS連携開始状態
+// 5件登録完了を開始条件とする
+//----------------------------------
+
+member.vshActive = true;
+
+member.snsActive = true;
+
+member.snsActivatedAt =
+  new Date().toISOString();
+
+
+//----------------------------------
+// Supabaseへ永続保存
+//----------------------------------
+
+await saveAdmin(data);
+
+console.log(
+  "VSH・SNS連携開始:",
+  member.name,
+  member.flp
+);
 
     console.log(
       "本人FLP番号5件登録:",
