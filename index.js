@@ -584,7 +584,23 @@ app.post("/api/confirm-member", async (req, res) => {
 
     member.confirmed =
       new Date().toISOString();
+//----------------------------------
+// 本人専用Adminトークン発行
+// 既にある場合は再発行しない
+//----------------------------------
 
+if (!member.adminToken) {
+
+  member.adminToken =
+    createMemberAdminToken();
+
+  console.log(
+    "本人専用Adminトークン発行:",
+    member.name,
+    member.flp
+  );
+
+}
     //----------------------------------
     // 先にSupabaseへ保存
     //----------------------------------
