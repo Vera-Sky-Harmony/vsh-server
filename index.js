@@ -611,7 +611,12 @@ app.get("/api/member-admin/me", async (req, res) => {
 
     const cookieHeader =
       req.headers.cookie || "";
-
+console.log(
+  "本人Admin Cookie有無:",
+  cookieHeader
+    ? "あり"
+    : "なし"
+);
     const cookies =
       Object.fromEntries(
         cookieHeader
