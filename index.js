@@ -1079,9 +1079,20 @@ app.get("/api/test-reset-member-flp/:flp", async (req, res) => {
     // 登録した5件だけ削除
     //----------------------------------
 
-    delete member.flpNumbers;
+   //----------------------------------
+// 登録した5件とVSH・SNS開始状態を
+// テスト前の状態へ戻す
+//----------------------------------
 
-    delete member.flpNumbersRegisteredAt;
+delete member.flpNumbers;
+
+delete member.flpNumbersRegisteredAt;
+
+delete member.vshActive;
+
+delete member.snsActive;
+
+delete member.snsActivatedAt;
 
     //----------------------------------
     // 保存
