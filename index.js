@@ -1168,7 +1168,128 @@ app.get("/api/admin", async (_req, res) => {
   }
 
 });
+/* =====================================================
+   VSH紹介テスト入口
+   SNS完成前の動作確認用
+   ※ツリー管理は行わない
+===================================================== */
 
+app.get("/vsh/invite/:flp", async (req, res) => {
+
+  try {
+
+    const introducerFLP =
+      String(req.params.flp || "").trim();
+
+    //----------------------------------
+    // 管理データ取得
+    //----------------------------------
+
+    const data =
+      await loadAdmin();
+
+    if (!Array.isArray(data.members)) {
+      data.members = [];
+    }
+
+    //----------------------------------
+    // このVSHの紹介者を確認
+    //----------------------------------
+
+    const introducer =
+      data.members.find(
+        member =>
+          String(member.flp) ===
+          String(introducerFLP)
+      );
+
+    if (!introducer) {
+
+      return res.status(404).send(
+        "VSHの紹介者が見つかりません。"
+      );
+
+    }
+
+    //----------------------------------
+    // VSH利用可能状態確認
+    //----------------------------------
+
+    if (
+      introducer.status !== "登録済" ||
+      introducer.vshActive !== true ||
+      introducer.snsActive !== true
+    ) {
+
+      return res.status(403).send(
+        "このVSHは現在利用できません。"
+      );
+
+    }
+
+    //----------------------------------
+    // 紹介用FLP番号5件確認
+    //----------------------------------
+
+    if (
+      !Array.isArray(introducer.flpNumbers) ||
+      introducer.flpNumbers.length !== 5
+    ) {
+
+      return res.status(403).send(
+        "紹介用FLP番号が準備されていません。"
+      );
+
+    }
+
+    //----------------------------------
+    // このスマホに
+    // 「誰のVSHから来たか」を保存
+    //----------------------------------
+
+    res.cookie(
+      "vsh_introducer_flp",
+      introducerFLP,
+      {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+
+        maxAge:
+          30 * 24 * 60 * 60 * 1000
+      }
+    );
+
+    console.log(
+      "VSH紹介入口:",
+      introducer.name,
+      introducer.flp
+    );
+
+    //----------------------------------
+    // Day0へ
+    //----------------------------------
+
+    return res.redirect(
+      "/pages/day0.html"
+    );
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "VSH紹介入口エラー:",
+      err
+    );
+
+    return res.status(500).send(
+      "VSH紹介入口エラー"
+    );
+
+  }
+
+});
 /* =====================================================
    VSH紹介者情報取得API
    第2世代以降の紹介者識別用
