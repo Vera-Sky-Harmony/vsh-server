@@ -785,11 +785,10 @@ app.post("/api/member-admin/flp", async (req, res) => {
     // 本人セッション確認
     //----------------------------------
 
-    const session =
-      getMemberAdminSession(
-        sessionId
-      );
-
+   const session =
+  await getMemberAdminSession(
+    sessionId
+  );
     if (!session) {
 
       return res.status(401).json({
