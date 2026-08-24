@@ -221,6 +221,101 @@ app.get("/member-admin", (_req, res) => {
 
 });
 /* =========================
+   本人用Admin 本人確認API
+========================= */
+
+app.post("/api/member-admin/me", async (req, res) => {
+
+  try {
+
+    const { token } = req.body;
+
+    //----------------------------------
+    // トークン確認
+    //----------------------------------
+
+    if (!token) {
+
+      return res.status(400).json({
+        success: false,
+        message: "本人確認情報がありません。"
+      });
+
+    }
+
+    //----------------------------------
+    // 最新管理データ取得
+    //----------------------------------
+
+    const data = await loadAdmin();
+
+    if (!Array.isArray(data.members)) {
+      data.members = [];
+    }
+
+    //----------------------------------
+    // トークンから本人を検索
+    //----------------------------------
+
+    const member = data.members.find(
+      x =>
+        x.adminToken &&
+        String(x.adminToken) === String(token)
+    );
+
+    if (!member) {
+
+      return res.status(401).json({
+        success: false,
+        message: "本人確認ができませんでした。"
+      });
+
+    }
+
+    //----------------------------------
+    // 登録済のみ利用可能
+    //----------------------------------
+
+    if (member.status !== "登録済") {
+
+      return res.status(403).json({
+        success: false,
+        message:
+          "FBO登録確認が完了していません。"
+      });
+
+    }
+
+    //----------------------------------
+    // 必要な本人情報だけ返す
+    //----------------------------------
+
+    return res.json({
+      success: true,
+      member: {
+        name: member.name,
+        flp: member.flp
+      }
+    });
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "本人用Admin本人確認エラー:",
+      err
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "本人確認処理エラー"
+    });
+
+  }
+
+});
+/* =========================
    Admin取得（Supabase）
 ========================= */
 
