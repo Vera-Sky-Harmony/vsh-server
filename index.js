@@ -415,10 +415,10 @@ app.get("/member-admin/test/:flp", async (req, res) => {
 
     }
 
-    const sessionId =
-      createMemberAdminSession(
-        member.adminToken
-      );
+   const sessionId =
+  await createMemberAdminSession(
+    member.adminToken
+  );
 
     res.cookie(
       "vsh_member_session",
