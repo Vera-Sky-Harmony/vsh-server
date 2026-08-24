@@ -644,7 +644,12 @@ console.log(
 
     const sessionId =
       cookies.vsh_member_session;
-
+console.log(
+  "本人Admin SessionID有無:",
+  sessionId
+    ? "あり"
+    : "なし"
+);
     //----------------------------------
     // セッション確認
     //----------------------------------
@@ -794,6 +799,12 @@ app.post("/api/member-admin/flp", async (req, res) => {
   await getMemberAdminSession(
     sessionId
   );
+     console.log(
+  "本人Admin Session確認:",
+  session
+    ? "成功"
+    : "失敗"
+);
     if (!session) {
 
       return res.status(401).json({
