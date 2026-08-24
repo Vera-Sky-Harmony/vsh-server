@@ -8,34 +8,115 @@ let currentMember = null;
 
 
 // ========================================
-// 初期表示
+// 初期表示・本人確認
 // ========================================
 
-window.addEventListener("DOMContentLoaded", async () => {
+window.addEventListener(
+  "DOMContentLoaded",
+  async () => {
 
-  const saveButton =
-    document.getElementById("saveButton");
+    const saveButton =
+      document.getElementById(
+        "saveButton"
+      );
 
-  saveButton.addEventListener(
-    "click",
-    saveFLPNumbers
-  );
+    saveButton.addEventListener(
+      "click",
+      saveFLPNumbers
+    );
 
-  //----------------------------------
-  // 現段階ではAPI未接続
-  //----------------------------------
+    //----------------------------------
+    // 本人情報取得
+    //----------------------------------
 
-  document.getElementById(
-    "memberName"
-  ).textContent = "本人確認待ち";
+    try {
 
-  document.getElementById(
-    "memberFLP"
-  ).textContent = "本人確認待ち";
+      const response =
+        await fetch(
+          "/api/member-admin/me",
+          {
+            method: "GET",
+            credentials: "same-origin"
+          }
+        );
 
-  updateStatus();
+      const result =
+        await response.json();
 
-});
+      if (
+        !response.ok ||
+        !result.success
+      ) {
+
+        document.getElementById(
+          "memberName"
+        ).textContent =
+          "本人確認できません";
+
+        document.getElementById(
+          "memberFLP"
+        ).textContent = "－";
+
+        saveButton.disabled = true;
+
+        alert(
+          result.message ||
+          "本人確認ができませんでした。"
+        );
+
+        return;
+
+      }
+
+      //----------------------------------
+      // 本人情報保存
+      //----------------------------------
+
+      currentMember =
+        result.member;
+
+      //----------------------------------
+      // 本人情報表示
+      //----------------------------------
+
+      document.getElementById(
+        "memberName"
+      ).textContent =
+        currentMember.name;
+
+      document.getElementById(
+        "memberFLP"
+      ).textContent =
+        currentMember.flp;
+
+    }
+
+    catch (err) {
+
+      console.error(
+        "本人情報取得エラー:",
+        err
+      );
+
+      document.getElementById(
+        "memberName"
+      ).textContent =
+        "本人確認エラー";
+
+      document.getElementById(
+        "memberFLP"
+      ).textContent = "－";
+
+      saveButton.disabled = true;
+
+      return;
+
+    }
+
+    updateStatus();
+
+  }
+);
 
 
 // ========================================
