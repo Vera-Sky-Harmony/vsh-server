@@ -49,7 +49,48 @@ const memberAdminSessions =
 function createMemberAdminSession(
   adminToken
 ) {
+// ========================================
+// 本人用Admin セッション確認
+// 有効期限：7日間
+// ========================================
 
+function getMemberAdminSession(
+  sessionId
+) {
+
+  if (!sessionId) {
+    return null;
+  }
+
+  const session =
+    memberAdminSessions.get(
+      sessionId
+    );
+
+  if (!session) {
+    return null;
+  }
+
+  const sevenDays =
+    7 * 24 * 60 * 60 * 1000;
+
+  const expired =
+    Date.now() - session.created >
+    sevenDays;
+
+  if (expired) {
+
+    memberAdminSessions.delete(
+      sessionId
+    );
+
+    return null;
+
+  }
+
+  return session;
+
+}
   const sessionId =
     crypto
       .randomBytes(32)
