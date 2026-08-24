@@ -645,6 +645,247 @@ app.get("/api/member-admin/me", async (req, res) => {
 
 });
 /* =========================
+   本人用Admin
+   FLP番号5件保存API
+========================= */
+
+app.post("/api/member-admin/flp", async (req, res) => {
+
+  try {
+
+    //----------------------------------
+    // Cookie取得
+    //----------------------------------
+
+    const cookieHeader =
+      req.headers.cookie || "";
+
+    const cookies =
+      Object.fromEntries(
+        cookieHeader
+          .split(";")
+          .map(x => x.trim())
+          .filter(Boolean)
+          .map(x => {
+
+            const index =
+              x.indexOf("=");
+
+            if (index === -1) {
+              return [x, ""];
+            }
+
+            return [
+              x.slice(0, index),
+              decodeURIComponent(
+                x.slice(index + 1)
+              )
+            ];
+
+          })
+      );
+
+    const sessionId =
+      cookies.vsh_member_session;
+
+    //----------------------------------
+    // 本人セッション確認
+    //----------------------------------
+
+    const session =
+      getMemberAdminSession(
+        sessionId
+      );
+
+    if (!session) {
+
+      return res.status(401).json({
+        success: false,
+        message:
+          "本人確認の有効期限が切れているか、本人確認情報がありません。"
+      });
+
+    }
+
+    //----------------------------------
+    // FLP番号取得
+    //----------------------------------
+
+    const numbers =
+      Array.isArray(req.body.numbers)
+        ? req.body.numbers.map(
+            x => String(x).trim()
+          )
+        : [];
+
+    //----------------------------------
+    // 必ず5件
+    //----------------------------------
+
+    if (numbers.length !== 5) {
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "FLP番号を5件入力してください。"
+      });
+
+    }
+
+    //----------------------------------
+    // すべて9桁の数字か確認
+    //----------------------------------
+
+    const invalid =
+      numbers.some(
+        x => !/^[0-9]{9}$/.test(x)
+      );
+
+    if (invalid) {
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "FLP番号は9桁の数字で入力してください。"
+      });
+
+    }
+
+    //----------------------------------
+    // 5件内の重複確認
+    //----------------------------------
+
+    const uniqueNumbers =
+      new Set(numbers);
+
+    if (uniqueNumbers.size !== 5) {
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "同じFLP番号が重複しています。"
+      });
+
+    }
+
+    //----------------------------------
+    // 最新管理データ取得
+    //----------------------------------
+
+    const data =
+      await loadAdmin();
+
+    if (!Array.isArray(data.members)) {
+      data.members = [];
+    }
+
+    //----------------------------------
+    // セッションから本人検索
+    //----------------------------------
+
+    const member =
+      data.members.find(
+        x =>
+          x.adminToken &&
+          String(x.adminToken) ===
+            String(session.adminToken)
+      );
+
+    if (!member) {
+
+      return res.status(401).json({
+        success: false,
+        message:
+          "本人情報が見つかりません。"
+      });
+
+    }
+
+    //----------------------------------
+    // 登録済FBOのみ
+    //----------------------------------
+
+    if (member.status !== "登録済") {
+
+      return res.status(403).json({
+        success: false,
+        message:
+          "FBO登録確認が完了していません。"
+      });
+
+    }
+
+    //----------------------------------
+    // 初回5件のみ
+    // 登録済みなら変更させない
+    //----------------------------------
+
+    if (
+      Array.isArray(member.flpNumbers) &&
+      member.flpNumbers.length === 5
+    ) {
+
+      return res.status(409).json({
+        success: false,
+        message:
+          "FLP番号5件はすでに登録済みです。"
+      });
+
+    }
+
+    //----------------------------------
+    // FLP番号5件を本人へ保存
+    //----------------------------------
+
+    member.flpNumbers =
+      numbers;
+
+    member.flpNumbersRegisteredAt =
+      new Date().toISOString();
+
+    //----------------------------------
+    // Supabaseへ保存
+    //----------------------------------
+
+    await saveAdmin(data);
+
+    console.log(
+      "本人FLP番号5件登録:",
+      member.name,
+      member.flp
+    );
+
+    //----------------------------------
+    // 正常終了
+    //----------------------------------
+
+    return res.json({
+      success: true,
+      message:
+        "5件のFLP番号を登録しました。",
+      numbers:
+        member.flpNumbers
+    });
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "本人FLP番号5件登録エラー:",
+      err
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "FLP番号の登録処理でエラーが発生しました。"
+    });
+
+  }
+
+});
+/* =========================
    Admin取得（Supabase）
 ========================= */
 
