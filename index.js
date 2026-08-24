@@ -122,6 +122,7 @@ async function createMemberAdminSession(
 
 // ========================================
 // 本人用Admin セッション確認
+// Supabase永続保存方式
 // 有効期限：7日間
 // ========================================
 
@@ -129,9 +130,17 @@ async function getMemberAdminSession(
   sessionId
 ) {
 
+  //----------------------------------
+  // セッションID確認
+  //----------------------------------
+
   if (!sessionId) {
     return null;
   }
+
+  //----------------------------------
+  // 最新管理データ取得
+  //----------------------------------
 
   const data =
     await loadAdmin();
@@ -146,6 +155,10 @@ async function getMemberAdminSession(
 
   }
 
+  //----------------------------------
+  // セッション取得
+  //----------------------------------
+
   const session =
     data.memberAdminSessions[
       sessionId
@@ -155,15 +168,25 @@ async function getMemberAdminSession(
     return null;
   }
 
+  //----------------------------------
+  // 7日間の有効期限確認
+  //----------------------------------
+
   const sevenDays =
     7 * 24 * 60 * 60 * 1000;
 
-  const expired =
-    Date.now() -
-      session.created >
-    sevenDays;
+  const created =
+    Number(session.created);
 
-  if (expired) {
+  if (
+    !Number.isFinite(created) ||
+    Date.now() - created >
+      sevenDays
+  ) {
+
+    //----------------------------------
+    // 期限切れセッション削除
+    //----------------------------------
 
     delete data.memberAdminSessions[
       sessionId
@@ -174,6 +197,10 @@ async function getMemberAdminSession(
     return null;
 
   }
+
+  //----------------------------------
+  // 有効なセッション
+  //----------------------------------
 
   return session;
 
