@@ -36,17 +36,16 @@ function createMemberAdminToken() {
 }
 // ========================================
 // 本人用Admin セッション管理
+// Supabase永続保存方式
+// 有効期限：7日間
 // ========================================
-
-const memberAdminSessions =
-  new Map();
 
 
 // ========================================
 // 本人用Admin セッション発行
 // ========================================
 
-function createMemberAdminSession(
+async function createMemberAdminSession(
   adminToken
 ) {
 
@@ -55,15 +54,66 @@ function createMemberAdminSession(
       .randomBytes(32)
       .toString("hex");
 
-  memberAdminSessions.set(
-    sessionId,
-    {
-      adminToken: adminToken,
+  const data =
+    await loadAdmin();
 
-      created:
-        Date.now()
+  if (
+    !data.memberAdminSessions ||
+    typeof data.memberAdminSessions !== "object" ||
+    Array.isArray(data.memberAdminSessions)
+  ) {
+
+    data.memberAdminSessions = {};
+
+  }
+
+  //----------------------------------
+  // 期限切れセッションを整理
+  //----------------------------------
+
+  const now =
+    Date.now();
+
+  const sevenDays =
+    7 * 24 * 60 * 60 * 1000;
+
+  for (
+    const [id, session]
+    of Object.entries(
+      data.memberAdminSessions
+    )
+  ) {
+
+    if (
+      !session ||
+      !session.created ||
+      now - session.created >
+        sevenDays
+    ) {
+
+      delete data.memberAdminSessions[id];
+
     }
-  );
+
+  }
+
+  //----------------------------------
+  // 新しいセッションを保存
+  //----------------------------------
+
+  data.memberAdminSessions[
+    sessionId
+  ] = {
+
+    adminToken:
+      adminToken,
+
+    created:
+      Date.now()
+
+  };
+
+  await saveAdmin(data);
 
   return sessionId;
 
@@ -75,7 +125,7 @@ function createMemberAdminSession(
 // 有効期限：7日間
 // ========================================
 
-function getMemberAdminSession(
+async function getMemberAdminSession(
   sessionId
 ) {
 
@@ -83,10 +133,23 @@ function getMemberAdminSession(
     return null;
   }
 
+  const data =
+    await loadAdmin();
+
+  if (
+    !data.memberAdminSessions ||
+    typeof data.memberAdminSessions !== "object" ||
+    Array.isArray(data.memberAdminSessions)
+  ) {
+
+    return null;
+
+  }
+
   const session =
-    memberAdminSessions.get(
+    data.memberAdminSessions[
       sessionId
-    );
+    ];
 
   if (!session) {
     return null;
@@ -96,14 +159,17 @@ function getMemberAdminSession(
     7 * 24 * 60 * 60 * 1000;
 
   const expired =
-    Date.now() - session.created >
+    Date.now() -
+      session.created >
     sevenDays;
 
   if (expired) {
 
-    memberAdminSessions.delete(
+    delete data.memberAdminSessions[
       sessionId
-    );
+    ];
+
+    await saveAdmin(data);
 
     return null;
 
