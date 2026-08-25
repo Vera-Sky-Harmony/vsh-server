@@ -4597,7 +4597,161 @@ if (!data.members) {
   data.members = [];
 }
 
+/* =====================================================
+   既存FBO Day8直接譲渡
+   LINE本人紐付け
+===================================================== */
 
+if (text.startsWith("【Day8受取】")) {
+
+  //----------------------------------
+  // LINEメッセージから
+  // FLP番号・TOKEN取得
+  //----------------------------------
+
+  const flpMatch =
+    text.match(/FLP番号：([0-9]{9})/);
+
+  const tokenMatch =
+    text.match(/TOKEN：([a-f0-9]+)/i);
+
+
+  const memberFLP =
+    flpMatch
+      ? flpMatch[1].trim()
+      : "";
+
+  const adminToken =
+    tokenMatch
+      ? tokenMatch[1].trim()
+      : "";
+
+
+  //----------------------------------
+  // 必要情報確認
+  //----------------------------------
+
+  if (
+    !memberFLP ||
+    !adminToken
+  ) {
+
+    await client.replyMessage(
+      ev.replyToken,
+      {
+        type: "text",
+        text:
+          "Day8受取情報を確認できませんでした。"
+      }
+    );
+
+    continue;
+
+  }
+
+
+  //----------------------------------
+  // 最新管理データ取得
+  //----------------------------------
+
+  const adminData =
+    await loadAdmin();
+
+
+  if (!Array.isArray(adminData.members)) {
+
+    adminData.members = [];
+
+  }
+
+
+  //----------------------------------
+  // FLP番号＋TOKENで本人確認
+  //----------------------------------
+
+  const member =
+    adminData.members.find(
+      x =>
+        String(x.flp) ===
+          String(memberFLP) &&
+        String(x.adminToken) ===
+          String(adminToken) &&
+        x.directDay8 === true
+    );
+
+
+  if (!member) {
+
+    await client.replyMessage(
+      ev.replyToken,
+      {
+        type: "text",
+        text:
+          "Day8直接譲渡の本人情報を確認できませんでした。"
+      }
+    );
+
+    continue;
+
+  }
+
+
+  //----------------------------------
+  // LINE User IDを本人へ紐付け
+  //----------------------------------
+
+  member.userId =
+    userId;
+
+  member.directDay8LineLinked =
+    true;
+
+  member.directDay8LineLinkedAt =
+    new Date().toISOString();
+
+
+  //----------------------------------
+  // 保存
+  //----------------------------------
+
+  await saveAdmin(
+    adminData
+  );
+
+
+  console.log(
+    "既存FBO LINE本人紐付け成功:",
+    member.name,
+    member.flp,
+    member.userId
+  );
+
+
+  //----------------------------------
+  // 今回は本人紐付け成功まで
+  // 次工程で正式Day8送信を接続
+  //----------------------------------
+
+  await client.replyMessage(
+    ev.replyToken,
+    {
+      type: "text",
+
+      text:
+`Vera Sky Harmony
+
+${member.name} 様
+
+LINE本人確認が完了しました。
+
+VSHのDay8を受け取る準備ができました。`
+    }
+  );
+
+
+  continue;
+
+}
 
 /* =========================
    登録完了 → Day7-3送信
