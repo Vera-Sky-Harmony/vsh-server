@@ -4022,7 +4022,264 @@ FBO登録が全て完了しましたら画面下のスタートを押し、「�
   }
 });
 
+/* =====================================================
+   VSH 連続継承シミュレーション
+   テスト専用
+   ※本番データは一切変更しない
+   ※LINEへは一切送信しない
+   ※ツリー管理は行わない
+===================================================== */
 
+app.get("/api/test-vsh-chain", async (_req, res) => {
+
+  try {
+
+    const generations = [];
+
+    //----------------------------------
+    // テスト開始者
+    //----------------------------------
+
+    let introducer = {
+
+      name: "TEST_ROOT",
+
+      flp: "900000000",
+
+      userId: "TEST_USER_000",
+
+      status: "登録済",
+
+      vshActive: true,
+
+      snsActive: true
+
+    };
+
+
+    //----------------------------------
+    // 10世代を順番に確認
+    //----------------------------------
+
+    for (let i = 1; i <= 10; i++) {
+
+      //----------------------------------
+      // この紹介者専用の
+      // FLP番号5件を仮想作成
+      //----------------------------------
+
+      const flpNumbers = [];
+
+      for (let n = 1; n <= 5; n++) {
+
+        flpNumbers.push(
+          String(
+            900000000 +
+            i * 10 +
+            n
+          )
+        );
+
+      }
+
+
+      //----------------------------------
+      // 5件登録完了
+      //----------------------------------
+
+      introducer.flpNumbers =
+        flpNumbers;
+
+
+      //----------------------------------
+      // 次の登録者
+      // 今回は5件のうち①を使用
+      //----------------------------------
+
+      const nextMember = {
+
+        name:
+          `TEST_MEMBER_${i}`,
+
+        flp:
+          flpNumbers[0],
+
+        userId:
+          `TEST_USER_${String(i).padStart(3, "0")}`,
+
+        status:
+          "確認中",
+
+        //--------------------------------
+        // 直接紹介者だけを記録
+        //--------------------------------
+
+        vshIntroducerFLP:
+          introducer.flp,
+
+        vshIntroducerName:
+          introducer.name
+
+      };
+
+
+      //----------------------------------
+      // 紹介者によるFBO登録確認
+      //----------------------------------
+
+      nextMember.status =
+        "登録済";
+
+
+      //----------------------------------
+      // Day8後
+      // VSH開始状態を再現
+      //----------------------------------
+
+      nextMember.vshActive =
+        true;
+
+      nextMember.snsActive =
+        true;
+
+
+      //----------------------------------
+      // この世代の結果を保存
+      // ※メモリ上のみ
+      //----------------------------------
+
+      generations.push({
+
+        generation:
+          i,
+
+        introducer: {
+
+          name:
+            introducer.name,
+
+          flp:
+            introducer.flp,
+
+          userId:
+            introducer.userId
+
+        },
+
+        member: {
+
+          name:
+            nextMember.name,
+
+          flp:
+            nextMember.flp,
+
+          userId:
+            nextMember.userId,
+
+          vshIntroducerFLP:
+            nextMember.vshIntroducerFLP,
+
+          status:
+            nextMember.status,
+
+          vshActive:
+            nextMember.vshActive,
+
+          snsActive:
+            nextMember.snsActive
+
+        },
+
+        result:
+          String(
+            nextMember.vshIntroducerFLP
+          ) ===
+          String(
+            introducer.flp
+          )
+            ? "OK"
+            : "ERROR"
+
+      });
+
+
+      //----------------------------------
+      // 次の世代では
+      // 今登録した本人が紹介者になる
+      //----------------------------------
+
+      introducer =
+        nextMember;
+
+    }
+
+
+    //----------------------------------
+    // 全世代確認
+    //----------------------------------
+
+    const allOK =
+      generations.every(
+        x => x.result === "OK"
+      );
+
+
+    //----------------------------------
+    // 結果
+    //----------------------------------
+
+    return res.json({
+
+      success:
+        allOK,
+
+      test:
+        "VSH連続継承10世代",
+
+      generations:
+        generations.length,
+
+      lineSend:
+        false,
+
+      databaseSave:
+        false,
+
+      treeManagement:
+        false,
+
+      result:
+        allOK
+          ? "10世代すべて正常"
+          : "異常あり",
+
+      details:
+        generations
+
+    });
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "VSH連続継承テストエラー:",
+      err
+    );
+
+    return res.status(500).json({
+
+      success: false,
+
+      message:
+        "VSH連続継承テストでエラーが発生しました。"
+
+    });
+
+  }
+
+});
 app.listen(Number(PORT || 10000), () => {
   console.log("=================================");
   console.log("VSH Stable Version Running");
