@@ -1,7 +1,7 @@
 // ========================================
 // Day7-2.js
-// Vera Sky Harmony Version2.0
-// 完成版（全面差し替え）
+// Vera Sky Harmony Version 2.0
+// 完全差し替え版
 // ========================================
 
 let myFLP = "";
@@ -16,33 +16,50 @@ window.onload = async () => {
     try {
 
         const res =
-            await fetch("/api/next-flp");
-
-        if (!res.ok) {
-            throw new Error("API Error");
-        }
+            await fetch(
+                "/api/next-flp",
+                {
+                    credentials: "same-origin"
+                }
+            );
 
         const data =
             await res.json();
 
-        if (!data.success) {
+        if (
+            !res.ok ||
+            !data.success
+        ) {
 
             alert(
+                data.message ||
                 "未使用のFLP番号がありません。"
             );
 
             return;
         }
 
+        //----------------------------------
+        // 紹介者氏名
+        //----------------------------------
+
         document
             .getElementById("name")
             .textContent =
                 data.introducerName;
 
+        //----------------------------------
+        // 紹介者FLP番号
+        //----------------------------------
+
         document
             .getElementById("flp")
             .textContent =
                 data.introducerFLP;
+
+        //----------------------------------
+        // あなたのFLP番号
+        //----------------------------------
 
         document
             .getElementById("myflp")
@@ -50,13 +67,18 @@ window.onload = async () => {
                 data.myFLP;
 
         myFLP =
-            data.myFLP;
+            String(
+                data.myFLP || ""
+            ).trim();
 
     }
 
     catch (err) {
 
-        console.error(err);
+        console.error(
+            "Day7-2 初期表示エラー:",
+            err
+        );
 
         alert(
             "サーバーへ接続できません。"
@@ -80,7 +102,7 @@ document
 
 
 // ========================================
-// LINE送信
+// 登録完了をLINEで送信
 // ========================================
 
 async function startLINE() {
@@ -99,17 +121,6 @@ async function startLINE() {
     }
 
     //----------------------------------
-    // ボタン一時停止
-    //----------------------------------
-
-    const button =
-        document.getElementById(
-            "sendButton"
-        );
-
-    button.disabled = true;
-
-    //----------------------------------
     // 氏名入力
     //----------------------------------
 
@@ -119,16 +130,32 @@ async function startLINE() {
         );
 
     if (!userName) {
-
-        button.disabled = false;
-
         return;
     }
+
+    const name =
+        userName.trim();
+
+    if (!name) {
+        return;
+    }
+
+    //----------------------------------
+    // 保存ボタンを一時停止
+    //----------------------------------
+
+    const button =
+        document.getElementById(
+            "sendButton"
+        );
+
+    button.disabled = true;
+
 
     try {
 
         //----------------------------------
-        // FLP番号を使用中へ変更
+        // FLP番号使用開始
         //----------------------------------
 
         const useRes =
@@ -142,6 +169,9 @@ async function startLINE() {
                         "Content-Type":
                             "application/json"
                     },
+
+                    credentials:
+                        "same-origin",
 
                     body:
                         JSON.stringify({
@@ -157,7 +187,10 @@ async function startLINE() {
         const useResult =
             await useRes.json();
 
-        if (!useResult.success) {
+        if (
+            !useRes.ok ||
+            !useResult.success
+        ) {
 
             alert(
                 useResult.message ||
@@ -186,11 +219,14 @@ async function startLINE() {
                             "application/json"
                     },
 
+                    credentials:
+                        "same-origin",
+
                     body:
                         JSON.stringify({
 
                             name:
-                                userName,
+                                name,
 
                             flp:
                                 myFLP
@@ -203,7 +239,10 @@ async function startLINE() {
         const registerResult =
             await registerRes.json();
 
-        if (!registerResult.success) {
+        if (
+            !registerRes.ok ||
+            !registerResult.success
+        ) {
 
             alert(
                 registerResult.message ||
@@ -217,34 +256,43 @@ async function startLINE() {
 
 
         //----------------------------------
-        // LINE送信用メッセージ
+        // LINEへ渡す登録完了メッセージ
         //----------------------------------
 
         const introducerText =
 
 `【登録完了】
 
-氏名：${userName}
+氏名：${name}
 
 FLP番号：${myFLP}`;
 
 
         //----------------------------------
-        // LINEを開く
+        // VSH公式LINEを開く
+        //
         // window.open は使用しない
+        // 同じ画面からLINEへ移動する
         //----------------------------------
 
-        window.location.href =
+        const lineURL =
             "https://line.me/R/oaMessage/@591tvejt/?"
             + encodeURIComponent(
                 introducerText
             );
 
+        window.location.assign(
+            lineURL
+        );
+
     }
 
     catch (err) {
 
-        console.error(err);
+        console.error(
+            "Day7-2 登録処理エラー:",
+            err
+        );
 
         alert(
             "通信エラーが発生しました。"
