@@ -971,3 +971,248 @@ Day8から直接譲渡しますか？`
     }
 
 }
+// ========================================
+// ルートID SNS手動管理
+// SNS連携・SNS解除
+// ========================================
+
+
+//----------------------------------------
+// SNS状態表示
+//----------------------------------------
+
+async function loadRootSnsStatus() {
+
+    try {
+
+        const res =
+            await fetch(
+                "/api/root-sns-status"
+            );
+
+        const result =
+            await res.json();
+
+        if (
+            !res.ok ||
+            !result.success
+        ) {
+
+            document
+            .getElementById("snsStatus")
+            .textContent =
+                "取得できません";
+
+            return;
+
+        }
+
+
+        document
+        .getElementById("snsStatus")
+        .textContent =
+            result.snsActive
+                ? "SNS連携中"
+                : "SNS解除中";
+
+    }
+
+    catch (err) {
+
+        console.error(
+            "SNS状態取得エラー:",
+            err
+        );
+
+        document
+        .getElementById("snsStatus")
+        .textContent =
+            "取得できません";
+
+    }
+
+}
+
+
+//----------------------------------------
+// SNS連携
+//----------------------------------------
+
+async function startRootSns() {
+
+    const ok =
+        confirm(
+            "ルートIDのSNS連携を開始しますか？"
+        );
+
+    if (!ok) {
+        return;
+    }
+
+
+    try {
+
+        const res =
+            await fetch(
+                "/api/root-sns-start",
+                {
+                    method: "POST"
+                }
+            );
+
+
+        const result =
+            await res.json();
+
+
+        if (
+            !res.ok ||
+            !result.success
+        ) {
+
+            alert(
+                result.message ||
+                "SNS連携に失敗しました。"
+            );
+
+            return;
+
+        }
+
+
+        alert(
+            "SNS連携を開始しました。"
+        );
+
+
+        await loadRootSnsStatus();
+
+    }
+
+    catch (err) {
+
+        console.error(
+            "SNS連携エラー:",
+            err
+        );
+
+        alert(
+            "SNS連携で通信エラーが発生しました。"
+        );
+
+    }
+
+}
+
+
+//----------------------------------------
+// SNS解除
+//----------------------------------------
+
+async function stopRootSns() {
+
+    const ok =
+        confirm(
+            "ルートIDのSNS連携を解除しますか？"
+        );
+
+    if (!ok) {
+        return;
+    }
+
+
+    try {
+
+        const res =
+            await fetch(
+                "/api/root-sns-stop",
+                {
+                    method: "POST"
+                }
+            );
+
+
+        const result =
+            await res.json();
+
+
+        if (
+            !res.ok ||
+            !result.success
+        ) {
+
+            alert(
+                result.message ||
+                "SNS解除に失敗しました。"
+            );
+
+            return;
+
+        }
+
+
+        alert(
+            "SNS連携を解除しました。"
+        );
+
+
+        await loadRootSnsStatus();
+
+    }
+
+    catch (err) {
+
+        console.error(
+            "SNS解除エラー:",
+            err
+        );
+
+        alert(
+            "SNS解除で通信エラーが発生しました。"
+        );
+
+    }
+
+}
+
+
+//----------------------------------------
+// ボタン接続
+//----------------------------------------
+
+const snsStartButton =
+    document.getElementById(
+        "snsStartButton"
+    );
+
+const snsStopButton =
+    document.getElementById(
+        "snsStopButton"
+    );
+
+
+if (snsStartButton) {
+
+    snsStartButton.addEventListener(
+        "click",
+        startRootSns
+    );
+
+}
+
+
+if (snsStopButton) {
+
+    snsStopButton.addEventListener(
+        "click",
+        stopRootSns
+    );
+
+}
+
+
+//----------------------------------------
+// 管理画面表示時に現在状態取得
+//----------------------------------------
+
+loadRootSnsStatus();
