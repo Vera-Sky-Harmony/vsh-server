@@ -1345,6 +1345,193 @@ app.get("/api/admin", async (_req, res) => {
 
 });
 /* =====================================================
+   ルートID SNS手動管理
+   SNS状態取得・連携・解除
+===================================================== */
+
+
+/* =========================
+   SNS現在状態取得
+========================= */
+
+app.get(
+  "/api/root-sns-status",
+  async (_req, res) => {
+
+    try {
+
+      const data =
+        await loadAdmin();
+
+      //----------------------------------
+      // ルートIDのSNS状態
+      //----------------------------------
+
+      const snsActive =
+        data.rootSnsActive === true;
+
+      return res.json({
+
+        success: true,
+
+        snsActive:
+          snsActive
+
+      });
+
+    }
+
+    catch (err) {
+
+      console.error(
+        "ルートID SNS状態取得エラー:",
+        err
+      );
+
+      return res.status(500).json({
+
+        success: false,
+
+        message:
+          "SNS状態を取得できませんでした。"
+
+      });
+
+    }
+
+  }
+);
+
+
+/* =========================
+   SNS手動連携
+========================= */
+
+app.post(
+  "/api/root-sns-start",
+  async (_req, res) => {
+
+    try {
+
+      const data =
+        await loadAdmin();
+
+      //----------------------------------
+      // SNS連携開始
+      //----------------------------------
+
+      data.rootSnsActive = true;
+
+      data.rootSnsActivatedAt =
+        new Date().toISOString();
+
+      delete data.rootSnsDeactivatedAt;
+
+      //----------------------------------
+      // 保存
+      //----------------------------------
+
+      await saveAdmin(data);
+
+      console.log(
+        "ルートID SNS連携開始"
+      );
+
+      return res.json({
+
+        success: true,
+
+        snsActive: true
+
+      });
+
+    }
+
+    catch (err) {
+
+      console.error(
+        "ルートID SNS連携開始エラー:",
+        err
+      );
+
+      return res.status(500).json({
+
+        success: false,
+
+        message:
+          "SNS連携を開始できませんでした。"
+
+      });
+
+    }
+
+  }
+);
+
+
+/* =========================
+   SNS手動解除
+========================= */
+
+app.post(
+  "/api/root-sns-stop",
+  async (_req, res) => {
+
+    try {
+
+      const data =
+        await loadAdmin();
+
+      //----------------------------------
+      // SNS連携解除
+      //----------------------------------
+
+      data.rootSnsActive = false;
+
+      data.rootSnsDeactivatedAt =
+        new Date().toISOString();
+
+      //----------------------------------
+      // 保存
+      //----------------------------------
+
+      await saveAdmin(data);
+
+      console.log(
+        "ルートID SNS連携解除"
+      );
+
+      return res.json({
+
+        success: true,
+
+        snsActive: false
+
+      });
+
+    }
+
+    catch (err) {
+
+      console.error(
+        "ルートID SNS連携解除エラー:",
+        err
+      );
+
+      return res.status(500).json({
+
+        success: false,
+
+        message:
+          "SNS連携を解除できませんでした。"
+
+      });
+
+    }
+
+  }
+);
+/* =====================================================
    VSH紹介テスト入口
    SNS完成前の動作確認用
    ※ツリー管理は行わない
