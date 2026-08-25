@@ -889,13 +889,31 @@ Day8から直接譲渡しますか？`
 
 
         //----------------------------------------
-        // LINE送信用URL作成
+        // LINE共有用文章確認
+        //----------------------------------------
+
+        if (!result.shareText) {
+
+            alert(
+                "Day8受取URLを取得できませんでした。"
+            );
+
+            return;
+
+        }
+
+
+        //----------------------------------------
+        // LINE共有URL作成
+        //
+        // Day8全文ではなく
+        // 本人専用Day8受取URLを送る
         //----------------------------------------
 
         const lineUrl =
             "https://line.me/R/share?text=" +
             encodeURIComponent(
-                result.day8Text
+                result.shareText
             );
 
 
