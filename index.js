@@ -2719,6 +2719,12 @@ app.get("/api/members", async (_req, res) => {
    ※LINEへの送信自体はルートIDが手動で行う
 ===================================================== */
 
+/* =====================================================
+   既存FBOへDay8直接譲渡
+   ルートID専用
+   Day8受取URL発行方式
+===================================================== */
+
 app.post("/api/direct-day8", async (req, res) => {
 
   try {
@@ -2751,6 +2757,7 @@ app.post("/api/direct-day8", async (req, res) => {
       });
 
     }
+
 
     if (!/^\d{9}$/.test(flp)) {
 
@@ -2788,13 +2795,13 @@ app.post("/api/direct-day8", async (req, res) => {
 
 
     /* ==================================
-       既にVSH管理データにいる場合
+       すでにVSH管理データにいる場合
     ================================== */
 
     if (member) {
 
       //----------------------------------
-      // 登録済FBOのみ対象
+      // 登録済FBOのみ直接譲渡可能
       //----------------------------------
 
       if (member.status !== "登録済") {
@@ -2809,7 +2816,8 @@ app.post("/api/direct-day8", async (req, res) => {
 
 
       //----------------------------------
-      // Adminトークン確認
+      // 本人専用Adminトークン
+      // 既存なら再発行しない
       //----------------------------------
 
       if (!member.adminToken) {
@@ -2818,6 +2826,14 @@ app.post("/api/direct-day8", async (req, res) => {
           createMemberAdminToken();
 
       }
+
+
+      //----------------------------------
+      // 氏名は今回入力値を保持
+      //----------------------------------
+
+      member.name =
+        name;
 
     }
 
@@ -2831,9 +2847,15 @@ app.post("/api/direct-day8", async (req, res) => {
 
       member = {
 
-        name: name,
+        name:
+          name,
 
-        flp: flp,
+        flp:
+          flp,
+
+        //--------------------------------
+        // 既存FBOなので登録済
+        //--------------------------------
 
         status:
           "登録済",
@@ -2849,7 +2871,7 @@ app.post("/api/direct-day8", async (req, res) => {
           data.introducerName || "",
 
         //--------------------------------
-        // VSH本体
+        // VSH利用開始
         //--------------------------------
 
         vshActive:
@@ -2857,7 +2879,7 @@ app.post("/api/direct-day8", async (req, res) => {
 
         //--------------------------------
         // SNSはまだ開始しない
-        // FLP5件登録後にON
+        // FLP番号5件登録後にON
         //--------------------------------
 
         snsActive:
@@ -2870,14 +2892,33 @@ app.post("/api/direct-day8", async (req, res) => {
         directDay8:
           true,
 
+        //--------------------------------
+        // LINE本人紐付け前
+        //--------------------------------
+
+        directDay8LineLinked:
+          false,
+
+        //--------------------------------
+        // 登録日時
+        //--------------------------------
+
         created:
           new Date().toISOString(),
 
         confirmed:
           new Date().toISOString(),
 
+        //--------------------------------
+        // 本人専用Admin
+        //--------------------------------
+
         adminToken:
           createMemberAdminToken(),
+
+        //--------------------------------
+        // 本人の紹介用FLP番号
+        //--------------------------------
 
         flpNumbers:
           []
@@ -2886,16 +2927,18 @@ app.post("/api/direct-day8", async (req, res) => {
 
 
       //----------------------------------
-      // 管理データへ追加
+      // 第一世代登録者へ追加
       //----------------------------------
 
-      data.members.push(member);
+      data.members.push(
+        member
+      );
 
     }
 
 
     //----------------------------------
-    // 直接譲渡情報を記録
+    // 直接譲渡情報を確定
     //----------------------------------
 
     member.directDay8 =
@@ -2903,6 +2946,18 @@ app.post("/api/direct-day8", async (req, res) => {
 
     member.vshActive =
       true;
+
+
+    //----------------------------------
+    // ルートIDを直接紹介者として記録
+    //----------------------------------
+
+    member.vshIntroducerFLP =
+      data.introducerFLP || "";
+
+    member.vshIntroducerName =
+      data.introducerName || "";
+
 
     //----------------------------------
     // 5件未登録ならSNSは開始しない
@@ -2914,6 +2969,19 @@ app.post("/api/direct-day8", async (req, res) => {
     ) {
 
       member.snsActive =
+        false;
+
+    }
+
+
+    //----------------------------------
+    // LINE User IDがまだない場合
+    // 本人紐付け待ち
+    //----------------------------------
+
+    if (!member.userId) {
+
+      member.directDay8LineLinked =
         false;
 
     }
@@ -2935,56 +3003,28 @@ app.post("/api/direct-day8", async (req, res) => {
 
 
     //----------------------------------
-    // LINE手動送信用メッセージ
+    // Day8受取専用URL
+    //
+    // 次工程でこのURLのGET処理を作る
     //----------------------------------
 
-    const day8Text =
-`━━━━━━━━━━━━━━━━━━
-【Vera Sky Harmony】
-【Day8】
-━━━━━━━━━━━━━━━━━━
+    const day8ReceiveUrl =
+      `https://vsh-server.onrender.com/vsh/direct-day8/${member.adminToken}`;
 
-${member.name} 様
 
-あなたへ
-Vera Sky Harmony（VSH）
-を譲渡します。
+    //----------------------------------
+    // LINE共有用の短い案内
+    //----------------------------------
 
-ここから
-あなた専用のVSHが始まります。
+    const shareText =
+`Vera Sky Harmony（VSH）を
+Day8からあなたへ譲渡します。
 
-━━━━━━━━━━━━━━━━━━
-【最初で最後の作業】
-━━━━━━━━━━━━━━━━━━
+下の専用URLを開いて、
+VSH公式LINEとの本人確認を
+行ってください。
 
-あなたが紹介する方のための
-「あなたのFLP番号」
-5人分を準備してください。
-
-スターターキット内の
-「エントリーガイド」にある
-
-『フォーエバービジネスオーナー
-（FBO）登録申請書』
-
-上部に記載されている
-「あなたのFLP番号」を確認し、
-
-5人分を
-あなたの管理画面へ
-登録してください。
-
-5件の登録が完了すると、
-VSHの紹介活動開始準備が整います。
-
-━━━━━━━━━━━━━━━━━━
-【あなたの管理画面】
-━━━━━━━━━━━━━━━━━━
-
-${adminUrl}
-
-Vera Sky Harmony
-Prototype`;
+${day8ReceiveUrl}`;
 
 
     //----------------------------------
@@ -2992,14 +3032,16 @@ Prototype`;
     //----------------------------------
 
     console.log(
-      "既存FBO Day8直接譲渡準備:",
+      "既存FBO Day8直接譲渡URL発行:",
       member.name,
       member.flp
     );
 
+
     return res.json({
 
-      success: true,
+      success:
+        true,
 
       name:
         member.name,
@@ -3010,8 +3052,11 @@ Prototype`;
       adminUrl:
         adminUrl,
 
-      day8Text:
-        day8Text,
+      day8ReceiveUrl:
+        day8ReceiveUrl,
+
+      shareText:
+        shareText,
 
       directDay8:
         true
@@ -3020,6 +3065,7 @@ Prototype`;
 
   }
 
+
   catch (err) {
 
     console.error(
@@ -3027,10 +3073,15 @@ Prototype`;
       err
     );
 
+
     return res.status(500).json({
-      success: false,
+
+      success:
+        false,
+
       message:
         "Day8直接譲渡の準備でエラーが発生しました。"
+
     });
 
   }
