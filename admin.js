@@ -738,3 +738,226 @@ ${url}`
 
     }
 );
+// ========================================
+// 既存FBOへDay8直接譲渡
+// ルートID専用
+// ========================================
+
+document
+.getElementById("directDay8Button")
+.addEventListener(
+    "click",
+    directDay8
+);
+
+
+async function directDay8() {
+
+    //----------------------------------------
+    // 入力取得
+    //----------------------------------------
+
+    const name =
+        document
+        .getElementById("directDay8Name")
+        .value
+        .trim();
+
+    const flp =
+        document
+        .getElementById("directDay8FLP")
+        .value
+        .trim();
+
+
+    //----------------------------------------
+    // 入力確認
+    //----------------------------------------
+
+    if (!name) {
+
+        alert(
+            "FBO氏名を入力してください。"
+        );
+
+        return;
+
+    }
+
+
+    if (!/^\d{9}$/.test(flp)) {
+
+        alert(
+            "FLP番号は9桁の数字で入力してください。"
+        );
+
+        return;
+
+    }
+
+
+    //----------------------------------------
+    // 最終確認
+    //----------------------------------------
+
+    const ok =
+        confirm(
+`${name} さん
+
+FLP番号：${flp}
+
+この方へVSHを
+Day8から直接譲渡しますか？`
+        );
+
+    if (!ok) {
+        return;
+    }
+
+
+    const button =
+        document.getElementById(
+            "directDay8Button"
+        );
+
+    button.disabled = true;
+
+
+    try {
+
+        //----------------------------------------
+        // Day8直接譲渡準備API
+        //----------------------------------------
+
+        const res =
+            await fetch(
+                "/api/direct-day8",
+                {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify({
+                            name: name,
+                            flp: flp
+                        })
+
+                }
+            );
+
+
+        const result =
+            await res.json();
+
+
+        if (
+            !res.ok ||
+            !result.success
+        ) {
+
+            alert(
+                result.message ||
+                "Day8直接譲渡の準備に失敗しました。"
+            );
+
+            return;
+
+        }
+
+
+        //----------------------------------------
+        // Day8文章をコピー
+        //----------------------------------------
+
+        try {
+
+            await navigator
+                .clipboard
+                .writeText(
+                    result.day8Text
+                );
+
+
+            alert(
+`Day8の譲渡準備ができました。
+
+${result.name} さん
+FLP番号：${result.flp}
+
+Day8の文章をコピーしました。
+
+① LINEを開く
+② ${result.name} さんとのトークを開く
+③ 貼り付けて送信してください。`
+            );
+
+        }
+
+
+        //----------------------------------------
+        // コピーできない場合
+        //----------------------------------------
+
+        catch {
+
+            prompt(
+                "下記のDay8文章をコピーして、LINEで本人へ送信してください。",
+                result.day8Text
+            );
+
+        }
+
+
+        //----------------------------------------
+        // 入力欄クリア
+        //----------------------------------------
+
+        document
+        .getElementById(
+            "directDay8Name"
+        )
+        .value = "";
+
+        document
+        .getElementById(
+            "directDay8FLP"
+        )
+        .value = "";
+
+
+        //----------------------------------------
+        // 管理画面更新
+        //----------------------------------------
+
+        await loadAdmin();
+        await loadMembers();
+
+    }
+
+
+    catch (err) {
+
+        console.error(
+            "Day8直接譲渡エラー:",
+            err
+        );
+
+        alert(
+            "Day8直接譲渡で通信エラーが発生しました。"
+        );
+
+    }
+
+
+    finally {
+
+        button.disabled = false;
+
+    }
+
+}
