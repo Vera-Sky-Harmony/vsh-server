@@ -3601,7 +3601,51 @@ app.post("/api/register", async (req, res) => {
           new Date().toISOString()
 
       });
+      //----------------------------------
+      // 紹介者の該当FLP番号を使用済へ
+      //----------------------------------
 
+      introducer.flpNumbers =
+        introducer.flpNumbers.map(
+          number => {
+
+            if (
+              typeof number === "object" &&
+              number !== null
+            ) {
+
+              if (
+                String(number.flp) ===
+                String(flp)
+              ) {
+
+                return {
+                  ...number,
+                  status: "使用済"
+                };
+
+              }
+
+              return number;
+
+            }
+
+            if (
+              String(number) ===
+              String(flp)
+            ) {
+
+              return {
+                flp: String(number),
+                status: "使用済"
+              };
+
+            }
+
+            return number;
+
+          }
+        );
       //----------------------------------
       // 永続保存
       //----------------------------------
