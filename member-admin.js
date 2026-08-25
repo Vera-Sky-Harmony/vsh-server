@@ -760,3 +760,69 @@ async function loadIntroducedMembers() {
   }
 
 }
+// ========================================
+// 使用済FLP番号の表示
+// ========================================
+
+function updateUsedFLPDisplay(members) {
+
+  const usedFLPs =
+    new Set(
+      (Array.isArray(members) ? members : [])
+        .map(member =>
+          String(member.flp || "")
+        )
+        .filter(Boolean)
+    );
+
+  for (let i = 1; i <= 5; i++) {
+
+    const input =
+      document.getElementById(`flp${i}`);
+
+    if (!input) {
+      continue;
+    }
+
+    const row =
+      input.closest(".flpRow");
+
+    if (!row) {
+      continue;
+    }
+
+    const oldBadge =
+      row.querySelector(".usedBadge");
+
+    if (oldBadge) {
+      oldBadge.remove();
+    }
+
+    if (
+      usedFLPs.has(
+        String(input.value).trim()
+      )
+    ) {
+
+      const badge =
+        document.createElement("span");
+
+      badge.className =
+        "usedBadge";
+
+      badge.textContent =
+        "使用済";
+
+      badge.style.whiteSpace =
+        "nowrap";
+
+      badge.style.fontWeight =
+        "bold";
+
+      badge.style.color =
+        "#b26a00";
+
+      row.appendChild(badge);
+    }
+  }
+}
