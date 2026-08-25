@@ -3087,6 +3087,128 @@ ${day8ReceiveUrl}`;
   }
 
 });
+/* =====================================================
+   既存FBO Day8直接譲渡
+   Day8受取専用URL
+   本人LINE紐付け入口
+===================================================== */
+
+app.get(
+  "/vsh/direct-day8/:adminToken",
+  async (req, res) => {
+
+    try {
+
+      //----------------------------------
+      // Adminトークン取得
+      //----------------------------------
+
+      const adminToken =
+        String(
+          req.params.adminToken || ""
+        ).trim();
+
+
+      if (!adminToken) {
+
+        return res.status(400).send(
+          "Day8受取情報がありません。"
+        );
+
+      }
+
+
+      //----------------------------------
+      // 最新管理データ取得
+      //----------------------------------
+
+      const data =
+        await loadAdmin();
+
+
+      if (!Array.isArray(data.members)) {
+
+        data.members = [];
+
+      }
+
+
+      //----------------------------------
+      // 対象FBOを検索
+      //----------------------------------
+
+      const member =
+        data.members.find(
+          x =>
+            x.adminToken &&
+            String(x.adminToken) ===
+              String(adminToken) &&
+            x.directDay8 === true
+        );
+
+
+      if (!member) {
+
+        return res.status(404).send(
+          "Day8受取対象者が見つかりません。"
+        );
+
+      }
+
+
+      //----------------------------------
+      // LINE本人紐付け用メッセージ
+      //
+      // この文字列を本人が
+      // VSH公式LINEへ送信する
+      //----------------------------------
+
+      const linkMessage =
+        `【Day8受取】\n` +
+        `氏名：${member.name}\n` +
+        `FLP番号：${member.flp}\n` +
+        `TOKEN：${member.adminToken}`;
+
+
+      //----------------------------------
+      // LINE公式アカウントへ送るための
+      // LINE共有画面を開く
+      //----------------------------------
+
+      const lineUrl =
+        "https://line.me/R/share?text=" +
+        encodeURIComponent(
+          linkMessage
+        );
+
+
+      //----------------------------------
+      // LINEへ移動
+      //----------------------------------
+
+      return res.redirect(
+        lineUrl
+      );
+
+    }
+
+
+    catch (err) {
+
+      console.error(
+        "Day8受取URLエラー:",
+        err
+      );
+
+
+      return res.status(500).send(
+        "Day8受取処理でエラーが発生しました。"
+      );
+
+    }
+
+  }
+);
 app.post("/api/confirm-member", async (req, res) => {
 
   try {
