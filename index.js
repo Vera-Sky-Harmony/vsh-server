@@ -3427,7 +3427,7 @@ app.post(
       member.confirmed =
         new Date().toISOString();
 
-      //----------------------------------
+            //----------------------------------
       // 本人専用Adminトークン発行
       //----------------------------------
 
@@ -3438,11 +3438,47 @@ app.post(
 
       }
 
+
+      //----------------------------------
+      // 直接紹介5人の登録完了確認
+      // 5人全員「登録済」ならSNS連携解除
+      //----------------------------------
+
+      const registeredDirectMembers =
+        data.members.filter(
+          x =>
+            String(
+              x.vshIntroducerFLP || ""
+            ) ===
+              String(introducer.flp) &&
+            x.status === "登録済"
+        );
+
+
+      if (
+        registeredDirectMembers.length >= 5
+      ) {
+
+        introducer.snsActive = false;
+
+        introducer.snsDeactivatedAt =
+          new Date().toISOString();
+
+        console.log(
+          "5人登録完了・SNS連携解除:",
+          introducer.name,
+          introducer.flp
+        );
+
+      }
+
+
       //----------------------------------
       // 保存
       //----------------------------------
 
       await saveAdmin(data);
+
 
       console.log(
         "本人AdminからFBO登録確認:",
