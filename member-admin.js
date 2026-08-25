@@ -516,7 +516,7 @@ async function loadIntroducedMembers() {
 
       return;
     }
-
+updateUsedFLPDisplay(members);
     area.innerHTML = "";
 
     members.forEach(member => {
