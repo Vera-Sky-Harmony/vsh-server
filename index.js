@@ -2521,7 +2521,334 @@ app.get("/api/members", async (_req, res) => {
    確認中 → 登録済
    Day8 LINE送信
 ========================= */
+/* =====================================================
+   既存FBOへのVSH Day8直接譲渡準備
+   ルートID専用
 
+   Day0～Day7-3を通らず、
+   既にFBO登録済みの方へ
+   Day8からVSHを直接譲渡する
+
+   ※LINEへの送信自体はルートIDが手動で行う
+===================================================== */
+
+app.post("/api/direct-day8", async (req, res) => {
+
+  try {
+
+    //----------------------------------
+    // 氏名・FLP番号取得
+    //----------------------------------
+
+    const name =
+      String(
+        req.body.name || ""
+      ).trim();
+
+    const flp =
+      String(
+        req.body.flp || ""
+      ).trim();
+
+
+    //----------------------------------
+    // 入力確認
+    //----------------------------------
+
+    if (!name) {
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "氏名を入力してください。"
+      });
+
+    }
+
+    if (!/^\d{9}$/.test(flp)) {
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "FLP番号は9桁の数字で入力してください。"
+      });
+
+    }
+
+
+    //----------------------------------
+    // 最新管理データ取得
+    //----------------------------------
+
+    const data =
+      await loadAdmin();
+
+    if (!Array.isArray(data.members)) {
+      data.members = [];
+    }
+
+
+    //----------------------------------
+    // 同じFLP番号の登録確認
+    //----------------------------------
+
+    let member =
+      data.members.find(
+        x =>
+          String(x.flp) ===
+          String(flp)
+      );
+
+
+    /* ==================================
+       既にVSH管理データにいる場合
+    ================================== */
+
+    if (member) {
+
+      //----------------------------------
+      // 登録済FBOのみ対象
+      //----------------------------------
+
+      if (member.status !== "登録済") {
+
+        return res.status(409).json({
+          success: false,
+          message:
+            "このFBOは現在「登録済」ではありません。"
+        });
+
+      }
+
+
+      //----------------------------------
+      // Adminトークン確認
+      //----------------------------------
+
+      if (!member.adminToken) {
+
+        member.adminToken =
+          createMemberAdminToken();
+
+      }
+
+    }
+
+
+    /* ==================================
+       VSH管理データにいない
+       既存FBOの場合
+    ================================== */
+
+    else {
+
+      member = {
+
+        name: name,
+
+        flp: flp,
+
+        status:
+          "登録済",
+
+        //--------------------------------
+        // ルートIDからの直接譲渡
+        //--------------------------------
+
+        vshIntroducerFLP:
+          data.introducerFLP || "",
+
+        vshIntroducerName:
+          data.introducerName || "",
+
+        //--------------------------------
+        // VSH本体
+        //--------------------------------
+
+        vshActive:
+          true,
+
+        //--------------------------------
+        // SNSはまだ開始しない
+        // FLP5件登録後にON
+        //--------------------------------
+
+        snsActive:
+          false,
+
+        //--------------------------------
+        // Day8直接譲渡
+        //--------------------------------
+
+        directDay8:
+          true,
+
+        created:
+          new Date().toISOString(),
+
+        confirmed:
+          new Date().toISOString(),
+
+        adminToken:
+          createMemberAdminToken(),
+
+        flpNumbers:
+          []
+
+      };
+
+
+      //----------------------------------
+      // 管理データへ追加
+      //----------------------------------
+
+      data.members.push(member);
+
+    }
+
+
+    //----------------------------------
+    // 直接譲渡情報を記録
+    //----------------------------------
+
+    member.directDay8 =
+      true;
+
+    member.vshActive =
+      true;
+
+    //----------------------------------
+    // 5件未登録ならSNSは開始しない
+    //----------------------------------
+
+    if (
+      !Array.isArray(member.flpNumbers) ||
+      member.flpNumbers.length !== 5
+    ) {
+
+      member.snsActive =
+        false;
+
+    }
+
+
+    //----------------------------------
+    // 保存
+    //----------------------------------
+
+    await saveAdmin(data);
+
+
+    //----------------------------------
+    // 本人専用管理画面URL
+    //----------------------------------
+
+    const adminUrl =
+      `https://vsh-server.onrender.com/member-admin/enter/${member.adminToken}`;
+
+
+    //----------------------------------
+    // LINE手動送信用メッセージ
+    //----------------------------------
+
+    const day8Text =
+`━━━━━━━━━━━━━━━━━━
+【Vera Sky Harmony】
+【Day8】
+━━━━━━━━━━━━━━━━━━
+
+${member.name} 様
+
+あなたへ
+Vera Sky Harmony（VSH）
+を譲渡します。
+
+ここから
+あなた専用のVSHが始まります。
+
+━━━━━━━━━━━━━━━━━━
+【最初で最後の作業】
+━━━━━━━━━━━━━━━━━━
+
+あなたが紹介する方のための
+「あなたのFLP番号」
+5人分を準備してください。
+
+スターターキット内の
+「エントリーガイド」にある
+
+『フォーエバービジネスオーナー
+（FBO）登録申請書』
+
+上部に記載されている
+「あなたのFLP番号」を確認し、
+
+5人分を
+あなたの管理画面へ
+登録してください。
+
+5件の登録が完了すると、
+VSHの紹介活動開始準備が整います。
+
+━━━━━━━━━━━━━━━━━━
+【あなたの管理画面】
+━━━━━━━━━━━━━━━━━━
+
+${adminUrl}
+
+Vera Sky Harmony
+Prototype`;
+
+
+    //----------------------------------
+    // 正常終了
+    //----------------------------------
+
+    console.log(
+      "既存FBO Day8直接譲渡準備:",
+      member.name,
+      member.flp
+    );
+
+    return res.json({
+
+      success: true,
+
+      name:
+        member.name,
+
+      flp:
+        member.flp,
+
+      adminUrl:
+        adminUrl,
+
+      day8Text:
+        day8Text,
+
+      directDay8:
+        true
+
+    });
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "既存FBO Day8直接譲渡準備エラー:",
+      err
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "Day8直接譲渡の準備でエラーが発生しました。"
+    });
+
+  }
+
+});
 app.post("/api/confirm-member", async (req, res) => {
 
   try {
