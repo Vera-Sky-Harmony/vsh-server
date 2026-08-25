@@ -738,9 +738,11 @@ ${url}`
 
     }
 );
+
 // ========================================
 // 既存FBOへDay8直接譲渡
 // ルートID専用
+// LINE直接起動版
 // ========================================
 
 document
@@ -810,10 +812,17 @@ FLP番号：${flp}
 Day8から直接譲渡しますか？`
         );
 
+
     if (!ok) {
+
         return;
+
     }
 
+
+    //----------------------------------------
+    // ボタン一時停止
+    //----------------------------------------
 
     const button =
         document.getElementById(
@@ -837,14 +846,19 @@ Day8から直接譲渡しますか？`
                     method: "POST",
 
                     headers: {
+
                         "Content-Type":
                             "application/json"
+
                     },
 
                     body:
                         JSON.stringify({
+
                             name: name,
+
                             flp: flp
+
                         })
 
                 }
@@ -854,6 +868,10 @@ Day8から直接譲渡しますか？`
         const result =
             await res.json();
 
+
+        //----------------------------------------
+        // APIエラー
+        //----------------------------------------
 
         if (
             !res.ok ||
@@ -871,46 +889,14 @@ Day8から直接譲渡しますか？`
 
 
         //----------------------------------------
-        // Day8文章をコピー
+        // LINE送信用URL作成
         //----------------------------------------
 
-        try {
-
-            await navigator
-                .clipboard
-                .writeText(
-                    result.day8Text
-                );
-
-
-            alert(
-`Day8の譲渡準備ができました。
-
-${result.name} さん
-FLP番号：${result.flp}
-
-Day8の文章をコピーしました。
-
-① LINEを開く
-② ${result.name} さんとのトークを開く
-③ 貼り付けて送信してください。`
-            );
-
-        }
-
-
-        //----------------------------------------
-        // コピーできない場合
-        //----------------------------------------
-
-        catch {
-
-            prompt(
-                "下記のDay8文章をコピーして、LINEで本人へ送信してください。",
+        const lineUrl =
+            "https://line.me/R/share?text=" +
+            encodeURIComponent(
                 result.day8Text
             );
-
-        }
 
 
         //----------------------------------------
@@ -934,8 +920,32 @@ Day8の文章をコピーしました。
         // 管理画面更新
         //----------------------------------------
 
-        await loadAdmin();
-        await loadMembers();
+        if (
+            typeof loadAdmin ===
+            "function"
+        ) {
+
+            await loadAdmin();
+
+        }
+
+
+        if (
+            typeof loadMembers ===
+            "function"
+        ) {
+
+            await loadMembers();
+
+        }
+
+
+        //----------------------------------------
+        // LINE共有画面を開く
+        //----------------------------------------
+
+        window.location.href =
+            lineUrl;
 
     }
 
