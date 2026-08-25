@@ -173,12 +173,9 @@ FLP番号：${myFLP}`;
 
         window.open(
 
-            "https://line.me/R/oaMessage/@591tvejt/?"
-            + encodeURIComponent(introducerText),
-
-            "_blank"
-
-        );
+          window.location.href =
+    "https://line.me/R/oaMessage/@591tvejt/?"
+    + encodeURIComponent(introducerText);
 
         //----------------------------------
         // Day7-3へ
