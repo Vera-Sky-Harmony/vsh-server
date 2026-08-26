@@ -3087,10 +3087,12 @@ ${day8ReceiveUrl}`;
   }
 
 });
+
+
 /* =====================================================
    既存FBO Day8直接譲渡
-   Day8受取専用URL
-   本人LINE紐付け入口
+   Day8専用WEB画面
+   ※LINE User ID取得は行わない
 ===================================================== */
 
 app.get(
@@ -3134,7 +3136,7 @@ app.get(
 
 
       //----------------------------------
-      // 対象FBOを検索
+      // 直接譲渡した既存FBOを検索
       //----------------------------------
 
       const member =
@@ -3157,38 +3159,313 @@ app.get(
 
 
       //----------------------------------
-      // LINE本人紐付け用メッセージ
-      //
-      // この文字列を本人が
-      // VSH公式LINEへ送信する
+      // 本人専用Admin URL
       //----------------------------------
 
-      const linkMessage =
-        `【Day8受取】\n` +
-        `氏名：${member.name}\n` +
-        `FLP番号：${member.flp}\n` +
-        `TOKEN：${member.adminToken}`;
+      const adminUrl =
+        `https://vsh-server.onrender.com/member-admin/enter/${member.adminToken}`;
 
 
       //----------------------------------
-      // LINE公式アカウントへ送るための
-      // LINE共有画面を開く
+      // Day8 WEB画面
       //----------------------------------
 
-      const lineUrl =
-        "https://line.me/R/share?text=" +
-        encodeURIComponent(
-          linkMessage
-        );
+      return res.send(`
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
+
+<title>
+Vera Sky Harmony Day8
+</title>
+
+<style>
+
+body {
+  margin: 0;
+  padding: 20px;
+  background: #ffffff;
+  color: #222222;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Helvetica Neue",
+    "Yu Gothic",
+    sans-serif;
+  line-height: 1.8;
+}
+
+.container {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.day8-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto 25px auto;
+  border-radius: 12px;
+}
+
+h1 {
+  text-align: center;
+  font-size: 25px;
+  margin-bottom: 25px;
+}
+
+.section {
+  margin: 28px 0;
+}
+
+.section-title {
+  font-weight: bold;
+  text-align: center;
+  border-top: 1px solid #999999;
+  border-bottom: 1px solid #999999;
+  padding: 10px 0;
+  margin: 25px 0 18px 0;
+}
+
+.admin-button {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 30px auto;
+  padding: 16px 12px;
+  text-align: center;
+  text-decoration: none;
+  background: #111111;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 8px;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 35px;
+  margin-bottom: 30px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<img
+  class="day8-image"
+  src="https://res.cloudinary.com/dxegzwukb/image/upload/v1787477831/vsh-day8-congratulations"
+  alt="Vera Sky Harmony Day8"
+>
+
+<h1>
+Vera Sky Harmony<br>
+Day8
+</h1>
+
+<p>
+${member.name} 様
+</p>
+
+<p>
+あなたへ<br>
+Vera Sky Harmony（VSH）を譲渡します。
+</p>
+
+<p>
+ここから、あなた専用のVSHが始まります。
+</p>
 
 
-      //----------------------------------
-      // LINEへ移動
-      //----------------------------------
+<div class="section-title">
+FLPビジネスとは
+</div>
 
-      return res.redirect(
-        lineUrl
-      );
+<p>
+FLPビジネスについてはこちらをご覧ください。
+</p>
+
+<p>
+<a
+  href="https://www.flpj.co.jp/business.html"
+  target="_blank"
+  rel="noopener noreferrer"
+>
+FLPビジネスを見る
+</a>
+</p>
+
+
+<div class="section-title">
+VSHの重要な目標
+</div>
+
+<p>
+VSHでは、FBO登録後、
+1か月以内を目標として、
+最大2か月以内に
+5人の新規登録者につなげることを
+重要な運用条件としています。
+</p>
+
+<p>
+これはFLPが定める
+登録期限ではありません。
+</p>
+
+<p>
+FLPのブレイクアウェイ方式による
+報酬システムと、
+ランクアップに伴う
+ボーナスの仕組みを基礎として、
+より早いランクアップを目指すために
+VSHが設定した目標です。
+</p>
+
+<p>
+※ランクアップや報酬額は、
+FLP所定の資格・CC・組織実績などの
+条件によって決まり、
+一定のランクや収入を
+保証するものではありません。
+</p>
+
+
+<div class="section-title">
+最初で最後の作業
+</div>
+
+<p>
+あなたが紹介する方のための
+「あなたのFLP番号」
+5人分を準備してください。
+</p>
+
+<p>
+この作業が、
+VSHで行う
+最初で最後の作業です。
+</p>
+
+
+<div class="section-title">
+手順①
+</div>
+
+<p>
+FLP本社へ電話し、
+スターターキットを
+5冊注文してください。
+</p>
+
+<p>
+<strong>FLP本社</strong><br>
+0120-834-882
+</p>
+
+<p>
+スターターキット<br>
+1冊400円＋送料
+</p>
+
+
+<div class="section-title">
+手順②
+</div>
+
+<p>
+スターターキット内の
+「エントリーガイド」にある
+『フォーエバービジネスオーナー
+（FBO）登録申請書』上部に記載されている
+「あなたのFLP番号」を確認してください。
+</p>
+
+<p>
+その番号を
+あなたの管理画面へ
+5人分登録してください。
+</p>
+
+<p>
+「あなたのFLP番号」が
+管理画面へ登録された時点から、
+あなたへ譲渡された
+Vera Sky Harmony（VSH）は、
+SNS（YouTube・Instagram・X）による
+紹介活動を開始します。
+</p>
+
+
+<div class="section-title">
+重要 ― 最初の2か月
+</div>
+
+<p>
+FBO登録後の最初の2か月は、
+とても重要な期間です。
+</p>
+
+<p>
+VSHでは、
+1か月以内に5人、
+遅くとも2か月以内に5人への連鎖を
+目標とします。
+</p>
+
+<p>
+FBO登録後は、
+速やかにスターターキットを準備し、
+5人分の「あなたのFLP番号」を
+管理画面へ登録してください。
+</p>
+
+<p>
+この作業が終わりましたら、
+「エントリーガイド」
+「商品販売ルール」をお読みください。
+</p>
+
+
+<div class="section-title">
+あなたの管理画面
+</div>
+
+<p>
+下のボタンから、
+あなた専用の管理画面へ進んでください。
+</p>
+
+<a
+  class="admin-button"
+  href="${adminUrl}"
+>
+あなたの管理画面を開く
+</a>
+
+
+<div class="footer">
+Vera Sky Harmony<br>
+Version 1.1
+</div>
+
+</div>
+
+</body>
+</html>
+      `);
 
     }
 
@@ -3196,13 +3473,13 @@ app.get(
     catch (err) {
 
       console.error(
-        "Day8受取URLエラー:",
+        "既存FBO Day8 WEB画面エラー:",
         err
       );
 
 
       return res.status(500).send(
-        "Day8受取処理でエラーが発生しました。"
+        "Day8の表示でエラーが発生しました。"
       );
 
     }
