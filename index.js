@@ -5380,7 +5380,11 @@ app.post("/api/register", async (req, res) => {
        譲渡されたVSHからの登録
     ================================== */
 
-    if (introducerFLP) {
+    if (
+  introducerFLP &&
+  String(introducerFLP) !==
+    String(data.introducerFLP || "")
+) {
 
       //----------------------------------
       // 紹介者本人を確認
