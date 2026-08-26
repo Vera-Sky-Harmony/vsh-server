@@ -942,6 +942,8 @@ app.get(
    本人用Admin
    自分が直接紹介した方のFBO登録確認
    確認中 → 登録済
+   Day8を本人LINEへ送信
+   5人登録完了で紹介者SNS連携解除
    ※本人と直接紹介者の関係だけ確認
 ===================================================== */
 
@@ -1006,7 +1008,7 @@ app.post(
       }
 
       //----------------------------------
-      // 確認するFLP番号取得
+      // FLP番号取得
       //----------------------------------
 
       const flp =
@@ -1036,10 +1038,10 @@ app.post(
       }
 
       //----------------------------------
-      // セッションから本人検索
+      // 現在ログインしている紹介者本人
       //----------------------------------
 
-      const currentMember =
+      const introducer =
         data.members.find(
           member =>
             member.adminToken &&
@@ -1047,24 +1049,21 @@ app.post(
               String(session.adminToken)
         );
 
-      if (!currentMember) {
+      if (!introducer) {
 
         return res.status(401).json({
           success: false,
           message:
-            "本人情報が見つかりません。"
+            "紹介者本人を確認できません。"
         });
 
       }
 
       //----------------------------------
-      // 登録済本人のみ利用可能
+      // 紹介者本人は登録済のみ
       //----------------------------------
 
-      if (
-        currentMember.status !==
-        "登録済"
-      ) {
+      if (introducer.status !== "登録済") {
 
         return res.status(403).json({
           success: false,
@@ -1075,35 +1074,35 @@ app.post(
       }
 
       //----------------------------------
-      // 対象者検索
+      // 登録確認対象者
       //----------------------------------
 
-      const targetMember =
+      const member =
         data.members.find(
           member =>
             String(member.flp) ===
               String(flp)
         );
 
-      if (!targetMember) {
+      if (!member) {
 
         return res.status(404).json({
           success: false,
           message:
-            "対象の登録者が見つかりません。"
+            "登録者が見つかりません。"
         });
 
       }
 
       //----------------------------------
-      // 本人が直接紹介した方か確認
+      // 本人が直接紹介した相手か確認
       //----------------------------------
 
       if (
         String(
-          targetMember.vshIntroducerFLP || ""
+          member.vshIntroducerFLP || ""
         ) !==
-        String(currentMember.flp)
+        String(introducer.flp)
       ) {
 
         return res.status(403).json({
@@ -1115,34 +1114,46 @@ app.post(
       }
 
       //----------------------------------
-      // 現在の状態確認
+      // LINE User ID確認
       //----------------------------------
 
-      if (
-        targetMember.status ===
-        "登録済"
-      ) {
+      if (!member.userId) {
 
-        return res.json({
-          success: true,
+        return res.status(400).json({
+          success: false,
           message:
-            "この方はすでに登録済みです。",
-          member: {
-            name:
-              targetMember.name,
-            flp:
-              targetMember.flp,
-            status:
-              targetMember.status
-          }
+            "この登録者のLINE User IDが保存されていません。"
         });
 
       }
 
-      if (
-        targetMember.status !==
-        "確認中"
-      ) {
+      //----------------------------------
+      // すでに登録済
+      //----------------------------------
+
+      if (member.status === "登録済") {
+
+        return res.json({
+          success: true,
+          message:
+            "すでに登録済です。",
+          name:
+            member.name,
+          flp:
+            member.flp,
+          status:
+            member.status,
+          day8Sent:
+            false
+        });
+
+      }
+
+      //----------------------------------
+      // 「確認中」だけ登録確認可能
+      //----------------------------------
+
+      if (member.status !== "確認中") {
 
         return res.status(409).json({
           success: false,
@@ -1156,35 +1167,284 @@ app.post(
       // 確認中 → 登録済
       //----------------------------------
 
-      targetMember.status =
+      member.status =
         "登録済";
 
-      targetMember.confirmedAt =
+      member.confirmed =
         new Date().toISOString();
 
       //----------------------------------
       // 本人専用Adminトークン発行
       //----------------------------------
 
-      if (!targetMember.adminToken) {
+      if (!member.adminToken) {
 
-        targetMember.adminToken =
+        member.adminToken =
           createMemberAdminToken();
+
+        console.log(
+          "本人専用Adminトークン発行:",
+          member.name,
+          member.flp
+        );
 
       }
 
       //----------------------------------
-      // Supabaseへ永続保存
+      // 直接紹介5人の登録完了確認
+      // 5人全員登録済ならSNS連携解除
+      //----------------------------------
+
+      const registeredDirectMembers =
+        data.members.filter(
+          x =>
+            String(
+              x.vshIntroducerFLP || ""
+            ) ===
+              String(introducer.flp) &&
+            x.status === "登録済"
+        );
+
+      if (
+        registeredDirectMembers.length >= 5
+      ) {
+
+        introducer.snsActive =
+          false;
+
+        introducer.snsDeactivatedAt =
+          new Date().toISOString();
+
+        console.log(
+          "5人登録完了・SNS連携解除:",
+          introducer.name,
+          introducer.flp
+        );
+
+      }
+
+      //----------------------------------
+      // Supabaseへ保存
       //----------------------------------
 
       await saveAdmin(data);
 
       console.log(
-        "本人Admin FBO登録確認:",
-        currentMember.name,
+        "本人AdminからFBO登録確認:",
+        introducer.name,
         "→",
-        targetMember.name,
-        targetMember.flp
+        member.name,
+        member.flp
+      );
+
+      //----------------------------------
+      // Day8を本人LINEへ送信
+      //----------------------------------
+
+      await client.pushMessage(
+        member.userId,
+        [
+
+          {
+            type: "image",
+
+            originalContentUrl:
+              "https://res.cloudinary.com/dxegzwukb/image/upload/v1787477831/vsh-day8-congratulations",
+
+            previewImageUrl:
+              "https://res.cloudinary.com/dxegzwukb/image/upload/v1787477831/vsh-day8-congratulations"
+          },
+
+          {
+            type: "text",
+
+            text:
+`━━━━━━━━━━━━━━━━━━
+【Vera Sky Harmony】
+【Day8】
+━━━━━━━━━━━━━━━━━━
+
+ご登録おめでとうございます。
+
+FOREVERへのFBO登録が確認され、
+あなた専用の
+Vera Sky Harmony（VSH）
+の利用が開始されました。
+
+━━━━━━━━━━━━━━━━━━
+
+これからは、
+健康と繁栄の「両方」を得るための
+学びが始まります。
+
+Day8では、
+Vera Sky Harmony の核心である
+「FLPビジネスの仕組み」
+について学びます。
+
+━━━━━━━━━━━━━━━━━━
+【FLPビジネスとは】
+━━━━━━━━━━━━━━━━━━
+
+FLPビジネスについてはこちらをご覧ください。
+
+https://www.flpj.co.jp/business.html
+
+━━━━━━━━━━━━━━━━━━
+【VSHの重要な目標】
+━━━━━━━━━━━━━━━━━━
+
+VSHでは、FBO登録後、
+1か月以内を目標として、
+最大2か月以内に
+5人の新規登録者につなげることを
+重要な運用条件としています。
+
+これはFLPが定める
+登録期限ではありません。
+
+FLPの制度を活用しながら、
+VSHが独自に設定している
+活動目標です。
+
+ランクアップや報酬額は、
+FLP所定の資格・CC・組織実績などの
+条件によって決まり、
+一定のランクや収入を
+保証するものではありません。
+
+━━━━━━━━━━━━━━━━━━
+【最初で最後の作業】
+━━━━━━━━━━━━━━━━━━
+
+あなたが紹介する方のための
+「あなたのFLP番号」
+5人分を準備してください。
+
+この作業が、
+VSHで行う
+最初で最後の作業です。
+
+━━━━━━━━━━━━━━━━━━
+【手順①】
+━━━━━━━━━━━━━━━━━━
+
+FLP本社へ電話し、
+スターターキットを
+5冊注文してください。
+
+【FLP本社】
+0120-834-882
+
+スターターキット
+1冊400円＋送料
+
+━━━━━━━━━━━━━━━━━━
+【手順②】
+━━━━━━━━━━━━━━━━━━
+
+スターターキット内の
+「エントリーガイド」にある
+
+『フォーエバービジネスオーナー
+（FBO）登録申請書』
+
+上部に記載されている
+「あなたのFLP番号」
+を確認してください。
+
+その番号を
+あなたの管理画面へ
+5人分登録してください。
+
+━━━━━━━━━━━━━━━━━━
+
+「あなたのFLP番号」が
+管理画面へ登録された時点から、
+
+あなたへ譲渡された
+Vera Sky Harmony（VSH）は、
+
+SNS
+（YouTube・Instagram・X）
+
+による紹介活動を開始します。
+
+━━━━━━━━━━━━━━━━━━
+【重要 ― 最初の2か月】
+━━━━━━━━━━━━━━━━━━
+
+FBO登録後の
+最初の2か月は、
+とても重要な期間です。
+
+VSHでは、
+
+1か月以内に5人、
+遅くとも2か月以内に5人
+
+への連鎖を目標とします。
+
+FBO登録後は、
+速やかにスターターキットを準備し、
+
+5人分の
+「あなたのFLP番号」を
+管理画面へ登録してください。
+
+━━━━━━━━━━━━━━━━━━
+
+この作業が終わりましたら、
+
+「エントリーガイド」
+「商品販売ルール」
+
+をお読みください。
+
+━━━━━━━━━━━━━━━━━━
+
+次は
+「管理画面」へ進みます。
+
+ここで5人分の
+「あなたのFLP番号」を
+登録していただきます。
+
+Vera Sky Harmony
+Version 1.1`
+          },
+
+          {
+            type: "template",
+
+            altText:
+              "VSH あなたの管理画面",
+
+            template: {
+
+              type: "buttons",
+
+              text:
+                "スターターキットを受け取り、5人分の「あなたのFLP番号」を確認できましたら、下のボタンから管理画面へ進んでください。",
+
+              actions: [
+
+                {
+                  type: "uri",
+
+                  label:
+                    "あなたの管理画面を開く",
+
+                  uri:
+                    `https://vsh-server.onrender.com/member-admin/enter/${member.adminToken}`
+                }
+
+              ]
+
+            }
+          }
+
+        ]
       );
 
       //----------------------------------
@@ -1192,17 +1452,21 @@ app.post(
       //----------------------------------
 
       return res.json({
+
         success: true,
-        message:
-          "FBO登録を確認しました。",
-        member: {
-          name:
-            targetMember.name,
-          flp:
-            targetMember.flp,
-          status:
-            targetMember.status
-        }
+
+        name:
+          member.name,
+
+        flp:
+          member.flp,
+
+        status:
+          member.status,
+
+        day8Sent:
+          true
+
       });
 
     }
@@ -1217,7 +1481,7 @@ app.post(
       return res.status(500).json({
         success: false,
         message:
-          "FBO登録確認処理でエラーが発生しました。"
+          "登録確認またはDay8送信処理でエラーが発生しました。"
       });
 
     }
