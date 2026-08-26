@@ -2720,6 +2720,7 @@ catch (err) {
 });
 /* =====================================================
    現在のVSH紹介者取得
+   ルートID ＋ 一般FBO 共通対応
    Cookieから「誰のVSHか」を確認
    ※ツリー管理は行わない
 ===================================================== */
@@ -2763,6 +2764,7 @@ app.get("/api/current-vsh-introducer", async (req, res) => {
     const introducerFLP =
       cookies.vsh_introducer_flp;
 
+
     //----------------------------------
     // 紹介者Cookieがない場合
     //----------------------------------
@@ -2777,8 +2779,9 @@ app.get("/api/current-vsh-introducer", async (req, res) => {
 
     }
 
+
     //----------------------------------
-    // 管理データ取得
+    // 最新管理データ取得
     //----------------------------------
 
     const data =
@@ -2788,9 +2791,98 @@ app.get("/api/current-vsh-introducer", async (req, res) => {
       data.members = [];
     }
 
-    //----------------------------------
-    // 紹介者検索
-    //----------------------------------
+    if (!Array.isArray(data.flpList)) {
+      data.flpList = [];
+    }
+
+
+    /* ==================================
+       ケース1
+       ルートID
+    ================================== */
+
+    if (
+      String(data.introducerFLP || "") ===
+      String(introducerFLP)
+    ) {
+
+      //----------------------------------
+      // ルートSNS利用状態確認
+      //----------------------------------
+
+      if (data.rootSnsActive !== true) {
+
+        return res.status(403).json({
+          success: false,
+          message:
+            "このVSHは現在利用できません。"
+        });
+
+      }
+
+
+      //----------------------------------
+      // 未使用FLP番号取得
+      //----------------------------------
+
+      const availableFLPs =
+        data.flpList
+          .filter(
+            item =>
+              item &&
+              item.status === "未使用" &&
+              item.flp
+          )
+          .map(
+            item =>
+              String(item.flp)
+          );
+
+
+      if (availableFLPs.length === 0) {
+
+        return res.status(400).json({
+          success: false,
+          message:
+            "利用できる紹介用FLP番号がありません。"
+        });
+
+      }
+
+
+      //----------------------------------
+      // ルートID情報を返す
+      //----------------------------------
+
+      return res.json({
+
+        success: true,
+
+        source:
+          "root",
+
+        introducer: {
+
+          name:
+            data.introducerName,
+
+          flp:
+            data.introducerFLP,
+
+          flpNumbers:
+            availableFLPs
+
+        }
+
+      });
+
+    }
+
+
+    /* ==================================
+       ケース2
+       第一世代以降の一般FBO
+    ================================== */
 
     const introducer =
       data.members.find(
@@ -2798,6 +2890,7 @@ app.get("/api/current-vsh-introducer", async (req, res) => {
           String(member.flp) ===
           String(introducerFLP)
       );
+
 
     if (!introducer) {
 
@@ -2808,6 +2901,7 @@ app.get("/api/current-vsh-introducer", async (req, res) => {
       });
 
     }
+
 
     //----------------------------------
     // VSH利用状態確認
@@ -2827,8 +2921,9 @@ app.get("/api/current-vsh-introducer", async (req, res) => {
 
     }
 
+
     //----------------------------------
-    // 5件確認
+    // FLP番号5件確認
     //----------------------------------
 
     if (
@@ -2846,13 +2941,17 @@ app.get("/api/current-vsh-introducer", async (req, res) => {
 
     }
 
+
     //----------------------------------
-    // 正常
+    // 一般FBO情報を返す
     //----------------------------------
 
     return res.json({
 
       success: true,
+
+      source:
+        "member",
 
       introducer: {
 
