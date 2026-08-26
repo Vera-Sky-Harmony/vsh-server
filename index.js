@@ -938,6 +938,292 @@ app.get(
 
   }
 );
+/* =====================================================
+   本人用Admin
+   自分が直接紹介した方のFBO登録確認
+   確認中 → 登録済
+   ※本人と直接紹介者の関係だけ確認
+===================================================== */
+
+app.post(
+  "/api/member-admin/confirm-member",
+  async (req, res) => {
+
+    try {
+
+      //----------------------------------
+      // Cookie取得
+      //----------------------------------
+
+      const cookieHeader =
+        req.headers.cookie || "";
+
+      const cookies =
+        Object.fromEntries(
+          cookieHeader
+            .split(";")
+            .map(x => x.trim())
+            .filter(Boolean)
+            .map(x => {
+
+              const index =
+                x.indexOf("=");
+
+              if (index === -1) {
+                return [x, ""];
+              }
+
+              return [
+                x.slice(0, index),
+                decodeURIComponent(
+                  x.slice(index + 1)
+                )
+              ];
+
+            })
+        );
+
+      const sessionId =
+        cookies.vsh_member_session;
+
+      //----------------------------------
+      // 本人Adminセッション確認
+      //----------------------------------
+
+      const session =
+        await getMemberAdminSession(
+          sessionId
+        );
+
+      if (!session) {
+
+        return res.status(401).json({
+          success: false,
+          message:
+            "本人確認の有効期限が切れているか、本人確認情報がありません。"
+        });
+
+      }
+
+      //----------------------------------
+      // 確認するFLP番号取得
+      //----------------------------------
+
+      const flp =
+        String(
+          req.body.flp || ""
+        ).trim();
+
+      if (!flp) {
+
+        return res.status(400).json({
+          success: false,
+          message:
+            "FLP番号がありません。"
+        });
+
+      }
+
+      //----------------------------------
+      // 最新管理データ取得
+      //----------------------------------
+
+      const data =
+        await loadAdmin();
+
+      if (!Array.isArray(data.members)) {
+        data.members = [];
+      }
+
+      //----------------------------------
+      // セッションから本人検索
+      //----------------------------------
+
+      const currentMember =
+        data.members.find(
+          member =>
+            member.adminToken &&
+            String(member.adminToken) ===
+              String(session.adminToken)
+        );
+
+      if (!currentMember) {
+
+        return res.status(401).json({
+          success: false,
+          message:
+            "本人情報が見つかりません。"
+        });
+
+      }
+
+      //----------------------------------
+      // 登録済本人のみ利用可能
+      //----------------------------------
+
+      if (
+        currentMember.status !==
+        "登録済"
+      ) {
+
+        return res.status(403).json({
+          success: false,
+          message:
+            "FBO登録確認が完了していません。"
+        });
+
+      }
+
+      //----------------------------------
+      // 対象者検索
+      //----------------------------------
+
+      const targetMember =
+        data.members.find(
+          member =>
+            String(member.flp) ===
+              String(flp)
+        );
+
+      if (!targetMember) {
+
+        return res.status(404).json({
+          success: false,
+          message:
+            "対象の登録者が見つかりません。"
+        });
+
+      }
+
+      //----------------------------------
+      // 本人が直接紹介した方か確認
+      //----------------------------------
+
+      if (
+        String(
+          targetMember.vshIntroducerFLP || ""
+        ) !==
+        String(currentMember.flp)
+      ) {
+
+        return res.status(403).json({
+          success: false,
+          message:
+            "この登録者を確認する権限がありません。"
+        });
+
+      }
+
+      //----------------------------------
+      // 現在の状態確認
+      //----------------------------------
+
+      if (
+        targetMember.status ===
+        "登録済"
+      ) {
+
+        return res.json({
+          success: true,
+          message:
+            "この方はすでに登録済みです。",
+          member: {
+            name:
+              targetMember.name,
+            flp:
+              targetMember.flp,
+            status:
+              targetMember.status
+          }
+        });
+
+      }
+
+      if (
+        targetMember.status !==
+        "確認中"
+      ) {
+
+        return res.status(409).json({
+          success: false,
+          message:
+            "現在の状態では登録確認できません。"
+        });
+
+      }
+
+      //----------------------------------
+      // 確認中 → 登録済
+      //----------------------------------
+
+      targetMember.status =
+        "登録済";
+
+      targetMember.confirmedAt =
+        new Date().toISOString();
+
+      //----------------------------------
+      // 本人専用Adminトークン発行
+      //----------------------------------
+
+      if (!targetMember.adminToken) {
+
+        targetMember.adminToken =
+          createMemberAdminToken();
+
+      }
+
+      //----------------------------------
+      // Supabaseへ永続保存
+      //----------------------------------
+
+      await saveAdmin(data);
+
+      console.log(
+        "本人Admin FBO登録確認:",
+        currentMember.name,
+        "→",
+        targetMember.name,
+        targetMember.flp
+      );
+
+      //----------------------------------
+      // 正常終了
+      //----------------------------------
+
+      return res.json({
+        success: true,
+        message:
+          "FBO登録を確認しました。",
+        member: {
+          name:
+            targetMember.name,
+          flp:
+            targetMember.flp,
+          status:
+            targetMember.status
+        }
+      });
+
+    }
+
+    catch (err) {
+
+      console.error(
+        "本人Admin FBO登録確認エラー:",
+        err
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "FBO登録確認処理でエラーが発生しました。"
+      });
+
+    }
+
+  }
+);
 /* =========================
    本人用Admin
    FLP番号5件保存API
