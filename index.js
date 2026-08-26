@@ -3016,13 +3016,12 @@ app.post("/api/direct-day8", async (req, res) => {
     // LINE共有用の短い案内
     //----------------------------------
 
-    const shareText =
+  const shareText =
 `Vera Sky Harmony（VSH）を
 Day8からあなたへ譲渡します。
 
 下の専用URLを開いて、
-VSH公式LINEとの本人確認を
-行ってください。
+Day8をご覧ください。
 
 ${day8ReceiveUrl}`;
 
