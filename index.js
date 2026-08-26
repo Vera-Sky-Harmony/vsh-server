@@ -3338,8 +3338,11 @@ app.post("/api/use-flp", async (req, res) => {
        譲渡されたVSH
     ================================== */
 
-    if (introducerFLP) {
-
+   if (
+  introducerFLP &&
+  String(introducerFLP) !==
+    String(data.introducerFLP || "")
+) {
       //----------------------------------
       // VSH所有者を検索
       //----------------------------------
