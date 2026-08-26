@@ -5278,6 +5278,244 @@ app.get("/api/test-vsh-chain", async (_req, res) => {
   }
 
 });
+/* =====================================================
+   VSH SNS自動解除シミュレーション
+   テスト専用
+   ※本番データは一切変更しない
+   ※LINEへは一切送信しない
+   ※既存10世代テストには影響しない
+===================================================== */
+
+app.get("/api/test-sns-auto-stop", async (_req, res) => {
+
+  try {
+
+    //----------------------------------
+    // テスト用紹介者
+    // 既FBOを想定
+    //----------------------------------
+
+    const introducer = {
+
+      name:
+        "TEST_EXISTING_FBO",
+
+      flp:
+        "922222222",
+
+      status:
+        "登録済",
+
+      vshActive:
+        true,
+
+      snsActive:
+        true
+
+    };
+
+
+    //----------------------------------
+    // テスト用members
+    // 本番data.membersは使用しない
+    //----------------------------------
+
+    const testMembers = [];
+
+
+    //----------------------------------
+    // 結果保存
+    //----------------------------------
+
+    const results = [];
+
+
+    //----------------------------------
+    // 直接紹介者5人を
+    // 1人ずつ登録済にする
+    //----------------------------------
+
+    for (let i = 1; i <= 5; i++) {
+
+      const member = {
+
+        name:
+          `TEST_DIRECT_${i}`,
+
+        flp:
+          String(
+            930000000 + i
+          ),
+
+        status:
+          "登録済",
+
+        //--------------------------------
+        // この人の直接紹介者
+        //--------------------------------
+
+        vshIntroducerFLP:
+          introducer.flp,
+
+        vshIntroducerName:
+          introducer.name
+
+      };
+
+
+      //----------------------------------
+      // テストmembersへ追加
+      //----------------------------------
+
+      testMembers.push(
+        member
+      );
+
+
+      //----------------------------------
+      // 本番と同じ条件で
+      // 直接紹介の登録済人数を数える
+      //----------------------------------
+
+      const registeredDirectMembers =
+        testMembers.filter(
+          x =>
+            String(
+              x.vshIntroducerFLP || ""
+            ) ===
+              String(introducer.flp) &&
+            x.status === "登録済"
+        );
+
+
+      //----------------------------------
+      // 本番と同じ解除条件
+      //----------------------------------
+
+      if (
+        registeredDirectMembers.length >= 5
+      ) {
+
+        introducer.snsActive =
+          false;
+
+        introducer.snsDeactivatedAt =
+          new Date().toISOString();
+
+      }
+
+
+      //----------------------------------
+      // 各段階を記録
+      //----------------------------------
+
+      results.push({
+
+        registeredCount:
+          registeredDirectMembers.length,
+
+        snsActive:
+          introducer.snsActive,
+
+        result:
+          (
+            i < 5 &&
+            introducer.snsActive === true
+          ) ||
+          (
+            i === 5 &&
+            introducer.snsActive === false
+          )
+            ? "OK"
+            : "ERROR"
+
+      });
+
+    }
+
+
+    //----------------------------------
+    // 全段階確認
+    //----------------------------------
+
+    const allOK =
+      results.every(
+        x =>
+          x.result === "OK"
+      );
+
+
+    //----------------------------------
+    // 正常終了
+    //----------------------------------
+
+    return res.json({
+
+      success:
+        allOK,
+
+      test:
+        "VSH SNS自動解除",
+
+      introducer: {
+
+        name:
+          introducer.name,
+
+        flp:
+          introducer.flp
+
+      },
+
+      databaseSave:
+        false,
+
+      lineSend:
+        false,
+
+      initialSnsActive:
+        true,
+
+      finalSnsActive:
+        introducer.snsActive,
+
+      registeredDirectMembers:
+        testMembers.length,
+
+      result:
+        allOK
+          ? "5人目でSNS自動解除・正常"
+          : "SNS自動解除に異常あり",
+
+      details:
+        results
+
+    });
+
+  }
+
+
+  catch (err) {
+
+    console.error(
+      "VSH SNS自動解除テストエラー:",
+      err
+    );
+
+
+    return res.status(500).json({
+
+      success:
+        false,
+
+      message:
+        "SNS自動解除テストでエラーが発生しました。"
+
+    });
+
+  }
+
+});
 app.listen(Number(PORT || 10000), () => {
   console.log("=================================");
   console.log("VSH Stable Version Running");
