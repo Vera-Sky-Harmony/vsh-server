@@ -449,13 +449,13 @@ async function loadMembers() {
         // FBO登録者だけ表示
         //--------------------------------
 
-        const members =
-            sourceMembers.filter(
-                member =>
-                    member.name &&
-                    member.flp
-            );
-
+       const members =
+    sourceMembers.filter(
+        member =>
+            member.name &&
+            member.flp &&
+            member.directDay8 !== true
+    );
 
         document
         .getElementById("memberCount")
