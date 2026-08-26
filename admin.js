@@ -889,7 +889,7 @@ Day8から直接譲渡しますか？`
 
 
         //----------------------------------------
-        // LINE共有用文章確認
+        // Day8案内確認
         //----------------------------------------
 
         if (!result.shareText) {
@@ -903,7 +903,6 @@ Day8から直接譲渡しますか？`
         }
 
 
-       
         //----------------------------------------
         // 入力欄クリア
         //----------------------------------------
@@ -921,73 +920,414 @@ Day8から直接譲渡しますか？`
         .value = "";
 
 
-       
+        //----------------------------------------
+        // Day8コピー画面を作成
+        //----------------------------------------
+
+        const overlay =
+            document.createElement(
+                "div"
+            );
+
+        overlay.style.position =
+            "fixed";
+
+        overlay.style.top =
+            "0";
+
+        overlay.style.left =
+            "0";
+
+        overlay.style.width =
+            "100%";
+
+        overlay.style.height =
+            "100%";
+
+        overlay.style.background =
+            "rgba(0,0,0,0.55)";
+
+        overlay.style.zIndex =
+            "99999";
+
+        overlay.style.display =
+            "flex";
+
+        overlay.style.alignItems =
+            "center";
+
+        overlay.style.justifyContent =
+            "center";
+
+        overlay.style.padding =
+            "20px";
+
+        overlay.style.boxSizing =
+            "border-box";
 
 
         //----------------------------------------
-// Day8案内＋専用URLをコピー
-// コピー後LINEを開く
-//----------------------------------------
+        // 白いカード
+        //----------------------------------------
 
-try {
+        const card =
+            document.createElement(
+                "div"
+            );
 
-    await navigator.clipboard.writeText(
-        result.shareText
-    );
+        card.style.background =
+            "#ffffff";
 
-    alert(
-`Day8の案内と専用URLをコピーしました。
+        card.style.width =
+            "100%";
 
-これからLINEを開きます。
+        card.style.maxWidth =
+            "600px";
 
-① 送信するFBOのトークを開く
-② メッセージ入力欄を長押し
-③「ペースト」
-④ 送信してください。`
-    );
+        card.style.maxHeight =
+            "85vh";
 
-    //----------------------------------------
-    // LINEを開く
-    //----------------------------------------
+        card.style.overflowY =
+            "auto";
 
-    window.location.href =
-        "https://line.me/R/";
+        card.style.borderRadius =
+            "16px";
 
-}
+        card.style.padding =
+            "20px";
 
-catch (err) {
+        card.style.boxSizing =
+            "border-box";
 
-    console.error(
-        "Day8コピーエラー:",
-        err
-    );
 
-    //----------------------------------------
-    // iPhone等で自動コピーできない場合
-    //----------------------------------------
+        //----------------------------------------
+        // 見出し
+        //----------------------------------------
 
-    const manualCopy =
-        prompt(
-            "Day8案内を手動でコピーしてください。",
-            result.shareText
+        const title =
+            document.createElement(
+                "h2"
+            );
+
+        title.textContent =
+            "Day8直接譲渡";
+
+        title.style.marginTop =
+            "0";
+
+        title.style.textAlign =
+            "center";
+
+
+        //----------------------------------------
+        // 説明
+        //----------------------------------------
+
+        const guide =
+            document.createElement(
+                "p"
+            );
+
+        guide.textContent =
+            "下のDay8案内をコピーして、LINEで送信するFBOへ送ってください。";
+
+
+        //----------------------------------------
+        // コピーする文章
+        //----------------------------------------
+
+        const textArea =
+            document.createElement(
+                "textarea"
+            );
+
+        textArea.value =
+            result.shareText;
+
+        textArea.readOnly =
+            true;
+
+        textArea.style.width =
+            "100%";
+
+        textArea.style.height =
+            "220px";
+
+        textArea.style.fontSize =
+            "16px";
+
+        textArea.style.lineHeight =
+            "1.6";
+
+        textArea.style.boxSizing =
+            "border-box";
+
+        textArea.style.padding =
+            "12px";
+
+        textArea.style.marginBottom =
+            "15px";
+
+
+        //----------------------------------------
+        // コピーボタン
+        //----------------------------------------
+
+        const copyButton =
+            document.createElement(
+                "button"
+            );
+
+        copyButton.textContent =
+            "Day8案内をコピー";
+
+        copyButton.style.width =
+            "100%";
+
+        copyButton.style.padding =
+            "16px";
+
+        copyButton.style.fontSize =
+            "18px";
+
+        copyButton.style.fontWeight =
+            "bold";
+
+        copyButton.style.marginBottom =
+            "12px";
+
+
+        //----------------------------------------
+        // LINEを開くボタン
+        //----------------------------------------
+
+        const lineButton =
+            document.createElement(
+                "button"
+            );
+
+        lineButton.textContent =
+            "LINEを開く";
+
+        lineButton.style.width =
+            "100%";
+
+        lineButton.style.padding =
+            "16px";
+
+        lineButton.style.fontSize =
+            "18px";
+
+        lineButton.style.fontWeight =
+            "bold";
+
+        lineButton.style.marginBottom =
+            "12px";
+
+
+        //----------------------------------------
+        // 閉じるボタン
+        //----------------------------------------
+
+        const closeButton =
+            document.createElement(
+                "button"
+            );
+
+        closeButton.textContent =
+            "閉じる";
+
+        closeButton.style.width =
+            "100%";
+
+        closeButton.style.padding =
+            "14px";
+
+        closeButton.style.fontSize =
+            "16px";
+
+
+        //----------------------------------------
+        // コピーボタン処理
+        //----------------------------------------
+
+        copyButton.addEventListener(
+            "click",
+            async () => {
+
+                //--------------------------------
+                // まず新方式でコピー
+                //--------------------------------
+
+                try {
+
+                    await navigator
+                        .clipboard
+                        .writeText(
+                            result.shareText
+                        );
+
+                    alert(
+                        "Day8案内をコピーしました。"
+                    );
+
+                    return;
+
+                }
+
+                catch (err) {
+
+                    console.log(
+                        "Clipboard API失敗:",
+                        err
+                    );
+
+                }
+
+
+                //--------------------------------
+                // iPhone Safari用
+                // textareaを選択して旧方式コピー
+                //--------------------------------
+
+                try {
+
+                    textArea.readOnly =
+                        false;
+
+                    textArea.focus();
+
+                    textArea.select();
+
+                    textArea.setSelectionRange(
+                        0,
+                        textArea.value.length
+                    );
+
+                    const copied =
+                        document.execCommand(
+                            "copy"
+                        );
+
+                    textArea.readOnly =
+                        true;
+
+
+                    if (copied) {
+
+                        alert(
+                            "Day8案内をコピーしました。"
+                        );
+
+                        return;
+
+                    }
+
+                }
+
+                catch (err) {
+
+                    console.error(
+                        "旧コピー方式エラー:",
+                        err
+                    );
+
+                }
+
+
+                //--------------------------------
+                // どちらも失敗した場合
+                //--------------------------------
+
+                textArea.readOnly =
+                    false;
+
+                textArea.focus();
+
+                textArea.select();
+
+                textArea.setSelectionRange(
+                    0,
+                    textArea.value.length
+                );
+
+                alert(
+`自動コピーできませんでした。
+
+文章を選択しています。
+
+表示された文章を
+「コピー」してください。`
+                );
+
+            }
         );
 
-    if (manualCopy !== null) {
 
-        alert(
-`コピー後、LINEを開きます。
+        //----------------------------------------
+        // LINEを開く
+        //----------------------------------------
 
-送信するFBOのトークを開き、
-メッセージ入力欄へ貼り付けて
-送信してください。`
+        lineButton.addEventListener(
+            "click",
+            () => {
+
+                window.location.href =
+                    "https://line.me/R/";
+
+            }
         );
 
-        window.location.href =
-            "https://line.me/R/";
 
-    }
+        //----------------------------------------
+        // 閉じる
+        //----------------------------------------
 
-}
+        closeButton.addEventListener(
+            "click",
+            () => {
+
+                overlay.remove();
+
+            }
+        );
+
+
+        //----------------------------------------
+        // 画面へ配置
+        //----------------------------------------
+
+        card.appendChild(
+            title
+        );
+
+        card.appendChild(
+            guide
+        );
+
+        card.appendChild(
+            textArea
+        );
+
+        card.appendChild(
+            copyButton
+        );
+
+        card.appendChild(
+            lineButton
+        );
+
+        card.appendChild(
+            closeButton
+        );
+
+        overlay.appendChild(
+            card
+        );
+
+        document.body.appendChild(
+            overlay
+        );
 
     }
 
