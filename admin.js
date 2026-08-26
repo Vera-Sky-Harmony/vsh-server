@@ -947,33 +947,66 @@ Day8から直接譲渡しますか？`
 
         //----------------------------------------
 // Day8案内＋専用URLをコピー
+// コピー後LINEを開く
 //----------------------------------------
 
 try {
 
-    await navigator
-        .clipboard
-        .writeText(
-            result.shareText
-        );
+    await navigator.clipboard.writeText(
+        result.shareText
+    );
 
     alert(
 `Day8の案内と専用URLをコピーしました。
 
-① LINEを開く
-② 送信するFBOのトークを開く
-③ メッセージ入力欄に貼り付け
+これからLINEを開きます。
+
+① 送信するFBOのトークを開く
+② メッセージ入力欄を長押し
+③「ペースト」
 ④ 送信してください。`
     );
 
+    //----------------------------------------
+    // LINEを開く
+    //----------------------------------------
+
+    window.location.href =
+        "https://line.me/R/";
+
 }
 
-catch {
+catch (err) {
 
-    prompt(
-        "下記のDay8案内をコピーしてください。",
-        result.shareText
+    console.error(
+        "Day8コピーエラー:",
+        err
     );
+
+    //----------------------------------------
+    // iPhone等で自動コピーできない場合
+    //----------------------------------------
+
+    const manualCopy =
+        prompt(
+            "Day8案内を手動でコピーしてください。",
+            result.shareText
+        );
+
+    if (manualCopy !== null) {
+
+        alert(
+`コピー後、LINEを開きます。
+
+送信するFBOのトークを開き、
+メッセージ入力欄へ貼り付けて
+送信してください。`
+        );
+
+        window.location.href =
+            "https://line.me/R/";
+
+    }
 
 }
 
