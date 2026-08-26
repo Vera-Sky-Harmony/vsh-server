@@ -3056,7 +3056,11 @@ app.get("/api/next-flp", async (req, res) => {
        譲渡されたVSHから来た場合
     ================================== */
 
-    if (introducerFLP) {
+ if (
+  introducerFLP &&
+  String(introducerFLP) !==
+    String(data.introducerFLP || "")
+) {
 
       const introducer =
         data.members.find(
