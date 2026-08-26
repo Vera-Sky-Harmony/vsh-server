@@ -2084,20 +2084,39 @@ app.post(
 /* =====================================================
    VSH正式紹介入口
    WEB・YouTube・SNS共通入口
-   紹介者FLPを識別してDay0へ接続
-   ※ツリー管理は行わない
+
+   ルートID ＋ 一般FBO 共通対応
+
+   URL：
+   /vsh/invite/紹介者FLP
+
+   ※VSH側ではツリー管理を行わない
 ===================================================== */
 
-app.get("/vsh/invite/:flp", async (req, res) => {
 app.get("/vsh/invite/:flp", async (req, res) => {
 
   try {
 
+    //----------------------------------
+    // URLから紹介者FLP取得
+    //----------------------------------
+
     const introducerFLP =
-      String(req.params.flp || "").trim();
+      String(
+        req.params.flp || ""
+      ).trim();
+
+    if (!introducerFLP) {
+
+      return res.status(400).send(
+        "紹介者FLP番号がありません。"
+      );
+
+    }
+
 
     //----------------------------------
-    // 管理データ取得
+    // 最新管理データ取得
     //----------------------------------
 
     const data =
@@ -2107,9 +2126,97 @@ app.get("/vsh/invite/:flp", async (req, res) => {
       data.members = [];
     }
 
-    //----------------------------------
-    // このVSHの紹介者を確認
-    //----------------------------------
+    if (!Array.isArray(data.flpList)) {
+      data.flpList = [];
+    }
+
+
+    /* ==================================
+       ケース1
+       ルートIDのVSH
+    ================================== */
+
+    if (
+      String(data.introducerFLP || "") ===
+      String(introducerFLP)
+    ) {
+
+      //----------------------------------
+      // ルートSNS連携状態確認
+      //----------------------------------
+
+      if (data.rootSnsActive !== true) {
+
+        return res.status(403).send(
+          "このVSHは現在利用できません。"
+        );
+
+      }
+
+
+      //----------------------------------
+      // ルート紹介用FLP番号確認
+      // 未使用番号があることを確認
+      //----------------------------------
+
+      const availableRootFLP =
+        data.flpList.filter(
+          item =>
+            item &&
+            item.status === "未使用" &&
+            item.flp
+        );
+
+      if (availableRootFLP.length === 0) {
+
+        return res.status(403).send(
+          "現在利用できる紹介用FLP番号がありません。"
+        );
+
+      }
+
+
+      //----------------------------------
+      // この端末に
+      // 「ルートVSHから来た」ことを保存
+      //----------------------------------
+
+      res.cookie(
+        "vsh_introducer_flp",
+        introducerFLP,
+        {
+          httpOnly: true,
+          secure: true,
+          sameSite: "lax",
+
+          maxAge:
+            30 * 24 * 60 * 60 * 1000
+        }
+      );
+
+
+      console.log(
+        "VSH正式紹介入口・ルート:",
+        data.introducerName,
+        data.introducerFLP
+      );
+
+
+      //----------------------------------
+      // Day0へ
+      //----------------------------------
+
+      return res.redirect(
+        "/pages/day0.html"
+      );
+
+    }
+
+
+    /* ==================================
+       ケース2
+       第一世代以降の一般FBO
+    ================================== */
 
     const introducer =
       data.members.find(
@@ -2117,6 +2224,7 @@ app.get("/vsh/invite/:flp", async (req, res) => {
           String(member.flp) ===
           String(introducerFLP)
       );
+
 
     if (!introducer) {
 
@@ -2126,15 +2234,12 @@ app.get("/vsh/invite/:flp", async (req, res) => {
 
     }
 
+
     //----------------------------------
-    // VSH利用可能状態確認
+    // FBO登録済み確認
     //----------------------------------
 
-    if (
-      introducer.status !== "登録済" ||
-      introducer.vshActive !== true ||
-      introducer.snsActive !== true
-    ) {
+    if (introducer.status !== "登録済") {
 
       return res.status(403).send(
         "このVSHは現在利用できません。"
@@ -2142,12 +2247,41 @@ app.get("/vsh/invite/:flp", async (req, res) => {
 
     }
 
+
     //----------------------------------
-    // 紹介用FLP番号5件確認
+    // VSH開始状態確認
+    //----------------------------------
+
+    if (introducer.vshActive !== true) {
+
+      return res.status(403).send(
+        "このVSHはまだ紹介活動を開始していません。"
+      );
+
+    }
+
+
+    //----------------------------------
+    // SNS連携状態確認
+    //----------------------------------
+
+    if (introducer.snsActive !== true) {
+
+      return res.status(403).send(
+        "このVSHのSNS連携は現在停止しています。"
+      );
+
+    }
+
+
+    //----------------------------------
+    // 本人の紹介用FLP番号5件確認
     //----------------------------------
 
     if (
-      !Array.isArray(introducer.flpNumbers) ||
+      !Array.isArray(
+        introducer.flpNumbers
+      ) ||
       introducer.flpNumbers.length !== 5
     ) {
 
@@ -2157,8 +2291,9 @@ app.get("/vsh/invite/:flp", async (req, res) => {
 
     }
 
+
     //----------------------------------
-    // このスマホに
+    // この端末に
     // 「誰のVSHから来たか」を保存
     //----------------------------------
 
@@ -2175,11 +2310,13 @@ app.get("/vsh/invite/:flp", async (req, res) => {
       }
     );
 
+
     console.log(
-      "VSH紹介入口:",
+      "VSH正式紹介入口・一般FBO:",
       introducer.name,
       introducer.flp
     );
+
 
     //----------------------------------
     // Day0へ
@@ -2194,7 +2331,7 @@ app.get("/vsh/invite/:flp", async (req, res) => {
   catch (err) {
 
     console.error(
-      "VSH紹介入口エラー:",
+      "VSH正式紹介入口エラー:",
       err
     );
 
