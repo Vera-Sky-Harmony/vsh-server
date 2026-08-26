@@ -959,11 +959,36 @@ Day8から直接譲渡しますか？`
 
 
         //----------------------------------------
-        // LINE共有画面を開く
-        //----------------------------------------
+// Day8案内＋専用URLをコピー
+//----------------------------------------
 
-        window.location.href =
-            lineUrl;
+try {
+
+    await navigator
+        .clipboard
+        .writeText(
+            result.shareText
+        );
+
+    alert(
+`Day8の案内と専用URLをコピーしました。
+
+① LINEを開く
+② 送信するFBOのトークを開く
+③ メッセージ入力欄に貼り付け
+④ 送信してください。`
+    );
+
+}
+
+catch {
+
+    prompt(
+        "下記のDay8案内をコピーしてください。",
+        result.shareText
+    );
+
+}
 
     }
 
