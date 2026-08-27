@@ -11496,7 +11496,366 @@ app.get(
   }
 );
 
+/* =====================================================
+   VSH 第2段階移行シミュレーション
+   テスト専用
 
+   確認内容
+   ① 1～4人目まではSNS自動支援継続
+   ② 5人目でSNS自動支援解除
+   ③ 同時にFace to Faceを有効化
+   ④ 使用したFLP番号5件を履歴へ保存
+   ⑤ 現在のFLP番号を空にする
+   ⑥ 次の5件を入力可能な状態にする
+
+   ※本番データは一切変更しない
+   ※LINEへは一切送信しない
+===================================================== */
+
+app.get(
+  "/api/test-vsh-stage2",
+  async (_req, res) => {
+
+    try {
+
+      //----------------------------------
+      // テスト用紹介者
+      //----------------------------------
+
+      const introducer = {
+
+        name:
+          "TEST_STAGE2_FBO",
+
+        flp:
+          "944444444",
+
+        status:
+          "登録済",
+
+        vshActive:
+          true,
+
+        snsActive:
+          true,
+
+        faceToFaceActive:
+          false,
+
+        flpNumbers: [
+          "955555551",
+          "955555552",
+          "955555553",
+          "955555554",
+          "955555555"
+        ],
+
+        flpNumbersRegisteredAt:
+          new Date().toISOString(),
+
+        flpHistory:
+          []
+
+      };
+
+
+      //----------------------------------
+      // テスト用登録者
+      //----------------------------------
+
+      const testMembers =
+        [];
+
+
+      //----------------------------------
+      // 各段階の結果
+      //----------------------------------
+
+      const results =
+        [];
+
+
+      //----------------------------------
+      // 5人を1人ずつ登録済にする
+      //----------------------------------
+
+      for (
+        let i = 1;
+        i <= 5;
+        i++
+      ) {
+
+        const member = {
+
+          name:
+            `TEST_STAGE2_MEMBER_${i}`,
+
+          flp:
+            introducer.flpNumbers[i - 1],
+
+          status:
+            "登録済",
+
+          vshIntroducerFLP:
+            introducer.flp,
+
+          vshIntroducerName:
+            introducer.name
+
+        };
+
+
+        testMembers.push(
+          member
+        );
+
+
+        //----------------------------------
+        // 直接紹介した登録済人数
+        //----------------------------------
+
+        const registeredDirectMembers =
+          testMembers.filter(
+            x =>
+              String(
+                x.vshIntroducerFLP || ""
+              ) ===
+                String(introducer.flp) &&
+              x.status === "登録済"
+          );
+
+
+        //----------------------------------
+        // 5人達成
+        // 第1段階 → 第2段階
+        //----------------------------------
+
+        if (
+          registeredDirectMembers.length >= 5 &&
+          introducer.faceToFaceActive !== true
+        ) {
+
+          //--------------------------------
+          // SNS自動支援解除
+          //--------------------------------
+
+          introducer.snsActive =
+            false;
+
+          introducer.snsDeactivatedAt =
+            new Date().toISOString();
+
+
+          //--------------------------------
+          // Face to Face開始
+          //--------------------------------
+
+          introducer.faceToFaceActive =
+            true;
+
+          introducer.faceToFaceActivatedAt =
+            new Date().toISOString();
+
+
+          //--------------------------------
+          // 使用した5件を履歴へ保存
+          //--------------------------------
+
+          if (
+            !Array.isArray(
+              introducer.flpHistory
+            )
+          ) {
+
+            introducer.flpHistory =
+              [];
+
+          }
+
+
+          const currentFLPNumbers =
+            Array.isArray(
+              introducer.flpNumbers
+            )
+              ? [
+                  ...introducer.flpNumbers
+                ]
+              : [];
+
+
+          if (
+            currentFLPNumbers.length > 0
+          ) {
+
+            introducer.flpHistory.push({
+
+              numbers:
+                currentFLPNumbers,
+
+              completedAt:
+                new Date().toISOString()
+
+            });
+
+          }
+
+
+          //--------------------------------
+          // 現在の5件を空にする
+          //--------------------------------
+
+          introducer.flpNumbers =
+            [];
+
+          delete introducer
+            .flpNumbersRegisteredAt;
+
+        }
+
+
+        //----------------------------------
+        // 各段階を記録
+        //----------------------------------
+
+        results.push({
+
+          registeredCount:
+            registeredDirectMembers.length,
+
+          snsActive:
+            introducer.snsActive,
+
+          faceToFaceActive:
+            introducer.faceToFaceActive,
+
+          currentFLPCount:
+            Array.isArray(
+              introducer.flpNumbers
+            )
+              ? introducer.flpNumbers.length
+              : 0,
+
+          historyCount:
+            Array.isArray(
+              introducer.flpHistory
+            )
+              ? introducer.flpHistory.length
+              : 0
+
+        });
+
+      }
+
+
+      //----------------------------------
+      // 最終確認
+      //----------------------------------
+
+      const historyOK =
+        Array.isArray(
+          introducer.flpHistory
+        ) &&
+        introducer.flpHistory.length === 1 &&
+        Array.isArray(
+          introducer.flpHistory[0].numbers
+        ) &&
+        introducer
+          .flpHistory[0]
+          .numbers.length === 5;
+
+
+      const currentFLPOK =
+        Array.isArray(
+          introducer.flpNumbers
+        ) &&
+        introducer.flpNumbers.length === 0;
+
+
+      const stage2OK =
+        introducer.snsActive === false &&
+        introducer.faceToFaceActive === true &&
+        historyOK === true &&
+        currentFLPOK === true;
+
+
+      //----------------------------------
+      // 結果を返す
+      //----------------------------------
+
+      return res.json({
+
+        success:
+          stage2OK,
+
+        test:
+          "VSH 第2段階自動移行",
+
+        databaseSave:
+          false,
+
+        lineSend:
+          false,
+
+        registeredDirectMembers:
+          testMembers.length,
+
+        snsActive:
+          introducer.snsActive,
+
+        faceToFaceActive:
+          introducer.faceToFaceActive,
+
+        flpHistoryCount:
+          introducer.flpHistory.length,
+
+        savedHistoryFLPs:
+          introducer.flpHistory.length > 0
+            ? introducer
+                .flpHistory[0]
+                .numbers
+            : [],
+
+        currentFLPNumbers:
+          introducer.flpNumbers,
+
+        nextFiveInputReady:
+          currentFLPOK,
+
+        result:
+          stage2OK
+            ? "5人達成・第2段階移行正常"
+            : "第2段階移行に異常あり",
+
+        details:
+          results
+
+      });
+
+    }
+
+
+    catch (err) {
+
+      console.error(
+        "VSH 第2段階移行テストエラー:",
+        err
+      );
+
+
+      return res.status(500).json({
+
+        success:
+          false,
+
+        message:
+          "第2段階移行テストでエラーが発生しました。"
+
+      });
+
+    }
+
+  }
+);
 app.listen(
   Number(PORT || 10000),
   () => {
