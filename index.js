@@ -740,10 +740,23 @@ console.log(
     flpNumbers:
       Array.isArray(member.flpNumbers)
         ? member.flpNumbers
-        : []
+        : [],
+
+    //--------------------------------
+    // VSH活動段階
+    //--------------------------------
+
+    faceToFaceActive:
+      member.faceToFaceActive === true,
+
+    //--------------------------------
+    // SNS自動支援状態
+    //--------------------------------
+
+    snsActive:
+      member.snsActive === true
   }
 });
-
   }
 
   catch (err) {
