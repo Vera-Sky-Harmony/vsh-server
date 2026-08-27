@@ -74,30 +74,31 @@ window.addEventListener(
 
       currentMember =
         result.member;
-//----------------------------------
-// 第2段階
-// VSHともだち追加表示制御
-//----------------------------------
 
-const friendAddCard =
-  document.getElementById(
-    "friendAddCard"
-  );
+      //----------------------------------
+      // 第2段階
+      // VSHともだち追加表示制御
+      //----------------------------------
 
-if (
-  friendAddCard &&
-  currentMember.faceToFaceActive === true
-) {
+      const friendAddCard =
+        document.getElementById(
+          "friendAddCard"
+        );
 
-  friendAddCard.style.display =
-    "block";
+      if (
+        friendAddCard &&
+        currentMember.faceToFaceActive === true
+      ) {
 
-} else if (friendAddCard) {
+        friendAddCard.style.display =
+          "block";
 
-  friendAddCard.style.display =
-    "none";
+      } else if (friendAddCard) {
 
-}
+        friendAddCard.style.display =
+          "none";
+
+      }
 
       //----------------------------------
       // 本人情報表示
@@ -734,6 +735,71 @@ updateUsedFLPDisplay(members);
 
               await loadIntroducedMembers();
 
+
+              //----------------------------------
+              // 本人情報を再取得
+              // 5人達成による第2段階移行を反映
+              //----------------------------------
+
+              try {
+
+                const meResponse =
+                  await fetch(
+                    "/api/member-admin/me",
+                    {
+                      method: "GET",
+                      credentials: "same-origin"
+                    }
+                  );
+
+                const meResult =
+                  await meResponse.json();
+
+                if (
+                  meResponse.ok &&
+                  meResult.success &&
+                  meResult.member
+                ) {
+
+                  //----------------------------------
+                  // 最新の本人情報へ更新
+                  //----------------------------------
+
+                  currentMember =
+                    meResult.member;
+
+
+                  //----------------------------------
+                  // VSHともだち追加表示制御
+                  //----------------------------------
+
+                  const friendAddCard =
+                    document.getElementById(
+                      "friendAddCard"
+                    );
+
+                  if (friendAddCard) {
+
+                    friendAddCard.style.display =
+                      currentMember.faceToFaceActive === true
+                        ? "block"
+                        : "none";
+
+                  }
+
+                }
+
+              }
+
+              catch (err) {
+
+                console.error(
+                  "第2段階状態再取得エラー:",
+                  err
+                );
+
+              }
+
             }
 
             catch (err) {
@@ -850,6 +916,7 @@ function updateUsedFLPDisplay(members) {
     }
   }
 }
+
 // ========================================
 // 第2段階
 // VSHともだち追加
