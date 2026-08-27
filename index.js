@@ -8972,10 +8972,7 @@ app.get("/api/next-flp", async (req, res) => {
 
           })
       );
-    const cookies =
-      Object.fromEntries(
-        ...
-      );
+   
     /* ==================================
        すでにVSH管理データにいる場合
     ================================== */
