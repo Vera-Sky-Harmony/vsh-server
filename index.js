@@ -3219,24 +3219,26 @@ app.get("/api/next-flp", async (req, res) => {
 
       }
 
-      //----------------------------------
-      // VSH利用可能状態確認
-      //----------------------------------
+     //----------------------------------
+// VSH紹介利用状態確認
+//----------------------------------
 
-      if (
-        introducer.status !== "登録済" ||
-        introducer.vshActive !== true ||
-        introducer.snsActive !== true
-      ) {
+if (
+  introducer.status !== "登録済" ||
+  introducer.vshActive !== true ||
+  (
+    introducer.snsActive !== true &&
+    introducer.faceToFaceActive !== true
+  )
+) {
 
-        return res.status(403).json({
-          success: false,
-          message:
-            "このVSHは現在利用できません。"
-        });
+  return res.status(403).json({
+    success: false,
+    message:
+      "このVSHは現在紹介活動を利用できません。"
+  });
 
-      }
-
+}
       //----------------------------------
       // 紹介者本人の5件確認
       //----------------------------------
