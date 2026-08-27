@@ -5041,24 +5041,27 @@ app.post("/api/register", async (req, res) => {
 
       }
 
-      //----------------------------------
-      // VSH利用状態確認
-      //----------------------------------
+   
+     //----------------------------------
+// VSH紹介利用状態確認
+//----------------------------------
 
-      if (
-        introducer.status !== "登録済" ||
-        introducer.vshActive !== true ||
-        introducer.snsActive !== true
-      ) {
+if (
+  introducer.status !== "登録済" ||
+  introducer.vshActive !== true ||
+  (
+    introducer.snsActive !== true &&
+    introducer.faceToFaceActive !== true
+  )
+) {
 
-        return res.status(403).json({
-          success: false,
-          message:
-            "このVSHは現在利用できません。"
-        });
+  return res.status(403).json({
+    success: false,
+    message:
+      "このVSHは現在紹介活動を利用できません。"
+  });
 
-      }
-
+}
       //----------------------------------
       // この紹介者の5件か確認
       //----------------------------------
