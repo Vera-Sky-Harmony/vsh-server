@@ -2259,18 +2259,23 @@ app.get("/vsh/invite/:flp", async (req, res) => {
       String(introducerFLP)
     ) {
 
-      //----------------------------------
-      // ルートSNS連携状態確認
-      //----------------------------------
+    //----------------------------------
+// VSH紹介利用状態確認
+//
+// 第1段階：SNS自動支援
+// 第2段階：Face to Face＋VSH
+//----------------------------------
 
-      if (data.rootSnsActive !== true) {
+if (
+  introducer.snsActive !== true &&
+  introducer.faceToFaceActive !== true
+) {
 
-        return res.status(403).send(
-          "このVSHは現在利用できません。"
-        );
+  return res.status(403).send(
+    "このVSHは現在紹介活動を利用できません。"
+  );
 
-      }
-
+}
 
       //----------------------------------
       // ルート紹介用FLP番号確認
