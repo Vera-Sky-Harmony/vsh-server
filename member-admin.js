@@ -74,6 +74,30 @@ window.addEventListener(
 
       currentMember =
         result.member;
+//----------------------------------
+// 第2段階
+// VSHともだち追加表示制御
+//----------------------------------
+
+const friendAddCard =
+  document.getElementById(
+    "friendAddCard"
+  );
+
+if (
+  friendAddCard &&
+  currentMember.faceToFaceActive === true
+) {
+
+  friendAddCard.style.display =
+    "block";
+
+} else if (friendAddCard) {
+
+  friendAddCard.style.display =
+    "none";
+
+}
 
       //----------------------------------
       // 本人情報表示
