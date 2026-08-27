@@ -850,3 +850,49 @@ function updateUsedFLPDisplay(members) {
     }
   }
 }
+// ========================================
+// 第2段階
+// VSHともだち追加
+// ========================================
+
+const friendAddButton =
+  document.getElementById(
+    "friendAddButton"
+  );
+
+if (friendAddButton) {
+
+  friendAddButton.addEventListener(
+    "click",
+    () => {
+
+      //----------------------------------
+      // 本人情報確認
+      //----------------------------------
+
+      if (
+        !currentMember ||
+        !currentMember.flp
+      ) {
+
+        alert(
+          "本人情報を確認できません。"
+        );
+
+        return;
+      }
+
+
+      //----------------------------------
+      // 本人専用VSH紹介入口へ進む
+      //----------------------------------
+
+      window.location.href =
+        `/vsh/invite/${encodeURIComponent(
+          currentMember.flp
+        )}`;
+
+    }
+  );
+
+}
