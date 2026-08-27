@@ -1205,8 +1205,9 @@ app.post(
             x.status === "登録済"
         );
 
-     if (
-  registeredDirectMembers.length >= 5
+   if (
+  registeredDirectMembers.length >= 5 &&
+  introducer.faceToFaceActive !== true
 ) {
 
   //----------------------------------
