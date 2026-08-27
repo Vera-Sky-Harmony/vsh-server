@@ -1754,20 +1754,11 @@ member.flpNumbersRegisteredAt =
 
 
 //----------------------------------
-// VSH・SNS連携開始状態
-// 5件登録完了を開始条件とする
+// VSH活動状態
 //----------------------------------
 
 member.vshActive = true;
 
-member.snsActive = true;
-
-//----------------------------------
-// 第1段階から開始
-// 5人達成後に true へ変更する
-//----------------------------------
-
-member.faceToFaceActive = false;
 
 //----------------------------------
 // 使用済みFLP番号履歴
@@ -1778,9 +1769,51 @@ if (!Array.isArray(member.flpHistory)) {
   member.flpHistory = [];
 }
 
-member.snsActivatedAt =
-  new Date().toISOString();
 
+//----------------------------------
+// 初回5件か、第2段階以降かを判定
+//----------------------------------
+
+if (member.faceToFaceActive === true) {
+
+  //--------------------------------
+  // 第2段階
+  // Face to Face活動を継続
+  // SNS自動支援は再開しない
+  //--------------------------------
+
+  member.snsActive =
+    false;
+
+  console.log(
+    "第2段階・新しいFLP番号5件登録:",
+    member.name,
+    member.flp
+  );
+
+} else {
+
+  //--------------------------------
+  // 第1段階
+  // 最初の5件なのでSNS自動支援開始
+  //--------------------------------
+
+  member.faceToFaceActive =
+    false;
+
+  member.snsActive =
+    true;
+
+  member.snsActivatedAt =
+    new Date().toISOString();
+
+  console.log(
+    "第1段階・VSH・SNS連携開始:",
+    member.name,
+    member.flp
+  );
+
+}
 
 //----------------------------------
 // Supabaseへ永続保存
