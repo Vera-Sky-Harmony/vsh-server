@@ -11856,6 +11856,411 @@ app.get(
 
   }
 );
+// =====================================================
+// VSH 第2段階 実画面確認ページ
+// テスト専用
+//
+// ・本番データ変更なし
+// ・データベース保存なし
+// ・LINE送信なし
+// ・第2段階の画面表示だけを確認
+// =====================================================
+
+app.get(
+  "/test-member-admin-stage2",
+  (_req, res) => {
+
+    res.send(`
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0">
+
+<title>VSH 第2段階テスト</title>
+
+<style>
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f4f6f8;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  color: #333;
+  line-height: 1.7;
+}
+
+.container {
+  max-width: 650px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.header {
+  background: #003366;
+  color: white;
+  padding: 22px 15px;
+  border-radius: 12px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 25px;
+}
+
+.header p {
+  margin: 8px 0 0;
+  font-size: 15px;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.08);
+}
+
+.card h2 {
+  margin-top: 0;
+  color: #003366;
+  font-size: 21px;
+  border-bottom:
+    2px solid #003366;
+  padding-bottom: 8px;
+}
+
+.infoRow {
+  margin: 15px 0;
+}
+
+.label {
+  font-size: 14px;
+  color: #666;
+}
+
+.value {
+  font-size: 19px;
+  font-weight: bold;
+  color: #222;
+}
+
+.flpRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.number {
+  width: 32px;
+  font-weight: bold;
+  color: #003366;
+  font-size: 18px;
+}
+
+.flpInput {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #bbb;
+  border-radius: 8px;
+  font-size: 18px;
+}
+
+.button {
+  display: block;
+  width: 100%;
+  padding: 15px;
+  margin-top: 22px;
+  border: none;
+  border-radius: 9px;
+  background: #06c755;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.statusBox {
+  background: #eef7ff;
+  padding: 18px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.statusCount {
+  font-size: 28px;
+  font-weight: bold;
+  color: #003366;
+}
+
+.notice {
+  font-size: 14px;
+  color: #666;
+  margin-top: 15px;
+}
+
+.testNotice {
+  background: #fff8e5;
+  border: 2px solid #b26a00;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-weight: bold;
+  color: #8a5200;
+}
+
+.footer {
+  text-align: center;
+  color: #777;
+  font-size: 13px;
+  padding: 10px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="testNotice">
+    第2段階・表示確認専用テスト<br>
+    本番データは変更されません
+  </div>
+
+
+  <div class="header">
+
+    <h1>
+      Vera Sky Harmony
+    </h1>
+
+    <p>
+      FBO管理画面
+    </p>
+
+  </div>
+
+
+  <div class="card">
+
+    <h2>
+      あなたの情報
+    </h2>
+
+    <div class="infoRow">
+
+      <div class="label">
+        氏名
+      </div>
+
+      <div class="value">
+        TEST_STAGE2_FBO
+      </div>
+
+    </div>
+
+    <div class="infoRow">
+
+      <div class="label">
+        FLP番号
+      </div>
+
+      <div class="value">
+        944444444
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div class="card">
+
+    <h2>
+      あなたのFLP番号
+    </h2>
+
+    <p>
+      次の5人の登録に使用する
+      「あなたのFLP番号」を
+      5件入力してください。
+    </p>
+
+
+    <div class="flpRow">
+      <div class="number">①</div>
+      <input
+        class="flpInput"
+        type="text"
+        placeholder="FLP番号①">
+    </div>
+
+    <div class="flpRow">
+      <div class="number">②</div>
+      <input
+        class="flpInput"
+        type="text"
+        placeholder="FLP番号②">
+    </div>
+
+    <div class="flpRow">
+      <div class="number">③</div>
+      <input
+        class="flpInput"
+        type="text"
+        placeholder="FLP番号③">
+    </div>
+
+    <div class="flpRow">
+      <div class="number">④</div>
+      <input
+        class="flpInput"
+        type="text"
+        placeholder="FLP番号④">
+    </div>
+
+    <div class="flpRow">
+      <div class="number">⑤</div>
+      <input
+        class="flpInput"
+        type="text"
+        placeholder="FLP番号⑤">
+    </div>
+
+
+    <button
+      class="button"
+      type="button">
+
+      5件を登録する
+
+    </button>
+
+
+    <div class="notice">
+
+      ※5件すべてを確認してから
+      登録してください。<br>
+
+      ※FLP番号は9桁の数字です。<br>
+
+      ※登録完了後は、
+      通常は変更できません。
+
+    </div>
+
+  </div>
+
+
+  <div class="card">
+
+    <h2>
+      登録状況
+    </h2>
+
+    <div class="statusBox">
+
+      <div class="statusCount">
+        0 / 5 件
+      </div>
+
+      <div>
+        FLP番号登録状況
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div class="card">
+
+    <h2>
+      紹介した方の登録確認
+    </h2>
+
+    <p>
+      あなたが紹介した方の
+      FBO登録状況です。
+    </p>
+
+    <p class="notice">
+      第2段階表示確認用のため、
+      このページでは登録確認処理は行いません。
+    </p>
+
+  </div>
+
+
+  <div class="card">
+
+    <h2>
+      VSHともだち追加
+    </h2>
+
+    <p>
+      最初の5人の登録が完了しました。
+    </p>
+
+    <p>
+      ここからは、
+      Face to Faceで出会った方へ
+      VSHを紹介できます。
+    </p>
+
+    <button
+      class="button"
+      type="button">
+
+      VSHともだち追加
+
+    </button>
+
+    <div class="notice">
+
+      ※紹介された方は、
+      これまでと同じ
+      Day0からVSHを開始します。
+
+    </div>
+
+  </div>
+
+
+  <div class="footer">
+
+    Vera Sky Harmony<br>
+    Version 1.0
+
+  </div>
+
+</div>
+
+</body>
+
+</html>
+    `);
+
+  }
+);
 app.listen(
   Number(PORT || 10000),
   () => {
