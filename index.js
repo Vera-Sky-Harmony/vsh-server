@@ -2634,22 +2634,29 @@ app.get("/api/vsh-introducer/:flp", async (req, res) => {
     }
 
 
-    //----------------------------------
-    // VSH・SNS開始状態確認
-    //----------------------------------
+   //----------------------------------
+// VSH紹介利用状態確認
+//
+// VSHが有効で、
+// SNS自動支援 または Face to Face
+// のどちらかが有効なら利用可能
+//----------------------------------
 
-    if (
-      introducer.vshActive !== true ||
-      introducer.snsActive !== true
-    ) {
+if (
+  introducer.vshActive !== true ||
+  (
+    introducer.snsActive !== true &&
+    introducer.faceToFaceActive !== true
+  )
+) {
 
-      return res.status(403).json({
-        success: false,
-        message:
-          "このVSHはまだ紹介活動を開始していません。"
-      });
+  return res.status(403).json({
+    success: false,
+    message:
+      "このVSHは現在紹介活動を利用できません。"
+  });
 
-    }
+}
 
 
     //----------------------------------
