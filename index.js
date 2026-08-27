@@ -1205,23 +1205,78 @@ app.post(
             x.status === "登録済"
         );
 
-      if (
-        registeredDirectMembers.length >= 5
-      ) {
+     if (
+  registeredDirectMembers.length >= 5
+) {
 
-        introducer.snsActive =
-          false;
+  //----------------------------------
+  // 第1段階完了
+  // SNS自動支援を解除
+  //----------------------------------
 
-        introducer.snsDeactivatedAt =
-          new Date().toISOString();
+  introducer.snsActive =
+    false;
 
-        console.log(
-          "5人登録完了・SNS連携解除:",
-          introducer.name,
-          introducer.flp
-        );
+  introducer.snsDeactivatedAt =
+    new Date().toISOString();
 
-      }
+
+  //----------------------------------
+  // 第2段階開始
+  // VSHともだち追加を有効化
+  //----------------------------------
+
+  introducer.faceToFaceActive =
+    true;
+
+  introducer.faceToFaceActivatedAt =
+    new Date().toISOString();
+
+
+  //----------------------------------
+  // 使用したFLP番号5件を履歴へ保存
+  //----------------------------------
+
+  if (!Array.isArray(introducer.flpHistory)) {
+    introducer.flpHistory = [];
+  }
+
+  const currentFLPNumbers =
+    Array.isArray(introducer.flpNumbers)
+      ? [...introducer.flpNumbers]
+      : [];
+
+  if (currentFLPNumbers.length > 0) {
+
+    introducer.flpHistory.push({
+      numbers:
+        currentFLPNumbers,
+
+      completedAt:
+        new Date().toISOString()
+    });
+
+  }
+
+
+  //----------------------------------
+  // 現在の5件を空にする
+  // 次の5件を入力可能にする
+  //----------------------------------
+
+  introducer.flpNumbers =
+    [];
+
+  delete introducer.flpNumbersRegisteredAt;
+
+
+  console.log(
+    "5人登録完了・第2段階開始:",
+    introducer.name,
+    introducer.flp
+  );
+
+}
 
       //----------------------------------
       // Supabaseへ保存
