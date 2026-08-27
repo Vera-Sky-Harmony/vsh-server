@@ -8,6 +8,73 @@ let currentMember = null;
 
 
 // ========================================
+// 第1段階・第2段階
+// 画面表示切替
+// ========================================
+
+function updateVSHStageDisplay() {
+
+  const friendAddCard =
+    document.getElementById(
+      "friendAddCard"
+    );
+
+  const stage1Keyword =
+    document.getElementById(
+      "stage1Keyword"
+    );
+
+
+  //----------------------------------
+  // 第2段階
+  //----------------------------------
+
+  if (
+    currentMember &&
+    currentMember.faceToFaceActive === true
+  ) {
+
+    if (friendAddCard) {
+
+      friendAddCard.style.display =
+        "block";
+
+    }
+
+    if (stage1Keyword) {
+
+      stage1Keyword.style.display =
+        "none";
+
+    }
+
+    return;
+
+  }
+
+
+  //----------------------------------
+  // 第1段階
+  //----------------------------------
+
+  if (friendAddCard) {
+
+    friendAddCard.style.display =
+      "none";
+
+  }
+
+  if (stage1Keyword) {
+
+    stage1Keyword.style.display =
+      "";
+
+  }
+
+}
+
+
+// ========================================
 // 初期表示・本人確認
 // ========================================
 
@@ -24,6 +91,7 @@ window.addEventListener(
       "click",
       saveFLPNumbers
     );
+
 
     //----------------------------------
     // 本人情報取得
@@ -55,9 +123,11 @@ window.addEventListener(
 
         document.getElementById(
           "memberFLP"
-        ).textContent = "－";
+        ).textContent =
+          "－";
 
-        saveButton.disabled = true;
+        saveButton.disabled =
+          true;
 
         alert(
           result.message ||
@@ -68,6 +138,7 @@ window.addEventListener(
 
       }
 
+
       //----------------------------------
       // 本人情報保存
       //----------------------------------
@@ -75,30 +146,14 @@ window.addEventListener(
       currentMember =
         result.member;
 
+
       //----------------------------------
-      // 第2段階
-      // VSHともだち追加表示制御
+      // 第1段階・第2段階
+      // 表示制御
       //----------------------------------
 
-      const friendAddCard =
-        document.getElementById(
-          "friendAddCard"
-        );
+      updateVSHStageDisplay();
 
-      if (
-        friendAddCard &&
-        currentMember.faceToFaceActive === true
-      ) {
-
-        friendAddCard.style.display =
-          "block";
-
-      } else if (friendAddCard) {
-
-        friendAddCard.style.display =
-          "none";
-
-      }
 
       //----------------------------------
       // 本人情報表示
@@ -113,45 +168,57 @@ window.addEventListener(
         "memberFLP"
       ).textContent =
         currentMember.flp;
-//----------------------------------
-// 保存済みFLP番号5件を再表示
-//----------------------------------
 
-if (
-  Array.isArray(currentMember.flpNumbers) &&
-  currentMember.flpNumbers.length === 5
-) {
 
-  for (let i = 1; i <= 5; i++) {
+      //----------------------------------
+      // 保存済みFLP番号5件を再表示
+      //----------------------------------
 
-    const input =
-      document.getElementById(
-        `flp${i}`
-      );
+      if (
+        Array.isArray(
+          currentMember.flpNumbers
+        ) &&
+        currentMember.flpNumbers.length === 5
+      ) {
 
-    input.value =
-      currentMember.flpNumbers[i - 1];
+        for (
+          let i = 1;
+          i <= 5;
+          i++
+        ) {
 
-    input.disabled = true;
+          const input =
+            document.getElementById(
+              `flp${i}`
+            );
 
-  }
+          input.value =
+            currentMember
+              .flpNumbers[i - 1];
 
-  document.getElementById(
-    "statusCount"
-  ).textContent =
-    "5 / 5 件";
+          input.disabled =
+            true;
 
-  document.getElementById(
-    "completeBox"
-  ).style.display =
-    "block";
+        }
 
-  saveButton.textContent =
-    "登録完了";
+        document.getElementById(
+          "statusCount"
+        ).textContent =
+          "5 / 5 件";
 
-  saveButton.disabled = true;
+        document.getElementById(
+          "completeBox"
+        ).style.display =
+          "block";
 
-}
+        saveButton.textContent =
+          "登録完了";
+
+        saveButton.disabled =
+          true;
+
+      }
+
     }
 
     catch (err) {
@@ -168,15 +235,19 @@ if (
 
       document.getElementById(
         "memberFLP"
-      ).textContent = "－";
+      ).textContent =
+        "－";
 
-      saveButton.disabled = true;
+      saveButton.disabled =
+        true;
 
       return;
 
     }
 
-       updateStatus();
+
+    updateStatus();
+
 
     //----------------------------------
     // 紹介した方の登録状況取得
@@ -196,15 +267,23 @@ function getFLPNumbers() {
 
   const numbers = [];
 
-  for (let i = 1; i <= 5; i++) {
+  for (
+    let i = 1;
+    i <= 5;
+    i++
+  ) {
 
     const value =
       document
-        .getElementById(`flp${i}`)
+        .getElementById(
+          `flp${i}`
+        )
         .value
         .trim();
 
-    numbers.push(value);
+    numbers.push(
+      value
+    );
 
   }
 
@@ -233,8 +312,6 @@ function updateStatus() {
     `${count} / 5 件`;
 
 }
-
-
 // ========================================
 // 入力変更時
 // ========================================
@@ -290,25 +367,24 @@ async function saveFLPNumbers() {
   }
 
 
- 
   //----------------------------------
-// FLP番号 9桁確認
-//----------------------------------
+  // FLP番号 9桁確認
+  //----------------------------------
 
-const invalid =
-  numbers.some(
-    x => !/^[0-9]{9}$/.test(x)
-  );
+  const invalid =
+    numbers.some(
+      x => !/^[0-9]{9}$/.test(x)
+    );
 
-if (invalid) {
+  if (invalid) {
 
-  alert(
-    "FLP番号は9桁の数字で入力してください。"
-  );
+    alert(
+      "FLP番号は9桁の数字で入力してください。"
+    );
 
-  return;
+    return;
 
-}
+  }
 
 
   //----------------------------------
@@ -318,7 +394,9 @@ if (invalid) {
   const uniqueNumbers =
     new Set(numbers);
 
-  if (uniqueNumbers.size !== 5) {
+  if (
+    uniqueNumbers.size !== 5
+  ) {
 
     alert(
       "同じFLP番号が重複しています。確認してください。"
@@ -329,101 +407,15 @@ if (invalid) {
   }
 
 
- //----------------------------------
-// 本人確認
-//----------------------------------
-
-if (!currentMember) {
-
-  alert(
-    "本人確認ができていません。"
-  );
-
-  return;
-
-}
-
-
-//----------------------------------
-// 登録前の最終確認
-//----------------------------------
-
-const confirmed =
-  confirm(
-    "5件のFLP番号を登録します。\n\n" +
-    "登録完了後は通常変更できません。\n" +
-    "よろしいですか？"
-  );
-
-if (!confirmed) {
-  return;
-}
-
-
-//----------------------------------
-// 保存ボタンを一時停止
-//----------------------------------
-
-const saveButton =
-  document.getElementById(
-    "saveButton"
-  );
-
-saveButton.disabled = true;
-
-saveButton.textContent =
-  "登録中...";
-
-
-//----------------------------------
-// 保存APIへ送信
-//----------------------------------
-
-try {
-
-  const response =
-    await fetch(
-      "/api/member-admin/flp",
-      {
-        method: "POST",
-
-        headers: {
-          "Content-Type":
-            "application/json"
-        },
-
-        credentials:
-          "same-origin",
-
-        body:
-          JSON.stringify({
-            numbers: numbers
-          })
-      }
-    );
-
-  const result =
-    await response.json();
-
-
   //----------------------------------
-  // 保存失敗
+  // 本人確認
   //----------------------------------
 
-  if (
-    !response.ok ||
-    !result.success
-  ) {
+  if (!currentMember) {
 
     alert(
-      result.message ||
-      "FLP番号を登録できませんでした。"
+      "本人確認ができていません。"
     );
-
-    saveButton.disabled = false;
-
-    saveButton.textContent =
-      "5件を登録する";
 
     return;
 
@@ -431,63 +423,161 @@ try {
 
 
   //----------------------------------
-  // 保存成功
+  // 登録前の最終確認
   //----------------------------------
 
-  for (let i = 1; i <= 5; i++) {
+  const confirmed =
+    confirm(
+      "5件のFLP番号を登録します。\n\n" +
+      "登録完了後は通常変更できません。\n" +
+      "よろしいですか？"
+    );
 
-    const input =
-      document.getElementById(
-        `flp${i}`
-      );
+  if (!confirmed) {
 
-    input.disabled = true;
+    return;
 
   }
 
-  document.getElementById(
-    "statusCount"
-  ).textContent =
-    "5 / 5 件";
 
-  document.getElementById(
-    "completeBox"
-  ).style.display =
-    "block";
+  //----------------------------------
+  // 保存ボタンを一時停止
+  //----------------------------------
 
-  saveButton.textContent =
-    "登録完了";
+  const saveButton =
+    document.getElementById(
+      "saveButton"
+    );
 
-  saveButton.disabled = true;
-
-  alert(
-    "5件のFLP番号を登録しました。"
-  );
-
-}
-
-
-//----------------------------------
-// 通信エラー
-//----------------------------------
-
-catch (err) {
-
-  console.error(
-    "FLP番号登録エラー:",
-    err
-  );
-
-  alert(
-    "通信エラーが発生しました。もう一度お試しください。"
-  );
-
-  saveButton.disabled = false;
+  saveButton.disabled =
+    true;
 
   saveButton.textContent =
-    "5件を登録する";
+    "登録中...";
 
-}
+
+  //----------------------------------
+  // 保存APIへ送信
+  //----------------------------------
+
+  try {
+
+    const response =
+      await fetch(
+        "/api/member-admin/flp",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          credentials:
+            "same-origin",
+
+          body:
+            JSON.stringify({
+              numbers: numbers
+            })
+        }
+      );
+
+    const result =
+      await response.json();
+
+
+    //----------------------------------
+    // 保存失敗
+    //----------------------------------
+
+    if (
+      !response.ok ||
+      !result.success
+    ) {
+
+      alert(
+        result.message ||
+        "FLP番号を登録できませんでした。"
+      );
+
+      saveButton.disabled =
+        false;
+
+      saveButton.textContent =
+        "5件を登録する";
+
+      return;
+
+    }
+
+
+    //----------------------------------
+    // 保存成功
+    //----------------------------------
+
+    for (
+      let i = 1;
+      i <= 5;
+      i++
+    ) {
+
+      const input =
+        document.getElementById(
+          `flp${i}`
+        );
+
+      input.disabled =
+        true;
+
+    }
+
+    document.getElementById(
+      "statusCount"
+    ).textContent =
+      "5 / 5 件";
+
+    document.getElementById(
+      "completeBox"
+    ).style.display =
+      "block";
+
+    saveButton.textContent =
+      "登録完了";
+
+    saveButton.disabled =
+      true;
+
+    alert(
+      "5件のFLP番号を登録しました。"
+    );
+
+  }
+
+
+  //----------------------------------
+  // 通信エラー
+  //----------------------------------
+
+  catch (err) {
+
+    console.error(
+      "FLP番号登録エラー:",
+      err
+    );
+
+    alert(
+      "通信エラーが発生しました。"
+    );
+
+    saveButton.disabled =
+      false;
+
+    saveButton.textContent =
+      "5件を登録する";
+
+  }
+
 }
 // ========================================
 // 紹介した方の登録状況を取得
@@ -501,7 +591,9 @@ async function loadIntroducedMembers() {
     );
 
   if (!area) {
+
     return;
+
   }
 
   try {
@@ -527,315 +619,478 @@ async function loadIntroducedMembers() {
         "<p>登録状況を取得できませんでした。</p>";
 
       return;
+
     }
 
+
     const members =
-      Array.isArray(result.members)
+      Array.isArray(
+        result.members
+      )
         ? result.members
         : [];
 
-    if (members.length === 0) {
+
+    //----------------------------------
+    // 使用済FLP番号表示更新
+    //----------------------------------
+
+    updateUsedFLPDisplay(
+      members
+    );
+
+
+    //----------------------------------
+    // 紹介者がまだいない場合
+    //----------------------------------
+
+    if (
+      members.length === 0
+    ) {
 
       area.innerHTML =
         "<p>現在、登録確認待ちの方はいません。</p>";
 
       return;
+
     }
-updateUsedFLPDisplay(members);
-    area.innerHTML = "";
-
-    members.forEach(member => {
-
-      const box =
-        document.createElement("div");
-
-      box.style.padding =
-        "15px 0";
-
-      box.style.borderBottom =
-        "1px solid #ddd";
-
-      const name =
-        document.createElement("div");
-
-      name.innerHTML =
-        '<span class="label">氏名</span><br>';
-
-      const nameValue =
-        document.createElement("strong");
-
-      nameValue.textContent =
-        member.name || "－";
-
-      name.appendChild(nameValue);
 
 
-      const flp =
-        document.createElement("div");
-
-      flp.style.marginTop =
-        "10px";
-
-      flp.innerHTML =
-        '<span class="label">FLP番号</span><br>';
-
-      const flpValue =
-        document.createElement("strong");
-
-      flpValue.textContent =
-        member.flp || "－";
-
-      flp.appendChild(flpValue);
+    area.innerHTML =
+      "";
 
 
-      const status =
-        document.createElement("div");
+    //----------------------------------
+    // 紹介した方を1人ずつ表示
+    //----------------------------------
 
-      status.style.marginTop =
-        "10px";
+    members.forEach(
+      member => {
 
-      status.innerHTML =
-        '<span class="label">状態</span><br>';
-
-      const statusValue =
-        document.createElement("strong");
-
-      statusValue.textContent =
-        member.status || "確認中";
-
-      status.appendChild(statusValue);
-
-
-           box.appendChild(name);
-      box.appendChild(flp);
-      box.appendChild(status);
-
-
-      //----------------------------------
-      // 確認中の場合だけ
-      // FBO登録確認ボタンを表示
-      //----------------------------------
-
-      if (member.status !== "登録済") {
-
-        const confirmButton =
+        const box =
           document.createElement(
-            "button"
+            "div"
           );
 
-        confirmButton.className =
-          "button";
+        box.style.padding =
+          "15px 0";
 
-        
-         confirmButton.textContent =
-  "登録確認";
-
-        confirmButton.addEventListener(
-          "click",
-          async () => {
-
-            //----------------------------------
-            // 最終確認
-            //----------------------------------
-
-            const confirmed =
-              confirm(
-                `${member.name}さんのFBO登録を\n` +
-                `FLP本体システムで確認しましたか？\n\n` +
-                `FLP番号：${member.flp}\n\n` +
-                `確認するとDay8が本人のLINEへ送信されます。`
-              );
-
-            if (!confirmed) {
-              return;
-            }
+        box.style.borderBottom =
+          "1px solid #ddd";
 
 
-            //----------------------------------
-            // 二重押下防止
-            //----------------------------------
+        //----------------------------------
+        // 氏名
+        //----------------------------------
 
-            confirmButton.disabled =
-              true;
+        const name =
+          document.createElement(
+            "div"
+          );
 
-            confirmButton.textContent =
-              "確認処理中...";
+        name.innerHTML =
+          '<span class="label">氏名</span><br>';
+
+        const nameValue =
+          document.createElement(
+            "strong"
+          );
+
+        nameValue.textContent =
+          member.name || "－";
+
+        name.appendChild(
+          nameValue
+        );
 
 
-            try {
+        //----------------------------------
+        // FLP番号
+        //----------------------------------
+
+        const flp =
+          document.createElement(
+            "div"
+          );
+
+        flp.style.marginTop =
+          "10px";
+
+        flp.innerHTML =
+          '<span class="label">FLP番号</span><br>';
+
+        const flpValue =
+          document.createElement(
+            "strong"
+          );
+
+        flpValue.textContent =
+          member.flp || "－";
+
+        flp.appendChild(
+          flpValue
+        );
+
+
+        //----------------------------------
+        // 状態
+        //----------------------------------
+
+        const status =
+          document.createElement(
+            "div"
+          );
+
+        status.style.marginTop =
+          "10px";
+
+        status.innerHTML =
+          '<span class="label">状態</span><br>';
+
+        const statusValue =
+          document.createElement(
+            "strong"
+          );
+
+        statusValue.textContent =
+          member.status ||
+          "確認中";
+
+        status.appendChild(
+          statusValue
+        );
+
+
+        box.appendChild(
+          name
+        );
+
+        box.appendChild(
+          flp
+        );
+
+        box.appendChild(
+          status
+        );
+
+
+        //----------------------------------
+        // 確認中の場合だけ
+        // FBO登録確認ボタンを表示
+        //----------------------------------
+
+        if (
+          member.status !== "登録済"
+        ) {
+
+          const confirmButton =
+            document.createElement(
+              "button"
+            );
+
+          confirmButton.className =
+            "button";
+
+          confirmButton.textContent =
+            "登録確認";
+
+
+          confirmButton.addEventListener(
+            "click",
+            async () => {
 
               //----------------------------------
-              // 本人Admin専用確認API
+              // 最終確認
               //----------------------------------
 
-              const response =
-                await fetch(
-                  "/api/member-admin/confirm-member",
-                  {
-                    method: "POST",
-
-                    headers: {
-                      "Content-Type":
-                        "application/json"
-                    },
-
-                    credentials:
-                      "same-origin",
-
-                    body:
-                      JSON.stringify({
-                        flp:
-                          member.flp
-                      })
-                  }
+              const confirmed =
+                confirm(
+                  `${member.name}さんのFBO登録を\n` +
+                  `FLP本体システムで確認しましたか？\n\n` +
+                  `FLP番号：${member.flp}\n\n` +
+                  `確認するとDay8が本人のLINEへ送信されます。`
                 );
 
-              const result =
-                await response.json();
-
-
-              //----------------------------------
-              // エラー
-              //----------------------------------
-
-              if (
-                !response.ok ||
-                !result.success
-              ) {
-
-                alert(
-                  result.message ||
-                  "FBO登録確認ができませんでした。"
-                );
-
-                confirmButton.disabled =
-                  false;
-
-                
-                  confirmButton.textContent =
-  "登録確認";
+              if (!confirmed) {
 
                 return;
+
               }
 
 
               //----------------------------------
-              // 正常終了
+              // 二重押下防止
               //----------------------------------
 
-              alert(
-                `${member.name}さんのFBO登録を確認しました。\n\n` +
-                `Day8を本人のLINEへ送信しました。`
-              );
+              confirmButton.disabled =
+                true;
 
+              confirmButton.textContent =
+                "確認処理中...";
 
-              //----------------------------------
-              // 一覧を再読み込み
-              //----------------------------------
-
-              await loadIntroducedMembers();
-
-
-              //----------------------------------
-              // 本人情報を再取得
-              // 5人達成による第2段階移行を反映
-              //----------------------------------
 
               try {
 
-                const meResponse =
+                //----------------------------------
+                // 本人Admin専用確認API
+                //----------------------------------
+
+                const response =
                   await fetch(
-                    "/api/member-admin/me",
+                    "/api/member-admin/confirm-member",
                     {
-                      method: "GET",
-                      credentials: "same-origin"
+                      method:
+                        "POST",
+
+                      headers: {
+                        "Content-Type":
+                          "application/json"
+                      },
+
+                      credentials:
+                        "same-origin",
+
+                      body:
+                        JSON.stringify({
+                          flp:
+                            member.flp
+                        })
                     }
                   );
 
-                const meResult =
-                  await meResponse.json();
+                const result =
+                  await response.json();
+
+
+                //----------------------------------
+                // エラー
+                //----------------------------------
 
                 if (
-                  meResponse.ok &&
-                  meResult.success &&
-                  meResult.member
+                  !response.ok ||
+                  !result.success
                 ) {
 
-                  //----------------------------------
-                  // 最新の本人情報へ更新
-                  //----------------------------------
+                  alert(
+                    result.message ||
+                    "FBO登録確認ができませんでした。"
+                  );
 
-                  currentMember =
-                    meResult.member;
+                  confirmButton.disabled =
+                    false;
+
+                  confirmButton.textContent =
+                    "登録確認";
+
+                  return;
+
+                }
+
+                //----------------------------------
+                // 正常終了
+                //----------------------------------
+
+                alert(
+                  `${member.name}さんのFBO登録を確認しました。\n\n` +
+                  `Day8を本人のLINEへ送信しました。`
+                );
 
 
-                  //----------------------------------
-                  // VSHともだち追加表示制御
-                  //----------------------------------
+                //----------------------------------
+                // 一覧を再読み込み
+                //----------------------------------
 
-                  const friendAddCard =
-                    document.getElementById(
-                      "friendAddCard"
+                await loadIntroducedMembers();
+
+
+                //----------------------------------
+                // 本人情報を再取得
+                // 5人達成による第2段階移行を反映
+                //----------------------------------
+
+                try {
+
+                  const meResponse =
+                    await fetch(
+                      "/api/member-admin/me",
+                      {
+                        method:
+                          "GET",
+
+                        credentials:
+                          "same-origin"
+                      }
                     );
 
-                  if (friendAddCard) {
+                  const meResult =
+                    await meResponse.json();
 
-                    friendAddCard.style.display =
-                      currentMember.faceToFaceActive === true
-                        ? "block"
-                        : "none";
+
+                  if (
+                    meResponse.ok &&
+                    meResult.success &&
+                    meResult.member
+                  ) {
+
+                    //----------------------------------
+                    // 最新の本人情報へ更新
+                    //----------------------------------
+
+                    currentMember =
+                      meResult.member;
+
+
+                    //----------------------------------
+                    // 第1段階・第2段階
+                    // 表示を最新状態へ更新
+                    //----------------------------------
+
+                    updateVSHStageDisplay();
+
+
+                    //----------------------------------
+                    // 第2段階移行時
+                    // 次の5件を入力できる状態へ更新
+                    //----------------------------------
+
+                    if (
+                      currentMember.faceToFaceActive === true &&
+                      Array.isArray(
+                        currentMember.flpNumbers
+                      ) &&
+                      currentMember.flpNumbers.length === 0
+                    ) {
+
+                      for (
+                        let i = 1;
+                        i <= 5;
+                        i++
+                      ) {
+
+                        const input =
+                          document.getElementById(
+                            `flp${i}`
+                          );
+
+                        if (input) {
+
+                          input.value =
+                            "";
+
+                          input.disabled =
+                            false;
+
+                        }
+
+                      }
+
+
+                      const saveButton =
+                        document.getElementById(
+                          "saveButton"
+                        );
+
+                      if (saveButton) {
+
+                        saveButton.textContent =
+                          "5件を登録する";
+
+                        saveButton.disabled =
+                          false;
+
+                      }
+
+
+                      const statusCount =
+                        document.getElementById(
+                          "statusCount"
+                        );
+
+                      if (statusCount) {
+
+                        statusCount.textContent =
+                          "0 / 5 件";
+
+                      }
+
+
+                      const completeBox =
+                        document.getElementById(
+                          "completeBox"
+                        );
+
+                      if (completeBox) {
+
+                        completeBox.style.display =
+                          "none";
+
+                      }
+
+                    }
 
                   }
 
                 }
 
+                catch (err) {
+
+                  console.error(
+                    "第2段階状態再取得エラー:",
+                    err
+                  );
+
+                }
+
               }
+
+
+              //----------------------------------
+              // FBO登録確認 通信エラー
+              //----------------------------------
 
               catch (err) {
 
                 console.error(
-                  "第2段階状態再取得エラー:",
+                  "FBO登録確認エラー:",
                   err
                 );
+
+                alert(
+                  "通信エラーが発生しました。"
+                );
+
+                confirmButton.disabled =
+                  false;
+
+                confirmButton.textContent =
+                  "登録確認";
 
               }
 
             }
+          );
 
-            catch (err) {
 
-              console.error(
-                "FBO登録確認エラー:",
-                err
-              );
+          box.appendChild(
+            confirmButton
+          );
 
-              alert(
-                "通信エラーが発生しました。"
-              );
+        }
 
-              confirmButton.disabled =
-                false;
 
-              
-              confirmButton.textContent =
-  "登録確認";
-
-            }
-
-          }
-        );
-
-        box.appendChild(
-          confirmButton
+        area.appendChild(
+          box
         );
 
       }
-
-
-      area.appendChild(box);
-    });
+    );
 
   }
+
+
+  //----------------------------------
+  // 紹介者登録状況取得エラー
+  //----------------------------------
 
   catch (err) {
 
@@ -850,52 +1105,87 @@ updateUsedFLPDisplay(members);
   }
 
 }
+
+
 // ========================================
 // 使用済FLP番号の表示
 // ========================================
 
-function updateUsedFLPDisplay(members) {
+function updateUsedFLPDisplay(
+  members
+) {
 
   const usedFLPs =
     new Set(
-      (Array.isArray(members) ? members : [])
-        .map(member =>
-          String(member.flp || "")
+      (
+        Array.isArray(members)
+          ? members
+          : []
+      )
+        .map(
+          member =>
+            String(
+              member.flp || ""
+            )
         )
         .filter(Boolean)
     );
 
-  for (let i = 1; i <= 5; i++) {
+
+  for (
+    let i = 1;
+    i <= 5;
+    i++
+  ) {
 
     const input =
-      document.getElementById(`flp${i}`);
+      document.getElementById(
+        `flp${i}`
+      );
 
     if (!input) {
+
       continue;
+
     }
+
 
     const row =
-      input.closest(".flpRow");
+      input.closest(
+        ".flpRow"
+      );
 
     if (!row) {
+
       continue;
+
     }
+
 
     const oldBadge =
-      row.querySelector(".usedBadge");
+      row.querySelector(
+        ".usedBadge"
+      );
 
     if (oldBadge) {
+
       oldBadge.remove();
+
     }
+
 
     if (
       usedFLPs.has(
-        String(input.value).trim()
+        String(
+          input.value
+        ).trim()
       )
     ) {
 
       const badge =
-        document.createElement("span");
+        document.createElement(
+          "span"
+        );
 
       badge.className =
         "usedBadge";
@@ -912,11 +1202,15 @@ function updateUsedFLPDisplay(members) {
       badge.style.color =
         "#b26a00";
 
-      row.appendChild(badge);
-    }
-  }
-}
+      row.appendChild(
+        badge
+      );
 
+    }
+
+  }
+
+}
 // ========================================
 // 第2段階
 // VSHともだち追加
@@ -926,6 +1220,7 @@ const friendAddButton =
   document.getElementById(
     "friendAddButton"
   );
+
 
 if (friendAddButton) {
 
@@ -947,6 +1242,24 @@ if (friendAddButton) {
         );
 
         return;
+
+      }
+
+
+      //----------------------------------
+      // 第2段階利用状態確認
+      //----------------------------------
+
+      if (
+        currentMember.faceToFaceActive !== true
+      ) {
+
+        alert(
+          "現在、Face to Faceでの紹介は利用できません。"
+        );
+
+        return;
+
       }
 
 
