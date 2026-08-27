@@ -1706,6 +1706,22 @@ member.vshActive = true;
 
 member.snsActive = true;
 
+//----------------------------------
+// 第1段階から開始
+// 5人達成後に true へ変更する
+//----------------------------------
+
+member.faceToFaceActive = false;
+
+//----------------------------------
+// 使用済みFLP番号履歴
+// 既存履歴があればそのまま保持
+//----------------------------------
+
+if (!Array.isArray(member.flpHistory)) {
+  member.flpHistory = [];
+}
+
 member.snsActivatedAt =
   new Date().toISOString();
 
