@@ -3508,20 +3508,26 @@ app.post("/api/use-flp", async (req, res) => {
       // VSH利用可能状態確認
       //----------------------------------
 
-      if (
-        introducer.status !== "登録済" ||
-        introducer.vshActive !== true ||
-        introducer.snsActive !== true
-      ) {
+     //----------------------------------
+// VSH紹介利用状態確認
+//----------------------------------
 
-        return res.status(403).json({
-          success: false,
-          message:
-            "このVSHは現在利用できません。"
-        });
+if (
+  introducer.status !== "登録済" ||
+  introducer.vshActive !== true ||
+  (
+    introducer.snsActive !== true &&
+    introducer.faceToFaceActive !== true
+  )
+) {
 
-      }
+  return res.status(403).json({
+    success: false,
+    message:
+      "このVSHは現在紹介活動を利用できません。"
+  });
 
+}
       //----------------------------------
       // 紹介者の5件に含まれるか
       //----------------------------------
