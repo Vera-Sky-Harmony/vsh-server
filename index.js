@@ -2379,17 +2379,22 @@ if (data.rootSnsActive !== true) {
 
 
     //----------------------------------
-    // SNS連携状態確認
-    //----------------------------------
+// VSH紹介利用状態確認
+//
+// 第1段階：SNS自動支援
+// 第2段階：Face to Face＋VSH
+//----------------------------------
 
-    if (introducer.snsActive !== true) {
+if (
+  introducer.snsActive !== true &&
+  introducer.faceToFaceActive !== true
+) {
 
-      return res.status(403).send(
-        "このVSHのSNS連携は現在停止しています。"
-      );
+  return res.status(403).send(
+    "このVSHは現在紹介活動を利用できません。"
+  );
 
-    }
-
+}
 
     //----------------------------------
     // 本人の紹介用FLP番号5件確認
