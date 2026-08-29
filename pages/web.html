@@ -40,82 +40,108 @@
       width: 100%;
     }
 
-    /* PC用QR案内 */
+    /* ==============================
+       PC専用 QRコード案内
+       ============================== */
+
     .pc-qr {
       display: none;
       position: absolute;
-      z-index: 10;
-      background: rgba(255, 255, 255, 0.96);
+      z-index: 20;
+
+      width: 180px;
+      padding: 8px;
+
+      background: rgba(255, 255, 255, 0.97);
       border: 2px solid #c99a28;
-      padding: 12px;
+
       text-align: center;
-      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.18);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
 
     .pc-qr-title {
-      margin: 0 0 5px;
-      color: #9a6b00;
-      font-size: 16px;
+      margin: 0 0 4px;
+      color: #946600;
+      font-size: 13px;
       font-weight: 700;
+      line-height: 1.4;
     }
 
     .pc-qr-text {
-      margin: 0 0 8px;
+      margin: 0 0 5px;
       color: #333333;
-      font-size: 12px;
-      line-height: 1.5;
+      font-size: 10px;
+      line-height: 1.4;
     }
 
-    .qr-canvas {
+    .qr-image {
       display: block;
-      width: 120px;
-      height: 120px;
+      width: 105px;
+      height: 105px;
       margin: 0 auto;
     }
 
-    /* 画像1のQR位置 */
+    /*
+      画像1のQRコード
+      右下寄り
+    */
     .qr-first {
-      right: 3%;
-      bottom: 3%;
+      right: 2%;
+      bottom: 2%;
     }
 
-    /* 画像4のQR位置 */
+    /*
+      画像4のQRコード
+      左下寄り
+    */
     .qr-final {
-      left: 3%;
-      bottom: 4%;
+      left: 2%;
+      bottom: 2%;
     }
 
-    /* 画像4「VSHともだち追加」クリック領域 */
+    /* ==============================
+       画像4 VSHともだち追加
+       ============================== */
+
     .vsh-link {
       position: absolute;
       left: 15%;
       right: 15%;
       bottom: 5%;
       height: 18%;
+
       display: block;
       cursor: pointer;
       text-decoration: none;
-      z-index: 5;
+      z-index: 10;
     }
 
-    /* PC */
+    /* ==============================
+       PC
+       ============================== */
+
     @media (min-width: 769px) {
+
       .pc-qr {
         display: block;
       }
 
-      /* PCでは画像4のボタンを直接Day0へ進ませない */
       .vsh-link {
         cursor: default;
       }
     }
 
-    /* スマホ */
+    /* ==============================
+       スマートフォン
+       ============================== */
+
     @media (max-width: 768px) {
+
       .pc-qr {
         display: none;
       }
     }
+
   </style>
 </head>
 
@@ -123,7 +149,10 @@
 
   <main class="web-page">
 
-    <!-- 画像1 -->
+    <!-- ==========================
+         画像1
+         ========================== -->
+
     <div class="image-area">
 
       <img
@@ -132,28 +161,34 @@
         alt="Vera Sky Harmony"
       >
 
+      <!-- PCのみ表示 -->
       <div class="pc-qr qr-first">
+
         <p class="pc-qr-title">
-          スマートフォンで続けてください
+          スマートフォンで<br>
+          続けてください
         </p>
+
+        <img
+          class="qr-image"
+          src="/pages/VSH_Day0_QR.png"
+          alt="VSH Day0 QRコード"
+        >
 
         <p class="pc-qr-text">
-          QRコードをスマートフォンで読み取り、<br>
-          VSHの続きをご覧ください。
+          QRコードを読み取ると<br>
+          Day0が開きます
         </p>
 
-        <canvas
-          id="qrFirst"
-          class="qr-canvas"
-          width="120"
-          height="120"
-        ></canvas>
       </div>
 
     </div>
 
 
-    <!-- 画像2 -->
+    <!-- ==========================
+         画像2
+         ========================== -->
+
     <img
       class="web-image"
       src="/pages/WEB2番目画像.png"
@@ -161,7 +196,10 @@
     >
 
 
-    <!-- 画像3 -->
+    <!-- ==========================
+         画像3
+         ========================== -->
+
     <img
       class="web-image"
       src="/pages/WEB3番目画像.png"
@@ -169,7 +207,10 @@
     >
 
 
-    <!-- 画像4 -->
+    <!-- ==========================
+         画像4
+         ========================== -->
+
     <div class="final-area">
 
       <img
@@ -178,24 +219,29 @@
         alt="VSHともだち追加"
       >
 
+      <!-- PCのみ表示 -->
       <div class="pc-qr qr-final">
+
         <p class="pc-qr-title">
-          スマートフォンで始めてください
+          スマートフォンで<br>
+          始めてください
         </p>
+
+        <img
+          class="qr-image"
+          src="/pages/VSH_Day0_QR.png"
+          alt="VSH Day0 QRコード"
+        >
 
         <p class="pc-qr-text">
-          QRコードをスマートフォンで読み取り、<br>
-          Day0からお進みください。
+          QRコードを読み取ると<br>
+          Day0が開きます
         </p>
 
-        <canvas
-          id="qrFinal"
-          class="qr-canvas"
-          width="120"
-          height="120"
-        ></canvas>
       </div>
 
+
+      <!-- スマホではDay0へ進む -->
       <a
         class="vsh-link"
         id="vshLink"
@@ -208,60 +254,54 @@
   </main>
 
 
-  <!-- QRコード生成 -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
-
   <script>
+
     const DAY0_URL =
       "https://vsh-server.onrender.com/pages/day0.html";
 
     const isMobile =
       /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
-    const vshLink = document.getElementById("vshLink");
+    const vshLink =
+      document.getElementById("vshLink");
+
 
     if (isMobile) {
 
-      /* スマホは従来どおりDay0へ */
+      /*
+        スマートフォン
+        今までどおりDay0へ進む
+      */
+
       vshLink.href = DAY0_URL;
 
     } else {
 
-      /* PCではボタンからDay0へ直接進ませない */
+      /*
+        PC
+        VSHともだち追加を押しても
+        Day0へ直接進ませない
+      */
+
       vshLink.removeAttribute("href");
 
-      vshLink.addEventListener("click", function (event) {
-        event.preventDefault();
+      vshLink.addEventListener(
+        "click",
+        function(event) {
 
-        alert(
-          "VSHはスマートフォンからご利用ください。\n\n" +
-          "画面に表示されているQRコードをスマートフォンで読み取り、" +
-          "Day0からお進みください。"
-        );
-      });
+          event.preventDefault();
 
-      /* 画像1 QRコード */
-      QRCode.toCanvas(
-        document.getElementById("qrFirst"),
-        DAY0_URL,
-        {
-          width: 120,
-          margin: 1,
-          errorCorrectionLevel: "H"
+          alert(
+            "VSHはスマートフォンからご利用ください。\n\n" +
+            "画面に表示されているQRコードをスマートフォンで読み取り、" +
+            "Day0からお進みください。"
+          );
+
         }
       );
 
-      /* 画像4 QRコード */
-      QRCode.toCanvas(
-        document.getElementById("qrFinal"),
-        DAY0_URL,
-        {
-          width: 120,
-          margin: 1,
-          errorCorrectionLevel: "H"
-        }
-      );
     }
+
   </script>
 
 </body>
