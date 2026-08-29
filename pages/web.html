@@ -43,59 +43,6 @@
 
 
     /* =========================================
-       新しい商品画像
-       ========================================= */
-
-   .product-overlay {
-  position: absolute;
-  z-index: 5;
-  display: block;
-  object-fit: contain;
-  border: 0;
-  border-radius: 0 !important;
-}
-
-    /*
-      画像1の商品部分
-    */
-.product-first {
-  left: 41%;
-  top: 46%;
-  width: 59%;
-  height: auto;
-}
-
-    /*
-      画像4の商品部分
-    */
-    .product-fourth {
-      right: 0%;
-      top: 18.5%;
-      width: 30%;
-      height: 13%;
-    }
-
-
-    /* =========================================
-       画像3
-       「LINEでVSHを受け取る」を隠す
-       ========================================= */
-
-    .hide-line-button {
-      position: absolute;
-      z-index: 6;
-
-      right: 7%;
-      bottom: 4.5%;
-
-      width: 35%;
-      height: 5%;
-
-      background: #ffffff;
-    }
-
-
-    /* =========================================
        PC用 QR案内
        ========================================= */
 
@@ -134,19 +81,20 @@
       width: 105px;
       height: 105px;
       margin: 0 auto;
+      border-radius: 0;
     }
 
-    /*
-      画像1 QR
-    */
+
+    /* 画像1 QR */
+
     .qr-first {
       right: 2%;
       bottom: 2%;
     }
 
-    /*
-      画像4 QR
-    */
+
+    /* 画像4 QR */
+
     .qr-fourth {
       left: 2%;
       bottom: 2%;
@@ -154,7 +102,7 @@
 
 
     /* =========================================
-       「VSHともだち追加」クリック領域
+       VSHともだち追加 クリック領域
        ========================================= */
 
     .day0-link {
@@ -164,10 +112,9 @@
       text-decoration: none;
     }
 
-    /*
-      画像1 最下部の
-      VSHともだち追加
-    */
+
+    /* 画像1のVSHともだち追加 */
+
     .day0-link-first {
       left: 53%;
       width: 39%;
@@ -175,9 +122,9 @@
       height: 5.8%;
     }
 
-    /*
-      画像4 VSHともだち追加
-    */
+
+    /* 画像4のVSHともだち追加 */
+
     .day0-link-fourth {
       left: 15%;
       right: 15%;
@@ -223,27 +170,20 @@
 
 
     <!-- =====================================
-         画像1
+         画像1・完成版
          ===================================== -->
 
     <div class="image-area">
 
       <img
         class="web-image"
-        src="/pages/WEB最初の画面.png"
+        src="/pages/WEB最初の画面_完成版.png"
         alt="Vera Sky Harmony"
       >
 
 
-      <!-- 新しい商品画像 -->
-      <img
-        class="product-overlay product-first"
-        src="/pages/VSH商品画像.png"
-        alt="Forever商品"
-      >
-
-
       <!-- PC用 QR -->
+
       <div class="pc-qr qr-first">
 
         <p class="pc-qr-title">
@@ -265,7 +205,8 @@
       </div>
 
 
-      <!-- スマホ用 Day0クリック領域 -->
+      <!-- スマートフォン用 Day0 -->
+
       <a
         class="day0-link day0-link-first"
         href="/pages/day0.html"
@@ -277,7 +218,7 @@
 
 
     <!-- =====================================
-         画像2
+         画像2・変更なし
          ===================================== -->
 
     <img
@@ -289,52 +230,32 @@
 
 
     <!-- =====================================
-         画像3
+         画像3・完成版
          ===================================== -->
 
-    <div class="image-area">
-
-      <img
-        class="web-image"
-        src="/pages/WEB3番目画像.png"
-        alt="Vera Sky Harmony 仕組み"
-      >
-
-      <!--
-        WEB紹介ページでは不要な
-        「LINEでVSHを受け取る」を隠す
-      -->
-      <div
-        class="hide-line-button"
-        aria-hidden="true"
-      ></div>
-
-    </div>
+    <img
+      class="web-image"
+      src="/pages/WEB3番目画像_完成版.png"
+      alt="Vera Sky Harmony 仕組み"
+    >
 
 
 
     <!-- =====================================
-         画像4
+         画像4・完成版
          ===================================== -->
 
     <div class="image-area">
 
       <img
         class="web-image"
-        src="/pages/WEB4番目の4画像.png"
+        src="/pages/WEB4完成版.png"
         alt="Vera Sky Harmony"
       >
 
 
-      <!-- 新しい商品画像 -->
-      <img
-        class="product-overlay product-fourth"
-        src="/pages/VSH商品画像.png"
-        alt="Forever商品"
-      >
-
-
       <!-- PC用 QR -->
+
       <div class="pc-qr qr-fourth">
 
         <p class="pc-qr-title">
@@ -356,7 +277,8 @@
       </div>
 
 
-      <!-- スマホ用 Day0クリック領域 -->
+      <!-- スマートフォン用 Day0 -->
+
       <a
         class="day0-link day0-link-fourth"
         href="/pages/day0.html"
@@ -397,6 +319,7 @@
         /*
           PC
           Day0へ直接進ませない
+          QRコードからスマートフォンへ
         */
 
         link.removeAttribute("href");
