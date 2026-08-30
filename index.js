@@ -2292,6 +2292,398 @@ app.post(
   }
 );
 
+/* =====================================================
+   VSH自動紹介入口
+   YouTube・Google・Yahoo・公開WEBからの自動紹介用
+
+   基本方針
+   ・全員へ1人ずつ均等配分しない
+   ・原則、現在選択中のFBOを5人完成まで優先
+   ・5人完成後、次の待機FBOを自動選択
+   ・次の選択時は待機日数と残り人数を考慮
+   ・30日以上待機を優先
+   ・60日以上待機を最優先
+   ・第1段階（SNS自動支援中）のFBOだけを対象
+===================================================== */
+
+app.get("/vsh/auto", async (req, res) => {
+
+  try {
+
+    //----------------------------------
+    // 最新管理データ取得
+    //----------------------------------
+
+    const data =
+      await loadAdmin();
+
+    if (!Array.isArray(data.members)) {
+      data.members = [];
+    }
+
+
+    //----------------------------------
+    // 現在の5件のうち
+    // 登録済人数を数える関数
+    //----------------------------------
+
+    const getRegisteredCount =
+      (introducer) => {
+
+        if (
+          !Array.isArray(
+            introducer.flpNumbers
+          )
+        ) {
+          return 0;
+        }
+
+        const currentFLPSet =
+          new Set(
+            introducer.flpNumbers.map(
+              number =>
+                String(number)
+            )
+          );
+
+        return data.members.filter(
+          item =>
+            String(
+              item.vshIntroducerFLP || ""
+            ) ===
+              String(
+                introducer.flp || ""
+              ) &&
+            item.status ===
+              "登録済" &&
+            currentFLPSet.has(
+              String(item.flp || "")
+            )
+        ).length;
+      };
+
+
+    //----------------------------------
+    // 第1段階SNS自動紹介の
+    // 対象FBOだけを取得
+    //----------------------------------
+
+    const eligibleMembers =
+      data.members.filter(
+        member => {
+
+          if (!member) {
+            return false;
+          }
+
+          if (
+            member.status !== "登録済" ||
+            member.vshActive !== true ||
+            member.snsActive !== true ||
+            member.faceToFaceActive === true
+          ) {
+            return false;
+          }
+
+          if (
+            !Array.isArray(
+              member.flpNumbers
+            ) ||
+            member.flpNumbers.length !== 5
+          ) {
+            return false;
+          }
+
+          const registeredCount =
+            getRegisteredCount(member);
+
+          return registeredCount < 5;
+        }
+      );
+
+
+    //----------------------------------
+    // 対象FBOがいない場合
+    //----------------------------------
+
+    if (eligibleMembers.length === 0) {
+
+      delete data.vshAutoCurrentFLP;
+
+      await saveAdmin(data);
+
+      return res.status(503).send(
+        "現在、自動紹介を受付中のVSHがありません。"
+      );
+    }
+
+
+    //----------------------------------
+    // 現在集中紹介中のFBOを確認
+    //
+    // 一度選ばれたFBOは原則として
+    // 5人完成まで継続する
+    //----------------------------------
+
+    let selectedMember = null;
+
+    if (data.vshAutoCurrentFLP) {
+
+      selectedMember =
+        eligibleMembers.find(
+          member =>
+            String(member.flp) ===
+            String(
+              data.vshAutoCurrentFLP
+            )
+        ) || null;
+    }
+
+
+    //----------------------------------
+    // 現在のFBOが5人完成等で
+    // 対象外になった場合
+    // 次のFBOを優先順位で選ぶ
+    //----------------------------------
+
+    if (!selectedMember) {
+
+      const now =
+        Date.now();
+
+      const DAY_MS =
+        24 * 60 * 60 * 1000;
+
+
+      //----------------------------------
+      // 各FBOの
+      // 待機日数・残人数を計算
+      //----------------------------------
+
+      const candidates =
+        eligibleMembers.map(
+          member => {
+
+            const registeredCount =
+              getRegisteredCount(member);
+
+            const remaining =
+              Math.max(
+                0,
+                5 - registeredCount
+              );
+
+            const startedAt =
+              new Date(
+                member.snsActivatedAt ||
+                member.flpNumbersRegisteredAt ||
+                0
+              ).getTime();
+
+            const validStartedAt =
+              Number.isFinite(startedAt) &&
+              startedAt > 0
+                ? startedAt
+                : now;
+
+            const waitingDays =
+              Math.max(
+                0,
+                Math.floor(
+                  (now - validStartedAt) /
+                  DAY_MS
+                )
+              );
+
+
+            //--------------------------------
+            // 期限区分
+            //
+            // 60日以上 = 最優先
+            // 30日以上 = 優先
+            // 30日未満 = 通常
+            //--------------------------------
+
+            let deadlineLevel = 0;
+
+            if (waitingDays >= 60) {
+              deadlineLevel = 2;
+            }
+            else if (waitingDays >= 30) {
+              deadlineLevel = 1;
+            }
+
+
+            return {
+
+              member,
+              registeredCount,
+              remaining,
+              waitingDays,
+              deadlineLevel,
+              startedAt:
+                validStartedAt
+            };
+
+          }
+        );
+
+
+      //----------------------------------
+      // 優先順位
+      //
+      // 1. 期限区分
+      // 2. 完成までの残人数が少ない
+      // 3. 待機日数が長い
+      // 4. SNS開始日時が早い
+      // 5. FLP番号で安定化
+      //----------------------------------
+
+      candidates.sort(
+        (a, b) => {
+
+          if (
+            b.deadlineLevel !==
+            a.deadlineLevel
+          ) {
+            return (
+              b.deadlineLevel -
+              a.deadlineLevel
+            );
+          }
+
+          if (
+            a.remaining !==
+            b.remaining
+          ) {
+            return (
+              a.remaining -
+              b.remaining
+            );
+          }
+
+          if (
+            b.waitingDays !==
+            a.waitingDays
+          ) {
+            return (
+              b.waitingDays -
+              a.waitingDays
+            );
+          }
+
+          if (
+            a.startedAt !==
+            b.startedAt
+          ) {
+            return (
+              a.startedAt -
+              b.startedAt
+            );
+          }
+
+          return String(
+            a.member.flp || ""
+          ).localeCompare(
+            String(
+              b.member.flp || ""
+            )
+          );
+
+        }
+      );
+
+
+      selectedMember =
+        candidates[0].member;
+
+
+      //----------------------------------
+      // 現在集中紹介するFBOを保存
+      //----------------------------------
+
+      data.vshAutoCurrentFLP =
+        selectedMember.flp;
+
+      data.vshAutoSelectedAt =
+        new Date().toISOString();
+
+      await saveAdmin(data);
+
+
+      console.log(
+        "VSH自動紹介・新規選択:",
+        selectedMember.name,
+        selectedMember.flp,
+        "登録済:",
+        getRegisteredCount(
+          selectedMember
+        ),
+        "/5"
+      );
+
+    }
+    else {
+
+      console.log(
+        "VSH自動紹介・集中継続:",
+        selectedMember.name,
+        selectedMember.flp,
+        "登録済:",
+        getRegisteredCount(
+          selectedMember
+        ),
+        "/5"
+      );
+    }
+
+
+    //----------------------------------
+    // 選ばれたFBOをCookieへ保存
+    //
+    // 以後は既存VSH処理が
+    // このCookieから紹介者を判定する
+    //----------------------------------
+
+    res.cookie(
+      "vsh_introducer_flp",
+      String(
+        selectedMember.flp
+      ),
+      {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+
+        maxAge:
+          30 * 24 * 60 * 60 * 1000
+      }
+    );
+
+
+    //----------------------------------
+    // Day0へ進む
+    //----------------------------------
+
+    return res.redirect(
+      "/pages/day0.html"
+    );
+
+  }
+  catch (err) {
+
+    console.error(
+      "VSH自動紹介入口エラー:",
+      err
+    );
+
+    return res.status(500).send(
+      "VSH自動紹介入口エラー"
+    );
+  }
+
+});
+
 
 /* =====================================================
    VSH正式紹介入口
