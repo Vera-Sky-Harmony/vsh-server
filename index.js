@@ -318,7 +318,69 @@ async function cleanupExpiredPendingMembers() {
         member.flp
       );
     }
+    //----------------------------------
+    // 一般FBO
+    // 7日経過した「使用中」FLPを解除
+    //----------------------------------
 
+    for (const introducer of remainingMembers) {
+
+      if (!Array.isArray(introducer.flpInUse)) {
+        continue;
+      }
+
+      const beforeCount =
+        introducer.flpInUse.length;
+
+      introducer.flpInUse =
+        introducer.flpInUse.filter(
+          item => {
+
+            if (!item || !item.usedAt) {
+              return true;
+            }
+
+            const usedTime =
+              new Date(item.usedAt).getTime();
+
+            if (!Number.isFinite(usedTime)) {
+              return true;
+            }
+
+            const elapsed =
+              now - usedTime;
+
+            //--------------------------------
+            // まだ7日未満なら「使用中」を維持
+            //--------------------------------
+
+            if (elapsed < sevenDays) {
+              return true;
+            }
+
+            //--------------------------------
+            // 7日経過
+            // 「使用中」から解除して再利用可能
+            //--------------------------------
+
+            console.log(
+              "一般FBO FLP使用中を7日後解除:",
+              introducer.name,
+              introducer.flp,
+              item.flp
+            );
+
+            return false;
+          }
+        );
+
+      if (
+        introducer.flpInUse.length !==
+        beforeCount
+      ) {
+        changed = true;
+      }
+    }
     //----------------------------------
     // 変更があった場合だけ保存
     //----------------------------------
