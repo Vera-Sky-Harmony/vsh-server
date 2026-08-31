@@ -2584,6 +2584,7 @@ if (
   );
 
 }
+else {
 
       console.log(
         "VSH自動紹介・集中継続:",
