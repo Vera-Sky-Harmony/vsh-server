@@ -2411,7 +2411,7 @@ app.get("/vsh/auto", async (req, res) => {
 
       res.cookie(
         "vsh_introducer_flp",
-        "ROOT",
+      String(data.introducerFLP), 
         {
           httpOnly: true,
           secure: true,
