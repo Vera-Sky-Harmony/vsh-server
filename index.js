@@ -4017,20 +4017,7 @@ app.post("/api/use-flp", async (req, res) => {
       }
 
 
-      /*
-       * 譲渡VSHの5件については、
-       * RootのflpListを書き換えない。
-       *
-       * 実際の登録確定は /api/register で行う。
-       */
-
-      console.log(
-        "譲渡VSH FLP使用開始:",
-        introducer.name,
-        introducer.flp,
-        targetFLP
-      );
-
+     
 
       return res.json({
 
