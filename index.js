@@ -2378,54 +2378,54 @@ app.get("/vsh/auto", async (req, res) => {
     // ② 未使用の「あなたのFLP番号」が1件以上
     //----------------------------------
 
-    const hasRegisteredFBO =
-      data.members.some(
-        member =>
-          member &&
-          member.status === "登録済"
-      );
-
     const rootUnusedFLP =
-      Array.isArray(data.flpList)
-        ? data.flpList.find(
-            item =>
-              item &&
-              item.flp &&
-              item.status === "未使用"
-          )
-        : null;
+  Array.isArray(data.flpList)
+    ? data.flpList.find(
+        item =>
+          item &&
+          item.flp &&
+          item.status === "未使用"
+      )
+    : null;
 
-    if (
-      !hasRegisteredFBO &&
-      data.rootSnsActive === true &&
-      rootUnusedFLP
-    ) {
+//----------------------------------
+// ルートID最優先
+//
+// ルートIDがSNS連携中で、
+// 未使用FLP番号がある間は
+// 一般FBOより必ずルートIDを優先
+//----------------------------------
 
-      delete data.vshAutoCurrentFLP;
+if (
+  data.rootSnsActive === true &&
+  rootUnusedFLP
+) {
 
-      await saveAdmin(data);
+  delete data.vshAutoCurrentFLP;
+  delete data.vshAutoSelectedAt;
 
-      console.log(
-        "VSH自動紹介・ルートIDから開始"
-      );
+  await saveAdmin(data);
 
-      res.cookie(
-        "vsh_introducer_flp",
-      String(data.introducerFLP), 
-        {
-          httpOnly: true,
-          secure: true,
-          sameSite: "lax",
-          maxAge:
-            30 * 24 * 60 * 60 * 1000
-        }
-      );
+  console.log(
+    "VSH自動紹介・ルートID最優先"
+  );
 
-      return res.redirect(
-        "/pages/day0.html"
-      );
+  res.cookie(
+    "vsh_introducer_flp",
+    String(data.introducerFLP),
+    {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      maxAge:
+        30 * 24 * 60 * 60 * 1000
     }
- 
+  );
+
+  return res.redirect(
+    "/pages/day0.html"
+  );
+}
      const eligibleMembers =
       data.members.filter(
         member => {
