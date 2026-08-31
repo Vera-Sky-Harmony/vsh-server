@@ -3685,38 +3685,57 @@ app.get("/api/next-flp", async (req, res) => {
 
 
       //----------------------------------
-      // 既に登録に使われた番号を取得
-      //----------------------------------
+// 既に登録に使われた番号を取得
+//----------------------------------
 
-      const usedFLPs =
-        new Set(
-          data.members
-            .filter(
-              member =>
-                String(
-                  member.vshIntroducerFLP || ""
-                ) ===
-                String(introducer.flp)
-            )
-            .map(
-              member =>
-                String(member.flp)
-            )
-        );
+const usedFLPs =
+  new Set(
+    data.members
+      .filter(
+        member =>
+          String(
+            member.vshIntroducerFLP || ""
+          ) ===
+          String(introducer.flp)
+      )
+      .map(
+        member =>
+          String(member.flp)
+      )
+  );
 
+//----------------------------------
+// Day7-2で現在「使用中」の番号を取得
+//----------------------------------
 
-      //----------------------------------
-      // 5件から次の未使用番号を取得
-      //----------------------------------
+const inUseFLPs =
+  new Set(
+    Array.isArray(introducer.flpInUse)
+      ? introducer.flpInUse
+          .filter(
+            item =>
+              item &&
+              item.flp
+          )
+          .map(
+            item =>
+              String(item.flp)
+          )
+      : []
+  );
 
-      const nextFLP =
-        introducer.flpNumbers.find(
-          flp =>
-            !usedFLPs.has(
-              String(flp)
-            )
-        );
+//----------------------------------
+// 5件から次の利用可能番号を取得
+//
+// 登録済み・使用中の両方を除外
+//----------------------------------
 
+const nextFLP =
+  introducer.flpNumbers.find(
+    flp =>
+      !usedFLPs.has(String(flp)) &&
+      !inUseFLPs.has(String(flp))
+  );
 
       if (!nextFLP) {
 
