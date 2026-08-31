@@ -2504,184 +2504,86 @@ if (
     // 次のFBOを優先順位で選ぶ
     //----------------------------------
 
-    if (!selectedMember) {
+   if (!selectedMember) {
 
-      const now =
-        Date.now();
+  //----------------------------------
+  // 一般FBOの自動紹介順
+  //
+  // 「あなたのFLP番号」5件を
+  // 入力完了した日時が早い順
+  //----------------------------------
 
-      const DAY_MS =
-        24 * 60 * 60 * 1000;
+  const candidates =
+    [...eligibleMembers].sort(
+      (a, b) => {
 
+        const aTime =
+          new Date(
+            a.flpNumbersRegisteredAt || 0
+          ).getTime();
 
-      //----------------------------------
-      // 各FBOの
-      // 待機日数・残人数を計算
-      //----------------------------------
+        const bTime =
+          new Date(
+            b.flpNumbersRegisteredAt || 0
+          ).getTime();
 
-      const candidates =
-        eligibleMembers.map(
-          member => {
+        //--------------------------------
+        // 5件入力完了日時が早い方を優先
+        //--------------------------------
 
-            const registeredCount =
-              getRegisteredCount(member);
+        if (aTime !== bTime) {
+          return aTime - bTime;
+        }
 
-            const remaining =
-              Math.max(
-                0,
-                5 - registeredCount
-              );
+        //--------------------------------
+        // 同時刻の場合だけ
+        // FLP番号で順番を安定させる
+        //--------------------------------
 
-            const startedAt =
-              new Date(
-                member.snsActivatedAt ||
-                member.flpNumbersRegisteredAt ||
-                0
-              ).getTime();
-
-            const validStartedAt =
-              Number.isFinite(startedAt) &&
-              startedAt > 0
-                ? startedAt
-                : now;
-
-            const waitingDays =
-              Math.max(
-                0,
-                Math.floor(
-                  (now - validStartedAt) /
-                  DAY_MS
-                )
-              );
-
-
-            //--------------------------------
-            // 期限区分
-            //
-            // 60日以上 = 最優先
-            // 30日以上 = 優先
-            // 30日未満 = 通常
-            //--------------------------------
-
-            let deadlineLevel = 0;
-
-            if (waitingDays >= 60) {
-              deadlineLevel = 2;
-            }
-            else if (waitingDays >= 30) {
-              deadlineLevel = 1;
-            }
-
-
-            return {
-
-              member,
-              registeredCount,
-              remaining,
-              waitingDays,
-              deadlineLevel,
-              startedAt:
-                validStartedAt
-            };
-
-          }
+        return String(
+          a.flp || ""
+        ).localeCompare(
+          String(
+            b.flp || ""
+          )
         );
 
-
-      //----------------------------------
-      // 優先順位
-      //
-      // 1. 期限区分
-      // 2. 完成までの残人数が少ない
-      // 3. 待機日数が長い
-      // 4. SNS開始日時が早い
-      // 5. FLP番号で安定化
-      //----------------------------------
-
-      candidates.sort(
-        (a, b) => {
-
-          if (
-            b.deadlineLevel !==
-            a.deadlineLevel
-          ) {
-            return (
-              b.deadlineLevel -
-              a.deadlineLevel
-            );
-          }
-
-          if (
-            a.remaining !==
-            b.remaining
-          ) {
-            return (
-              a.remaining -
-              b.remaining
-            );
-          }
-
-          if (
-            b.waitingDays !==
-            a.waitingDays
-          ) {
-            return (
-              b.waitingDays -
-              a.waitingDays
-            );
-          }
-
-          if (
-            a.startedAt !==
-            b.startedAt
-          ) {
-            return (
-              a.startedAt -
-              b.startedAt
-            );
-          }
-
-          return String(
-            a.member.flp || ""
-          ).localeCompare(
-            String(
-              b.member.flp || ""
-            )
-          );
-
-        }
-      );
+      }
+    );
 
 
-      selectedMember =
-        candidates[0].member;
+  selectedMember =
+    candidates[0];
 
 
-      //----------------------------------
-      // 現在集中紹介するFBOを保存
-      //----------------------------------
+  //----------------------------------
+  // 現在集中紹介するFBOを保存
+  //
+  // このFBOの5人が完成するまで
+  // 原則として同じFBOを継続
+  //----------------------------------
 
-      data.vshAutoCurrentFLP =
-        selectedMember.flp;
+  data.vshAutoCurrentFLP =
+    selectedMember.flp;
 
-      data.vshAutoSelectedAt =
-        new Date().toISOString();
+  data.vshAutoSelectedAt =
+    new Date().toISOString();
 
-      await saveAdmin(data);
+  await saveAdmin(data);
 
 
-      console.log(
-        "VSH自動紹介・新規選択:",
-        selectedMember.name,
-        selectedMember.flp,
-        "登録済:",
-        getRegisteredCount(
-          selectedMember
-        ),
-        "/5"
-      );
+  console.log(
+    "VSH自動紹介・5件入力完了順で選択:",
+    selectedMember.name,
+    selectedMember.flp,
+    "登録済:",
+    getRegisteredCount(
+      selectedMember
+    ),
+    "/5"
+  );
 
-    }
-    else {
+}
 
       console.log(
         "VSH自動紹介・集中継続:",
