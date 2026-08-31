@@ -2368,7 +2368,46 @@ app.get("/vsh/auto", async (req, res) => {
     // 対象FBOだけを取得
     //----------------------------------
 
-    const eligibleMembers =
+   
+     // ------------------------------------
+// ルートIDを最優先で自動紹介
+// SNS連携中 ＋ 未使用FLPが1件以上
+// ------------------------------------
+const rootUnusedFlps = Array.isArray(data.flpList)
+  ? data.flpList.filter(
+      item =>
+        item &&
+        String(item.flp || "").trim() !== "" &&
+        item.used !== true
+    )
+  : [];
+
+if (
+  data.rootSnsActive === true &&
+  rootUnusedFlps.length > 0 &&
+  String(data.introducerFLP || "").trim() !== ""
+) {
+  const rootFLP = String(data.introducerFLP).trim();
+
+  data.vshAutoCurrentFLP = rootFLP;
+  data.vshAutoSelectedAt = new Date().toISOString();
+
+  await saveAdmin(data);
+
+  res.cookie(
+    "vsh_introducer_flp",
+    rootFLP,
+    {
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax"
+    }
+  );
+
+  return res.redirect("/pages/day0.html");
+}
+     const eligibleMembers =
       data.members.filter(
         member => {
 
