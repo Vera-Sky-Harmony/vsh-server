@@ -2378,7 +2378,7 @@ const rootUnusedFlps = Array.isArray(data.flpList)
       item =>
         item &&
         String(item.flp || "").trim() !== "" &&
-        item.used !== true
+      item.status === "未使用"
     )
   : [];
 
