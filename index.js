@@ -4017,7 +4017,40 @@ app.post("/api/use-flp", async (req, res) => {
       }
 
 
-     
+     //----------------------------------
+// 譲渡VSH
+// FLP番号を「使用中」として仮確保
+//----------------------------------
+
+if (!Array.isArray(introducer.flpInUse)) {
+  introducer.flpInUse = [];
+}
+
+// 同じ番号の重複登録を防止
+const alreadyInUse =
+  introducer.flpInUse.some(
+    item =>
+      item &&
+      String(item.flp) ===
+        String(targetFLP)
+  );
+
+if (!alreadyInUse) {
+
+  introducer.flpInUse.push({
+    flp: String(targetFLP),
+    usedAt: new Date().toISOString()
+  });
+
+  await saveAdmin(data);
+}
+
+console.log(
+  "譲渡VSH FLP使用開始:",
+  introducer.name,
+  introducer.flp,
+  targetFLP
+);
 
       return res.json({
 
