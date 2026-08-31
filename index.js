@@ -2368,7 +2368,63 @@ app.get("/vsh/auto", async (req, res) => {
     // 対象FBOだけを取得
     //----------------------------------
 
-   
+       //----------------------------------
+    // VSH最初のスタート
+    // 一般FBOがまだ存在しない場合は
+    // ルートIDから自動紹介を開始
+    //
+    // 開始条件
+    // ① ルートIDのSNS連携中
+    // ② 未使用の「あなたのFLP番号」が1件以上
+    //----------------------------------
+
+    const hasRegisteredFBO =
+      data.members.some(
+        member =>
+          member &&
+          member.status === "登録済"
+      );
+
+    const rootUnusedFLP =
+      Array.isArray(data.flpList)
+        ? data.flpList.find(
+            item =>
+              item &&
+              item.flp &&
+              item.status === "未使用"
+          )
+        : null;
+
+    if (
+      !hasRegisteredFBO &&
+      data.rootSnsActive === true &&
+      rootUnusedFLP
+    ) {
+
+      delete data.vshAutoCurrentFLP;
+
+      await saveAdmin(data);
+
+      console.log(
+        "VSH自動紹介・ルートIDから開始"
+      );
+
+      res.cookie(
+        "vsh_introducer_flp",
+        "ROOT",
+        {
+          httpOnly: true,
+          secure: true,
+          sameSite: "lax",
+          maxAge:
+            30 * 24 * 60 * 60 * 1000
+        }
+      );
+
+      return res.redirect(
+        "/pages/day0.html"
+      );
+    }
  
      const eligibleMembers =
       data.members.filter(
