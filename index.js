@@ -4059,7 +4059,154 @@ app.get("/api/current-vsh-introducer", async (req, res) => {
 
 });
 
+/* =====================================================
+   Day7-2 LINE専用割当取得
+   tokenから同じ紹介者・同じFLP番号を返す
+===================================================== */
 
+app.get(
+  "/api/day7-2-assignment",
+  async (req, res) => {
+
+    try {
+
+      //----------------------------------
+      // token取得
+      //----------------------------------
+
+      const token =
+        String(
+          req.query.t || ""
+        ).trim();
+
+      if (!token) {
+
+        return res.status(400).json({
+          success: false,
+          message:
+            "Day7-2の確認情報がありません。"
+        });
+
+      }
+
+
+      //----------------------------------
+      // 最新管理データ取得
+      // 7日期限切れも同時整理
+      //----------------------------------
+
+      const data =
+        await cleanupExpiredPendingMembers();
+
+      if (
+        !Array.isArray(
+          data.day72LineAssignments
+        )
+      ) {
+
+        return res.status(404).json({
+          success: false,
+          message:
+            "Day7-2の割当情報がありません。"
+        });
+
+      }
+
+
+      //----------------------------------
+      // token一致の割当を検索
+      //----------------------------------
+
+      const assignment =
+        data.day72LineAssignments.find(
+          item =>
+            item &&
+            String(item.token || "") ===
+              String(token)
+        );
+
+      if (!assignment) {
+
+        return res.status(404).json({
+          success: false,
+          message:
+            "Day7-2の割当情報が見つかりません。"
+        });
+
+      }
+
+
+      //----------------------------------
+      // 7日以内か確認
+      //----------------------------------
+
+      const assignedTime =
+        new Date(
+          assignment.assignedAt || ""
+        ).getTime();
+
+      const sevenDays =
+        7 * 24 * 60 * 60 * 1000;
+
+      if (
+        !Number.isFinite(assignedTime) ||
+        Date.now() - assignedTime >=
+          sevenDays
+      ) {
+
+        return res.status(410).json({
+          success: false,
+          message:
+            "Day7-2の有効期限が終了しました。"
+        });
+
+      }
+
+
+      //----------------------------------
+      // Day7-2表示情報だけ返す
+      //----------------------------------
+
+      return res.json({
+
+        success: true,
+
+        introducerName:
+          String(
+            assignment.introducerName || ""
+          ),
+
+        introducerFLP:
+          String(
+            assignment.introducerFLP || ""
+          ),
+
+        myFLP:
+          String(
+            assignment.myFLP || ""
+          )
+
+      });
+
+    }
+
+    catch (err) {
+
+      console.error(
+        "Day7-2 LINE割当取得エラー:",
+        err
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Day7-2情報を取得できませんでした。"
+      });
+
+    }
+
+  }
+);
 /* =====================================================
    次のFLP番号取得
    ルートVSH ＋ 譲渡VSH対応
