@@ -4207,6 +4207,510 @@ app.get(
 
   }
 );
+
+/* =====================================================
+   Day7-2 LINE専用登録受付
+   tokenで紹介者・FLP番号を確定
+   Cookieには依存しない
+===================================================== */
+
+app.post(
+  "/api/day7-2-register",
+  async (req, res) => {
+
+    try {
+
+      //----------------------------------
+      // 入力取得
+      //----------------------------------
+
+      const token =
+        String(
+          req.body.token || ""
+        ).trim();
+
+      const name =
+        String(
+          req.body.name || ""
+        ).trim();
+
+
+      //----------------------------------
+      // 基本確認
+      //----------------------------------
+
+      if (!token || !name) {
+
+        return res.status(400).json({
+          success: false,
+          message:
+            "氏名またはDay7-2の確認情報がありません。"
+        });
+
+      }
+
+
+      //----------------------------------
+      // 最新管理データ取得
+      // 7日期限切れも同時整理
+      //----------------------------------
+
+      const data =
+        await cleanupExpiredPendingMembers();
+
+      if (!Array.isArray(data.members)) {
+        data.members = [];
+      }
+
+      if (!Array.isArray(data.flpList)) {
+        data.flpList = [];
+      }
+
+      if (
+        !Array.isArray(
+          data.day72LineAssignments
+        )
+      ) {
+        data.day72LineAssignments = [];
+      }
+
+
+      //----------------------------------
+      // token一致の割当を取得
+      //----------------------------------
+
+      const assignment =
+        data.day72LineAssignments.find(
+          item =>
+            item &&
+            String(item.token || "") ===
+              String(token)
+        );
+
+      if (!assignment) {
+
+        return res.status(404).json({
+          success: false,
+          message:
+            "Day7-2の割当情報が見つかりません。"
+        });
+
+      }
+
+
+      //----------------------------------
+      // 7日以内か確認
+      //----------------------------------
+
+      const assignedTime =
+        new Date(
+          assignment.assignedAt || ""
+        ).getTime();
+
+      const sevenDays =
+        7 * 24 * 60 * 60 * 1000;
+
+      if (
+        !Number.isFinite(assignedTime) ||
+        Date.now() - assignedTime >=
+          sevenDays
+      ) {
+
+        return res.status(410).json({
+          success: false,
+          message:
+            "Day7-2の有効期限が終了しました。"
+        });
+
+      }
+
+
+      //----------------------------------
+      // FLP番号はtoken側の値だけを使用
+      //----------------------------------
+
+      const flp =
+        String(
+          assignment.myFLP || ""
+        ).trim();
+
+      if (!flp) {
+
+        return res.status(400).json({
+          success: false,
+          message:
+            "割当FLP番号がありません。"
+        });
+
+      }
+
+
+      //----------------------------------
+      // 二重押下対策
+      // 同じ割当ですでに確認中なら成功扱い
+      //----------------------------------
+
+      const existingMember =
+        data.members.find(
+          member =>
+            String(member.flp || "") ===
+              String(flp)
+        );
+
+      if (existingMember) {
+
+        const sameAssignment =
+          String(
+            existingMember.vshDay72Token || ""
+          ) ===
+          String(token);
+
+        if (sameAssignment) {
+
+          return res.json({
+            success: true,
+            source:
+              assignment.source,
+            userName:
+              existingMember.name,
+            userFLP:
+              existingMember.flp
+          });
+
+        }
+
+        return res.status(409).json({
+          success: false,
+          message:
+            "このFLP番号はすでに登録されています。"
+        });
+
+      }
+
+
+      /* ==================================
+         ケース1
+         一般FBOのVSH
+      ================================== */
+
+      if (
+        assignment.source ===
+        "member"
+      ) {
+
+        //--------------------------------
+        // 紹介者本人を確認
+        //--------------------------------
+
+        const introducer =
+          data.members.find(
+            member =>
+              String(member.flp || "") ===
+              String(
+                assignment.introducerFLP || ""
+              )
+          );
+
+        if (!introducer) {
+
+          return res.status(404).json({
+            success: false,
+            message:
+              "VSH紹介者が見つかりません。"
+          });
+
+        }
+
+
+        //--------------------------------
+        // VSH利用状態確認
+        //--------------------------------
+
+        if (
+          introducer.status !== "登録済" ||
+          introducer.vshActive !== true ||
+          (
+            introducer.snsActive !== true &&
+            introducer.faceToFaceActive !== true
+          )
+        ) {
+
+          return res.status(403).json({
+            success: false,
+            message:
+              "このVSHは現在紹介活動を利用できません。"
+          });
+
+        }
+
+
+        //--------------------------------
+        // 紹介者の現在の5件か確認
+        //--------------------------------
+
+        if (
+          !Array.isArray(
+            introducer.flpNumbers
+          ) ||
+          !introducer.flpNumbers.some(
+            number =>
+              String(number) ===
+              String(flp)
+          )
+        ) {
+
+          return res.status(400).json({
+            success: false,
+            message:
+              "このVSHのFLP番号ではありません。"
+          });
+
+        }
+
+
+        //--------------------------------
+        // Day7-2で仮確保済みか確認
+        //--------------------------------
+
+        const reserved =
+          Array.isArray(
+            introducer.flpInUse
+          ) &&
+          introducer.flpInUse.some(
+            item =>
+              item &&
+              String(item.flp || "") ===
+                String(flp)
+          );
+
+        if (!reserved) {
+
+          return res.status(409).json({
+            success: false,
+            message:
+              "このFLP番号の仮確保を確認できません。"
+          });
+
+        }
+
+
+        //--------------------------------
+        // 新規登録者を確認中で保存
+        //--------------------------------
+
+        data.members.push({
+
+          userId:
+            "",
+
+          name:
+            name,
+
+          flp:
+            flp,
+
+          status:
+            "確認中",
+
+          vshIntroducerFLP:
+            String(
+              assignment.introducerFLP || ""
+            ),
+
+          vshIntroducerName:
+            String(
+              assignment.introducerName || ""
+            ),
+
+          vshDay72Token:
+            token,
+
+          created:
+            new Date().toISOString()
+
+        });
+
+
+        await saveAdmin(data);
+
+        console.log(
+          "Day7-2 LINE 一般FBO登録受付:",
+          assignment.introducerName,
+          assignment.introducerFLP,
+          "→",
+          name,
+          flp
+        );
+
+
+        return res.json({
+
+          success: true,
+
+          source:
+            "member",
+
+          userName:
+            name,
+
+          userFLP:
+            flp
+
+        });
+
+      }
+
+
+      /* ==================================
+         ケース2
+         ルートVSH
+      ================================== */
+
+      if (
+        assignment.source ===
+        "root"
+      ) {
+
+        //--------------------------------
+        // ルートの割当FLPを確認
+        //--------------------------------
+
+        const item =
+          data.flpList.find(
+            x =>
+              String(x.flp || "") ===
+              String(flp)
+          );
+
+        if (!item) {
+
+          return res.status(404).json({
+            success: false,
+            message:
+              "FLP番号が見つかりません。"
+          });
+
+        }
+
+
+        //--------------------------------
+        // Day7-2で仮確保された番号だけ受付
+        //--------------------------------
+
+        if (
+          item.status !== "使用中"
+        ) {
+
+          return res.status(409).json({
+            success: false,
+            message:
+              "このFLP番号の仮確保を確認できません。"
+          });
+
+        }
+
+
+        //--------------------------------
+        // 登録受付時点で使用済へ
+        //--------------------------------
+
+        item.status =
+          "使用済";
+
+
+        //--------------------------------
+        // 新規登録者を確認中で保存
+        //--------------------------------
+
+        data.members.push({
+
+          userId:
+            "",
+
+          name:
+            name,
+
+          flp:
+            flp,
+
+          status:
+            "確認中",
+
+          vshIntroducerFLP:
+            String(
+              assignment.introducerFLP || ""
+            ),
+
+          vshIntroducerName:
+            String(
+              assignment.introducerName || ""
+            ),
+
+          vshDay72Token:
+            token,
+
+          created:
+            new Date().toISOString()
+
+        });
+
+
+        await saveAdmin(data);
+
+        console.log(
+          "Day7-2 LINE ルート登録受付:",
+          name,
+          flp
+        );
+
+
+        return res.json({
+
+          success: true,
+
+          source:
+            "root",
+
+          userName:
+            name,
+
+          userFLP:
+            flp
+
+        });
+
+      }
+
+
+      //----------------------------------
+      // 不明な割当種別
+      //----------------------------------
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "Day7-2の割当種別が正しくありません。"
+      });
+
+    }
+
+    catch (err) {
+
+      console.error(
+        "Day7-2 LINE登録受付エラー:",
+        err
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Day7-2登録処理エラー"
+      });
+
+    }
+
+  }
+);
 /* =====================================================
    次のFLP番号取得
    ルートVSH ＋ 譲渡VSH対応
