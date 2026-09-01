@@ -12512,7 +12512,7 @@ Vera Sky Harmony を譲渡いたします。`
           //----------------------------------
 
           const day72URL =
-            "https://vsh-server.onrender.com/pages/day7-2.html?t=" +
+            "https://vsh-server.onrender.com/day7-2.html?t=" +
             encodeURIComponent(
               assignment.token
             );
