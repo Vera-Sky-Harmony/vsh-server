@@ -962,42 +962,63 @@ app.get(
       // この本人が直接紹介した登録者だけ取得
       //----------------------------------
 
-      const introducedMembers =
-        data.members
-          .filter(
-            member =>
-              String(
-                member.vshIntroducerFLP || ""
-              ) ===
-              String(currentMember.flp)
-          )
-          .map(
-            member => ({
+const introducedMembers =
+  data.members
+    .filter(
+      member =>
+        String(
+          member.vshIntroducerFLP || ""
+        ) ===
+        String(currentMember.flp)
+    )
+    .map(
+      member => ({
 
-              name:
-                member.name,
+        name:
+          member.name,
 
-              flp:
-                member.flp,
+        flp:
+          member.flp,
 
-              status:
-                member.status || "確認中"
+        status:
+          member.status || "確認中"
 
-            })
-          );
+      })
+    );
 
-      //----------------------------------
-      // 正常終了
-      //----------------------------------
+//----------------------------------
+// Day7-2で割当済みのFLP番号
+//----------------------------------
 
-      return res.json({
+const reservedFLPs =
+  Array.isArray(currentMember.flpInUse)
+    ? currentMember.flpInUse
+        .filter(
+          item =>
+            item &&
+            item.flp
+        )
+        .map(
+          item =>
+            String(item.flp)
+        )
+    : [];
 
-        success: true,
+//----------------------------------
+// 正常終了
+//----------------------------------
 
-        members:
-          introducedMembers
+return res.json({
 
-      });
+  success: true,
+
+  members:
+    introducedMembers,
+
+  reservedFLPs:
+    reservedFLPs
+
+});
 
     }
 
