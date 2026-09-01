@@ -1115,25 +1115,36 @@ async function loadIntroducedMembers() {
 // ========================================
 
 function updateUsedFLPDisplay(
-  members
+  members,
+  reservedFLPs
 ) {
 
   const usedFLPs =
-    new Set(
-      (
+    new Set([
+      ...(
         Array.isArray(members)
           ? members
+              .map(
+                member =>
+                  String(
+                    member.flp || ""
+                  )
+              )
+              .filter(Boolean)
+          : []
+      ),
+
+      ...(
+        Array.isArray(reservedFLPs)
+          ? reservedFLPs
+              .map(
+                flp =>
+                  String(flp || "")
+              )
+              .filter(Boolean)
           : []
       )
-        .map(
-          member =>
-            String(
-              member.flp || ""
-            )
-        )
-        .filter(Boolean)
-    );
-
+    ]);
 
   for (
     let i = 1;
