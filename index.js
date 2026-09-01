@@ -642,7 +642,13 @@ async function cleanupExpiredPendingMembers() {
 
   try {
 
-   const data = await loadAdmin();
+    const data =
+      await loadAdmin();
+
+
+    //----------------------------------
+    // 基本データ確認
+    //----------------------------------
 
     if (!Array.isArray(data.members)) {
       data.members = [];
@@ -652,90 +658,147 @@ async function cleanupExpiredPendingMembers() {
       data.flpList = [];
     }
 
-    const now = Date.now();
+    if (
+      !Array.isArray(
+        data.day72LineAssignments
+      )
+    ) {
+      data.day72LineAssignments = [];
+    }
+
+
+    const now =
+      Date.now();
 
     const sevenDays =
       7 * 24 * 60 * 60 * 1000;
 
-    let changed = false;
+    let changed =
+      false;
 
-    const remainingMembers = [];
 
-    for (const member of data.members) {
+    /* ==================================
+       1.
+       7日経過した「確認中」登録者を整理
+    ================================== */
+
+    const remainingMembers =
+      [];
+
+
+    for (
+      const member of data.members
+    ) {
 
       //----------------------------------
-      // 「確認中」以外はそのまま残す
+      // 「確認中」以外は残す
       //----------------------------------
 
-      if (member.status !== "確認中") {
+      if (
+        member.status !== "確認中"
+      ) {
 
-        remainingMembers.push(member);
+        remainingMembers.push(
+          member
+        );
+
         continue;
-
       }
 
+
       //----------------------------------
-      // 登録日時がない場合も削除しない
+      // 登録日時なしは残す
       //----------------------------------
 
       if (!member.created) {
 
-        remainingMembers.push(member);
-        continue;
+        remainingMembers.push(
+          member
+        );
 
+        continue;
       }
+
 
       const createdTime =
-        new Date(member.created).getTime();
+        new Date(
+          member.created
+        ).getTime();
+
 
       //----------------------------------
-      // 日付異常の場合も削除しない
+      // 日付異常の場合も残す
       //----------------------------------
 
-      if (!Number.isFinite(createdTime)) {
+      if (
+        !Number.isFinite(
+          createdTime
+        )
+      ) {
 
-        remainingMembers.push(member);
+        remainingMembers.push(
+          member
+        );
+
         continue;
-
       }
 
-      const elapsed =
-        now - createdTime;
 
       //----------------------------------
-      // まだ7日未満
+      // まだ7日未満なら残す
       //----------------------------------
 
-      if (elapsed < sevenDays) {
+      if (
+        now - createdTime <
+        sevenDays
+      ) {
 
-        remainingMembers.push(member);
+        remainingMembers.push(
+          member
+        );
+
         continue;
-
       }
 
+
       //----------------------------------
-      // 7日経過
-      // FLP番号を未使用へ戻す
+      // 7日経過した確認中登録者
       //----------------------------------
 
       const flpItem =
         data.flpList.find(
-          x =>
-            String(x.flp) ===
-            String(member.flp)
+          item =>
+            item &&
+            String(item.flp || "") ===
+              String(member.flp || "")
         );
+
+
+      //----------------------------------
+      // ルートFLPなら未使用へ戻す
+      //----------------------------------
 
       if (flpItem) {
 
-        flpItem.status = "未使用";
+        flpItem.status =
+          "未使用";
+
+        console.log(
+          "FLP番号を未使用へ復元:",
+          member.flp
+        );
+
       }
+
 
       //----------------------------------
       // remainingMembersへ入れない
-      // ＝登録者削除
+      // ＝確認中登録者を削除
       //----------------------------------
 
-      changed = true;
+      changed =
+        true;
+
 
       console.log(
         "確認期限切れ登録者を自動削除:",
@@ -743,101 +806,353 @@ async function cleanupExpiredPendingMembers() {
         member.flp
       );
 
-      console.log(
-        "FLP番号を未使用へ復元:",
-        member.flp
-      );
     }
+
+
     //----------------------------------
-    // 一般FBO
-    // 7日経過した「使用中」FLPを解除
+    // ここで最新のmembersへ更新
     //----------------------------------
 
-    for (const introducer of remainingMembers) {
+    data.members =
+      remainingMembers;
 
-      if (!Array.isArray(introducer.flpInUse)) {
+
+
+    /* ==================================
+       2.
+       一般FBO
+       7日経過した仮確保FLPを解除
+    ================================== */
+
+    for (
+      const introducer of data.members
+    ) {
+
+      if (
+        !Array.isArray(
+          introducer.flpInUse
+        )
+      ) {
         continue;
       }
 
+
       const beforeCount =
         introducer.flpInUse.length;
+
 
       introducer.flpInUse =
         introducer.flpInUse.filter(
           item => {
 
-            if (!item || !item.usedAt) {
+            if (
+              !item ||
+              !item.usedAt
+            ) {
               return true;
             }
+
 
             const usedTime =
-              new Date(item.usedAt).getTime();
+              new Date(
+                item.usedAt
+              ).getTime();
 
-            if (!Number.isFinite(usedTime)) {
+
+            if (
+              !Number.isFinite(
+                usedTime
+              )
+            ) {
               return true;
             }
 
-            const elapsed =
-              now - usedTime;
 
             //--------------------------------
-            // まだ7日未満なら「使用中」を維持
+            // まだ7日未満
             //--------------------------------
 
-            if (elapsed < sevenDays) {
+            if (
+              now - usedTime <
+              sevenDays
+            ) {
               return true;
             }
+
 
             //--------------------------------
             // 7日経過
-            // 「使用中」から解除して再利用可能
+            // 仮確保解除
             //--------------------------------
 
             console.log(
-              "一般FBO FLP使用中を7日後解除:",
+              "一般FBO FLP仮確保を7日後解除:",
               introducer.name,
               introducer.flp,
               item.flp
             );
 
+
             return false;
+
           }
         );
+
 
       if (
         introducer.flpInUse.length !==
         beforeCount
       ) {
-        changed = true;
+
+        changed =
+          true;
+
       }
+
     }
-    //----------------------------------
-    // 変更があった場合だけ保存
-    //----------------------------------
 
-    if (changed) {
 
-      data.members =
-        remainingMembers;
 
-      await saveAdmin(data);
+    /* ==================================
+       3.
+       Day7-2 LINE仮割当
+       7日経過分を整理
+    ================================== */
+
+    const remainingAssignments =
+      [];
+
+
+    for (
+      const assignment of
+      data.day72LineAssignments
+    ) {
+
+      if (!assignment) {
+
+        changed =
+          true;
+
+        continue;
+      }
+
+
+      const assignedTime =
+        new Date(
+          assignment.assignedAt || ""
+        ).getTime();
+
+
+      //----------------------------------
+      // 7日未満の正常な割当は残す
+      //----------------------------------
+
+      if (
+        Number.isFinite(
+          assignedTime
+        ) &&
+        now - assignedTime <
+          sevenDays
+      ) {
+
+        remainingAssignments.push(
+          assignment
+        );
+
+        continue;
+      }
+
+
+      //----------------------------------
+      // ここから7日経過または
+      // 日付異常の割当
+      //----------------------------------
+
+      const assignmentFLP =
+        String(
+          assignment.myFLP || ""
+        );
+
+
+      //----------------------------------
+      // このFLPで登録者が存在するか確認
+      //----------------------------------
+
+      const registeredMember =
+        data.members.find(
+          member =>
+            String(
+              member.flp || ""
+            ) ===
+            assignmentFLP
+        );
+
+
+      //----------------------------------
+      // 登録者が存在しない場合だけ
+      // 仮確保を解除
+      //----------------------------------
+
+      if (!registeredMember) {
+
+
+        /* -------------------------------
+           ルートVSH
+        ------------------------------- */
+
+        if (
+          assignment.source ===
+          "root"
+        ) {
+
+          const rootItem =
+            data.flpList.find(
+              item =>
+                item &&
+                String(
+                  item.flp || ""
+                ) ===
+                assignmentFLP
+            );
+
+
+          if (
+            rootItem &&
+            rootItem.status ===
+              "使用中"
+          ) {
+
+            rootItem.status =
+              "未使用";
+
+
+            console.log(
+              "Day7-2 LINE期限切れ・ルートFLP解除:",
+              assignmentFLP
+            );
+
+          }
+
+        }
+
+
+        /* -------------------------------
+           一般FBO
+        ------------------------------- */
+
+        if (
+          assignment.source ===
+          "member"
+        ) {
+
+          const introducer =
+            data.members.find(
+              member =>
+                String(
+                  member.flp || ""
+                ) ===
+                String(
+                  assignment.introducerFLP ||
+                  ""
+                )
+            );
+
+
+          if (
+            introducer &&
+            Array.isArray(
+              introducer.flpInUse
+            )
+          ) {
+
+            const beforeCount =
+              introducer.flpInUse.length;
+
+
+            introducer.flpInUse =
+              introducer.flpInUse.filter(
+                item =>
+                  !item ||
+                  String(
+                    item.flp || ""
+                  ) !==
+                  assignmentFLP
+              );
+
+
+            if (
+              introducer.flpInUse.length !==
+              beforeCount
+            ) {
+
+              console.log(
+                "Day7-2 LINE期限切れ・一般FBO FLP解除:",
+                introducer.name,
+                introducer.flp,
+                assignmentFLP
+              );
+
+            }
+
+          }
+
+        }
+
+      }
+
+
+      //----------------------------------
+      // 期限切れDay7-2割当は削除
+      //----------------------------------
+
+      changed =
+        true;
+
 
       console.log(
-        "7日経過登録者の自動整理完了"
+        "Day7-2 LINE期限切れ割当を削除:",
+        assignment.source,
+        assignment.introducerFLP,
+        assignmentFLP
       );
 
     }
+
+
+    data.day72LineAssignments =
+      remainingAssignments;
+
+
+
+    /* ==================================
+       4.
+       変更があった場合だけ保存
+    ================================== */
+
+    if (changed) {
+
+      await saveAdmin(data);
+
+
+      console.log(
+        "7日経過データの自動整理完了"
+      );
+
+    }
+
 
     return data;
 
   }
 
+
   catch (err) {
 
     console.error(
-      "7日経過登録者の自動整理エラー:",
+      "7日経過データの自動整理エラー:",
       err
     );
+
 
     throw err;
 
