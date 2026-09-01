@@ -11786,53 +11786,151 @@ Vera Sky Harmony を譲渡いたします。`
            Day7-2
         ========================= */
 
-        if (
+              if (
           text ===
           "Day7-2へ進む"
         ) {
 
+          //----------------------------------
+          // 最新管理データ取得
+          //----------------------------------
+
+          const data =
+            await cleanupExpiredPendingMembers();
+
+
+          //----------------------------------
+          // LINE User IDを基準に
+          // 紹介者＋FLP番号を決定
+          //----------------------------------
+
+          const assignment =
+            await createDay72LineAssignment(
+              data,
+              userId
+            );
+
+
+          //----------------------------------
+          // 現在割当可能なVSHがない場合
+          //----------------------------------
+
+          if (!assignment) {
+
+            await client.replyMessage(
+              ev.replyToken,
+              {
+                type: "text",
+
+                text:
+`現在、VSHの登録受付準備中です。
+
+恐れ入りますが、
+しばらくしてからもう一度
+「Day7-2へ進む」
+と送信してください。`
+              }
+            );
+
+            continue;
+          }
+
+
+          //----------------------------------
+          // 専用Day7-2 URL
+          // LINE User IDそのものはURLに出さない
+          //----------------------------------
+
+          const day72URL =
+            "https://vsh-server.onrender.com/pages/day7-2.html?t=" +
+            encodeURIComponent(
+              assignment.token
+            );
+
+
+          //----------------------------------
+          // Day7-2をLINEトーク欄へ残す
+          //----------------------------------
+
           await client.replyMessage(
             ev.replyToken,
             [
-
               {
-                type:
-                  "image",
+                type: "image",
 
                 originalContentUrl:
-                  "https://res.cloudinary.com/dxegzwukb/image/upload/v1771291127/X41_s9psh6.png",
+                  "https://res.cloudinary.com/dxegzwukb/image/upload/v1786244756/X66_wbuybf.png",
 
                 previewImageUrl:
-                  "https://res.cloudinary.com/dxegzwukb/image/upload/v1771291127/X41_s9psh6.png"
+                  "https://res.cloudinary.com/dxegzwukb/image/upload/v1786244756/X66_wbuybf.png"
               },
 
               {
-                type:
-                  "text",
+                type: "text",
 
                 text:
-`【VSH登録受付】
+`Vera Sky Harmony
+Day7-2へ進みます。
 
-FBO登録が全て完了しましたら画面下のスタートを押し、「あなたの氏名」と「あなたのFLP番号」を送信してください。
+あなた専用の登録番号を
+ご用意しました。
 
-【登録申請】方法は、
-・FBO登録申請書（WEB版）の入力
-・登録セットの「登録らくらく３本入アロエベラジュース１L」
-（12,420円・0.575CC）を購入して完了です
+下のボタンから
+登録画面を開いてください。
 
-クーリングオフ制度がありますので、安心して登録してください。
+このボタンからは、
+7日以内であれば
+同じDay7-2を確認できます。`
+              },
 
-あなたが登録すると、この✨Vera.Sky.Harmony✨があなたにプレゼントされます。`
+              {
+                type: "template",
+
+                altText:
+                  "VSH Day7-2",
+
+                template: {
+
+                  type:
+                    "buttons",
+
+                  text:
+                    "FBO登録申請へ進みます。",
+
+                  actions: [
+
+                    {
+                      type:
+                        "uri",
+
+                      label:
+                        "Day7-2を開く",
+
+                      uri:
+                        day72URL
+                    }
+
+                  ]
+
+                }
+
               }
 
             ]
           );
 
-          return;
 
-        }
+          console.log(
+            "Day7-2 LINE送信成功:",
+            assignment.source,
+            assignment.introducerFLP,
+            assignment.myFLP,
+            userId
+          );
 
+          continue;
 
+        } 
         /* =========================
            登録希望（既存保持）
         ========================= */
