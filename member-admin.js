@@ -636,8 +636,11 @@ async function loadIntroducedMembers() {
     //----------------------------------
 
     updateUsedFLPDisplay(
-      members
-    );
+  members,
+  Array.isArray(result.reservedFLPs)
+    ? result.reservedFLPs
+    : []
+);
 
 
     //----------------------------------
