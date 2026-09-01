@@ -254,6 +254,45 @@ function getDay72LineAssignment(data, userId) {
   return null;
 }
 // ========================================
+// 現在の5件のうち
+// 登録済み人数を取得
+// ========================================
+
+function getRegisteredCount(
+  data,
+  introducer
+) {
+
+  if (
+    !data ||
+    !introducer ||
+    !Array.isArray(data.members) ||
+    !Array.isArray(introducer.flpNumbers)
+  ) {
+    return 0;
+  }
+
+  const currentFLPs =
+    introducer.flpNumbers.map(
+      flp => String(flp || "")
+    );
+
+  return data.members.filter(
+    member =>
+      member &&
+      member.status === "登録済" &&
+      String(
+        member.vshIntroducerFLP || ""
+      ) ===
+        String(introducer.flp || "") &&
+      currentFLPs.includes(
+        String(member.flp || "")
+      )
+  ).length;
+}
+
+
+// ========================================
 // Day7-2 LINE用
 // 紹介者決定 ＋ FLP番号仮確保
 // ========================================
@@ -411,8 +450,11 @@ async function createDay72LineAssignment(
           return false;
         }
 
-        const registeredCount =
-          getRegisteredCount(member);
+      const registeredCount =
+  getRegisteredCount(
+    data,
+    member
+  );
 
         return registeredCount < 5;
       }
