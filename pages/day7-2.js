@@ -1,15 +1,11 @@
 // ========================================
 // Day7-2.js
 // Vera Sky Harmony Version 2.0
-// 完全差し替え版
+// LINE専用token方式・完全版
 // ========================================
 
 let myFLP = "";
 
-
-// ========================================
-// 初期表示
-// ========================================
 
 // ========================================
 // 初期表示
@@ -129,6 +125,7 @@ window.onload = async () => {
 
 };
 
+
 // ========================================
 // ボタン
 // ========================================
@@ -143,6 +140,7 @@ document
 
 // ========================================
 // 登録完了をLINEで送信
+// Day7-2 LINE専用token方式
 // ========================================
 
 async function startLINE() {
@@ -160,6 +158,32 @@ async function startLINE() {
         return;
     }
 
+
+    //----------------------------------
+    // URLからDay7-2 token取得
+    //----------------------------------
+
+    const params =
+        new URLSearchParams(
+            window.location.search
+        );
+
+    const token =
+        String(
+            params.get("t") || ""
+        ).trim();
+
+
+    if (!token) {
+
+        alert(
+            "Day7-2の確認情報がありません。\nLINEの「Day7-2を開く」から進んでください。"
+        );
+
+        return;
+    }
+
+
     //----------------------------------
     // 氏名入力
     //----------------------------------
@@ -169,19 +193,23 @@ async function startLINE() {
             "あなたの氏名を入力してください。"
         );
 
+
     if (!userName) {
         return;
     }
 
+
     const name =
         userName.trim();
+
 
     if (!name) {
         return;
     }
 
+
     //----------------------------------
-    // 保存ボタンを一時停止
+    // ボタンを一時停止
     //----------------------------------
 
     const button =
@@ -189,70 +217,25 @@ async function startLINE() {
             "sendButton"
         );
 
-    button.disabled = true;
+
+    if (button) {
+        button.disabled = true;
+    }
 
 
     try {
 
         //----------------------------------
-        // FLP番号使用開始
-        //----------------------------------
-
-        const useRes =
-            await fetch(
-                "/api/use-flp",
-                {
-
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    credentials:
-                        "same-origin",
-
-                    body:
-                        JSON.stringify({
-
-                            flp:
-                                myFLP
-
-                        })
-
-                }
-            );
-
-        const useResult =
-            await useRes.json();
-
-        if (
-            !useRes.ok ||
-            !useResult.success
-        ) {
-
-            alert(
-                useResult.message ||
-                "FLP番号更新エラー"
-            );
-
-            button.disabled = false;
-
-            return;
-        }
-
-
-        //----------------------------------
-        // 登録データ保存
+        // LINE専用tokenで登録受付
         //----------------------------------
 
         const registerRes =
             await fetch(
-                "/api/register",
+                "/api/day7-2-register",
                 {
 
-                    method: "POST",
+                    method:
+                        "POST",
 
                     headers: {
                         "Content-Type":
@@ -265,19 +248,21 @@ async function startLINE() {
                     body:
                         JSON.stringify({
 
-                            name:
-                                name,
+                            token:
+                                token,
 
-                            flp:
-                                myFLP
+                            name:
+                                name
 
                         })
 
                 }
             );
 
+
         const registerResult =
             await registerRes.json();
+
 
         if (
             !registerRes.ok ||
@@ -289,7 +274,11 @@ async function startLINE() {
                 "登録処理エラー"
             );
 
-            button.disabled = false;
+
+            if (button) {
+                button.disabled = false;
+            }
+
 
             return;
         }
@@ -309,7 +298,7 @@ FLP番号：${myFLP}`;
 
 
         //----------------------------------
-        // VSH公式LINEを開く
+        // VSH公式LINEへ戻る
         //
         // window.open は使用しない
         // 同じ画面からLINEへ移動する
@@ -317,9 +306,11 @@ FLP番号：${myFLP}`;
 
         const lineURL =
             "https://line.me/R/oaMessage/@591tvejt/?"
-            + encodeURIComponent(
+            +
+            encodeURIComponent(
                 introducerText
             );
+
 
         window.location.assign(
             lineURL
@@ -330,15 +321,19 @@ FLP番号：${myFLP}`;
     catch (err) {
 
         console.error(
-            "Day7-2 登録処理エラー:",
+            "Day7-2 LINE登録処理エラー:",
             err
         );
+
 
         alert(
             "通信エラーが発生しました。"
         );
 
-        button.disabled = false;
+
+        if (button) {
+            button.disabled = false;
+        }
 
     }
 
