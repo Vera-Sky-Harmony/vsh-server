@@ -11,20 +11,57 @@ let myFLP = "";
 // 初期表示
 // ========================================
 
+// ========================================
+// 初期表示
+// LINEで決定済みのDay7-2割当を表示
+// ========================================
+
 window.onload = async () => {
 
     try {
 
+        //----------------------------------
+        // LINEから渡された専用token取得
+        //----------------------------------
+
+        const params =
+            new URLSearchParams(
+                window.location.search
+            );
+
+        const token =
+            String(
+                params.get("t") || ""
+            ).trim();
+
+
+        if (!token) {
+
+            alert(
+                "Day7-2の確認情報がありません。\nLINEの「Day7-2を開く」から進んでください。"
+            );
+
+            return;
+        }
+
+
+        //----------------------------------
+        // LINEで決定済みの割当を取得
+        //----------------------------------
+
         const res =
             await fetch(
-                "/api/next-flp",
+                "/api/day7-2-assignment?t=" +
+                encodeURIComponent(token),
                 {
-                    credentials: "same-origin"
+                    credentials:
+                        "same-origin"
                 }
             );
 
         const data =
             await res.json();
+
 
         if (
             !res.ok ||
@@ -33,11 +70,12 @@ window.onload = async () => {
 
             alert(
                 data.message ||
-                "未使用のFLP番号がありません。"
+                "Day7-2の情報を取得できません。"
             );
 
             return;
         }
+
 
         //----------------------------------
         // 紹介者氏名
@@ -48,6 +86,7 @@ window.onload = async () => {
             .textContent =
                 data.introducerName;
 
+
         //----------------------------------
         // 紹介者FLP番号
         //----------------------------------
@@ -57,6 +96,7 @@ window.onload = async () => {
             .textContent =
                 data.introducerFLP;
 
+
         //----------------------------------
         // あなたのFLP番号
         //----------------------------------
@@ -65,6 +105,7 @@ window.onload = async () => {
             .getElementById("myflp")
             .textContent =
                 data.myFLP;
+
 
         myFLP =
             String(
@@ -87,7 +128,6 @@ window.onload = async () => {
     }
 
 };
-
 
 // ========================================
 // ボタン
