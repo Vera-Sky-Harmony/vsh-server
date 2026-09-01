@@ -254,6 +254,386 @@ function getDay72LineAssignment(data, userId) {
   return null;
 }
 // ========================================
+// Day7-2 LINE用
+// 紹介者決定 ＋ FLP番号仮確保
+// ========================================
+
+async function createDay72LineAssignment(
+  data,
+  userId
+) {
+
+  //----------------------------------
+  // 基本データ確認
+  //----------------------------------
+
+  if (!data || !userId) {
+    return null;
+  }
+
+  if (!Array.isArray(data.members)) {
+    data.members = [];
+  }
+
+  if (!Array.isArray(data.flpList)) {
+    data.flpList = [];
+  }
+
+  if (!Array.isArray(data.day72LineAssignments)) {
+    data.day72LineAssignments = [];
+  }
+
+
+  //----------------------------------
+  // 同じLINE利用者に
+  // 7日以内の割当があれば再利用
+  //----------------------------------
+
+  const existingAssignment =
+    getDay72LineAssignment(
+      data,
+      userId
+    );
+
+  if (existingAssignment) {
+    return existingAssignment;
+  }
+
+
+  //----------------------------------
+  // ルートID最優先
+  //----------------------------------
+
+  const rootUnusedFLP =
+    data.flpList.find(
+      item =>
+        item &&
+        item.flp &&
+        item.status === "未使用"
+    );
+
+  if (
+    data.rootSnsActive === true &&
+    rootUnusedFLP
+  ) {
+
+    //--------------------------------
+    // Day7-2表示時点で仮確保
+    //--------------------------------
+
+    rootUnusedFLP.status =
+      "使用中";
+
+    const assignment = {
+
+      userId:
+        String(userId),
+
+      token:
+        crypto
+          .randomBytes(24)
+          .toString("hex"),
+
+      source:
+        "root",
+
+      introducerName:
+        String(
+          data.introducerName || ""
+        ),
+
+      introducerFLP:
+        String(
+          data.introducerFLP || ""
+        ),
+
+      myFLP:
+        String(
+          rootUnusedFLP.flp
+        ),
+
+      assignedAt:
+        new Date().toISOString()
+
+    };
+
+    data.day72LineAssignments.push(
+      assignment
+    );
+
+    //--------------------------------
+    // ルート優先中は
+    // 一般FBO集中状態を解除
+    //--------------------------------
+
+    delete data.vshAutoCurrentFLP;
+    delete data.vshAutoSelectedAt;
+
+    await saveAdmin(data);
+
+    console.log(
+      "Day7-2 LINE割当・ルート:",
+      assignment.introducerFLP,
+      assignment.myFLP
+    );
+
+    return assignment;
+  }
+
+
+  //----------------------------------
+  // 一般FBO候補取得
+  //----------------------------------
+
+  const eligibleMembers =
+    data.members.filter(
+      member => {
+
+        if (!member) {
+          return false;
+        }
+
+        if (
+          member.status !== "登録済" ||
+          member.vshActive !== true ||
+          member.snsActive !== true ||
+          member.faceToFaceActive === true
+        ) {
+          return false;
+        }
+
+        if (
+          !Array.isArray(
+            member.flpNumbers
+          ) ||
+          member.flpNumbers.length !== 5
+        ) {
+          return false;
+        }
+
+        const registeredCount =
+          getRegisteredCount(member);
+
+        return registeredCount < 5;
+      }
+    );
+
+
+  //----------------------------------
+  // 対象FBOなし
+  //----------------------------------
+
+  if (eligibleMembers.length === 0) {
+    return null;
+  }
+
+
+  //----------------------------------
+  // 現在集中紹介中のFBO
+  //----------------------------------
+
+  let selectedMember = null;
+
+  if (data.vshAutoCurrentFLP) {
+
+    selectedMember =
+      eligibleMembers.find(
+        member =>
+          String(member.flp) ===
+          String(
+            data.vshAutoCurrentFLP
+          )
+      ) || null;
+  }
+
+
+  //----------------------------------
+  // 新しくFBOを選ぶ
+  // 5件入力完了日時が早い順
+  //----------------------------------
+
+  if (!selectedMember) {
+
+    const candidates =
+      [...eligibleMembers].sort(
+        (a, b) => {
+
+          const aTime =
+            new Date(
+              a.flpNumbersRegisteredAt || 0
+            ).getTime();
+
+          const bTime =
+            new Date(
+              b.flpNumbersRegisteredAt || 0
+            ).getTime();
+
+          if (aTime !== bTime) {
+            return aTime - bTime;
+          }
+
+          return String(
+            a.flp || ""
+          ).localeCompare(
+            String(
+              b.flp || ""
+            )
+          );
+        }
+      );
+
+    selectedMember =
+      candidates[0];
+
+    data.vshAutoCurrentFLP =
+      selectedMember.flp;
+
+    data.vshAutoSelectedAt =
+      new Date().toISOString();
+  }
+
+
+  //----------------------------------
+  // 一般FBOの使用済・仮確保番号
+  //----------------------------------
+
+  const registeredFLPs =
+    new Set(
+      data.members
+        .filter(
+          member =>
+            String(
+              member.vshIntroducerFLP || ""
+            ) ===
+            String(
+              selectedMember.flp
+            )
+        )
+        .map(
+          member =>
+            String(member.flp || "")
+        )
+        .filter(Boolean)
+    );
+
+  if (
+    !Array.isArray(
+      selectedMember.flpInUse
+    )
+  ) {
+    selectedMember.flpInUse = [];
+  }
+
+  const inUseFLPs =
+    new Set(
+      selectedMember.flpInUse
+        .filter(
+          item =>
+            item &&
+            item.flp
+        )
+        .map(
+          item =>
+            String(item.flp)
+        )
+    );
+
+
+  //----------------------------------
+  // 次の利用可能FLP
+  //----------------------------------
+
+  const nextFLP =
+    selectedMember.flpNumbers.find(
+      flp =>
+        flp &&
+        !registeredFLPs.has(
+          String(flp)
+        ) &&
+        !inUseFLPs.has(
+          String(flp)
+        )
+    );
+
+
+  //----------------------------------
+  // 5件すべて登録済または仮確保中
+  //----------------------------------
+
+  if (!nextFLP) {
+    return null;
+  }
+
+
+  //----------------------------------
+  // 一般FBOのFLPを仮確保
+  //----------------------------------
+
+  const assignedAt =
+    new Date().toISOString();
+
+  selectedMember.flpInUse.push({
+
+    flp:
+      String(nextFLP),
+
+    usedAt:
+      assignedAt
+
+  });
+
+
+  //----------------------------------
+  // LINE利用者と割当を保存
+  //----------------------------------
+
+  const assignment = {
+
+    userId:
+      String(userId),
+
+    token:
+      crypto
+        .randomBytes(24)
+        .toString("hex"),
+
+    source:
+      "member",
+
+    introducerName:
+      String(
+        selectedMember.name || ""
+      ),
+
+    introducerFLP:
+      String(
+        selectedMember.flp || ""
+      ),
+
+    myFLP:
+      String(nextFLP),
+
+    assignedAt:
+      assignedAt
+
+  };
+
+  data.day72LineAssignments.push(
+    assignment
+  );
+
+  await saveAdmin(data);
+
+  console.log(
+    "Day7-2 LINE割当・一般FBO:",
+    assignment.introducerName,
+    assignment.introducerFLP,
+    assignment.myFLP
+  );
+
+  return assignment;
+}
+// ========================================
 // 7日経過した「確認中」登録者を自動整理
 // 登録者削除 ＋ FLP番号を未使用へ復元
 // ========================================
