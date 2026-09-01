@@ -204,6 +204,56 @@ async function getMemberAdminSession(
   return session;
 }
 // ========================================
+// Day7-2 LINE仮割当
+// 同じLINE User IDは7日間同じ割当を使用
+// ========================================
+
+function getDay72LineAssignment(data, userId) {
+
+  if (!data || !userId) {
+    return null;
+  }
+
+  if (!Array.isArray(data.day72LineAssignments)) {
+    data.day72LineAssignments = [];
+  }
+
+  const now = Date.now();
+
+  const sevenDays =
+    7 * 24 * 60 * 60 * 1000;
+
+  const assignment =
+    data.day72LineAssignments.find(
+      item =>
+        item &&
+        String(item.userId || "") ===
+          String(userId)
+    );
+
+  if (!assignment) {
+    return null;
+  }
+
+  const assignedTime =
+    new Date(
+      assignment.assignedAt || ""
+    ).getTime();
+
+  if (!Number.isFinite(assignedTime)) {
+    return null;
+  }
+
+  if (
+    now - assignedTime <
+    sevenDays
+  ) {
+    return assignment;
+  }
+
+  return null;
+}
+// ========================================
 // 7日経過した「確認中」登録者を自動整理
 // 登録者削除 ＋ FLP番号を未使用へ復元
 // ========================================
