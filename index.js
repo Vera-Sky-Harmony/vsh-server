@@ -12267,25 +12267,7 @@ app.post(
             );
 
 
-          if (member) {
-
-            member.userId =
-              userId;
-
-            await saveAdmin(
-              adminData
-            );
-
-
-            console.log(
-              "LINE User ID 保存成功:",
-              memberName,
-              memberFLP
-            );
-
-          }
-
-          else {
+                   if (!member) {
 
             console.log(
               "LINE User ID 保存対象が見つかりません:",
@@ -12293,9 +12275,88 @@ app.post(
               memberFLP
             );
 
+            await client.replyMessage(
+              ev.replyToken,
+              {
+                type: "text",
+                text:
+                  "登録情報を確認できませんでした。Day7-2からもう一度ご確認ください。"
+              }
+            );
+
+            continue;
           }
 
 
+          //----------------------------------
+          // Day7-2を割り当てた
+          // LINE本人か確認
+          //----------------------------------
+
+          if (!Array.isArray(
+            adminData.day72LineAssignments
+          )) {
+
+            adminData.day72LineAssignments = [];
+
+          }
+
+
+          const assignment =
+            adminData.day72LineAssignments.find(
+              item =>
+                item &&
+                String(item.myFLP || "") ===
+                  String(memberFLP) &&
+                String(item.userId || "") ===
+                  String(userId) &&
+                (
+                  !member.vshDay72Token ||
+                  String(item.token || "") ===
+                    String(member.vshDay72Token)
+                )
+            );
+
+
+          if (!assignment) {
+
+            console.log(
+              "Day7-2 LINE本人確認失敗:",
+              memberName,
+              memberFLP,
+              userId
+            );
+
+            await client.replyMessage(
+              ev.replyToken,
+              {
+                type: "text",
+                text:
+                  "この登録情報は、現在のLINEアカウントに割り当てられたものではありません。"
+              }
+            );
+
+            continue;
+          }
+
+
+          //----------------------------------
+          // LINE User IDを登録者へ紐付け
+          //----------------------------------
+
+          member.userId =
+            userId;
+
+          await saveAdmin(
+            adminData
+          );
+
+
+          console.log(
+            "Day7-2 LINE本人確認・User ID保存成功:",
+            memberName,
+            memberFLP
+          );
           //----------------------------------
           // Day7-3を本人へ送信
           //----------------------------------
