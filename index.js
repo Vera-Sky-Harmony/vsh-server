@@ -3809,6 +3809,20 @@ const nextFLP =
 
       }
 
+       //----------------------------------
+// Day7-2表示時点でFLP番号を仮確保
+//----------------------------------
+
+if (!Array.isArray(introducer.flpInUse)) {
+  introducer.flpInUse = [];
+}
+
+introducer.flpInUse.push({
+  flp: String(nextFLP),
+  usedAt: new Date().toISOString()
+});
+
+await saveAdmin(data);
 
       console.log(
         "譲渡VSH 次FLP:",
