@@ -5101,7 +5101,16 @@ app.post(
         item.status =
           "使用済";
 
+        //--------------------------------
+        // 登録受付時点から
+        // 新しい7日間を開始
+        //--------------------------------
 
+        const registrationTime =
+          new Date().toISOString();
+
+        assignment.registrationSentAt =
+          registrationTime;
         //--------------------------------
         // 新規登録者を確認中で保存
         //--------------------------------
@@ -5134,7 +5143,7 @@ app.post(
             token,
 
           created:
-            new Date().toISOString()
+            registrationTime
 
         });
 
