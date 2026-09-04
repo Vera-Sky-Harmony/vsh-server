@@ -59,18 +59,34 @@ window.onload = async () => {
             await res.json();
 
 
-        if (
-            !res.ok ||
-            !data.success
-        ) {
+       if (
+    !res.ok ||
+    !data.success
+) {
 
-            alert(
-                data.message ||
-                "Day7-2の情報を取得できません。"
+    alert(
+        data.message ||
+        "Day7-2の情報を取得できません。"
+    );
+
+    //----------------------------------
+    // 登録済みなら再登録ボタンを無効化
+    //----------------------------------
+
+    if (data.blocked === true) {
+
+        const button =
+            document.getElementById(
+                "sendButton"
             );
 
-            return;
+        if (button) {
+            button.disabled = true;
         }
+    }
+
+    return;
+}
 
 
         //----------------------------------
