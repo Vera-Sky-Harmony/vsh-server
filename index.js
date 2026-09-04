@@ -218,10 +218,35 @@ function getDay72LineAssignment(data, userId) {
     data.day72LineAssignments = [];
   }
 
-  const now = Date.now();
+  if (!Array.isArray(data.members)) {
+    data.members = [];
+  }
 
-  const sevenDays =
-    7 * 24 * 60 * 60 * 1000;
+  //----------------------------------
+  // LINE本人として登録済みなら
+  // 2人目の登録を禁止
+  //----------------------------------
+
+  const registeredMember =
+    data.members.find(
+      member =>
+        member &&
+        String(member.userId || "") ===
+          String(userId)
+    );
+
+  if (registeredMember) {
+
+    return {
+      blocked: true,
+      reason: "alreadyRegistered"
+    };
+
+  }
+
+  //----------------------------------
+  // 同じLINE User IDの割当を取得
+  //----------------------------------
 
   const assignment =
     data.day72LineAssignments.find(
@@ -235,6 +260,25 @@ function getDay72LineAssignment(data, userId) {
     return null;
   }
 
+  //----------------------------------
+  // Day7-2から登録送信済みなら
+  // 同じLINEで2人目を禁止
+  //----------------------------------
+
+  if (assignment.registrationSentAt) {
+
+    return {
+      blocked: true,
+      reason: "alreadyRegistered"
+    };
+
+  }
+
+  const now = Date.now();
+
+  const sevenDays =
+    7 * 24 * 60 * 60 * 1000;
+
   const assignedTime =
     new Date(
       assignment.assignedAt || ""
@@ -243,6 +287,11 @@ function getDay72LineAssignment(data, userId) {
   if (!Number.isFinite(assignedTime)) {
     return null;
   }
+
+  //----------------------------------
+  // 登録送信前で7日以内なら
+  // 同じ本人には同じFLPを表示
+  //----------------------------------
 
   if (
     now - assignedTime <
@@ -4901,7 +4950,38 @@ app.post(
         //--------------------------------
         // 新規登録者を確認中で保存
         //--------------------------------
+        //--------------------------------
+        // 登録受付時点から
+        // 新しい7日間を開始
+        //--------------------------------
 
+        const registrationTime =
+          new Date().toISOString();
+
+        assignment.registrationSentAt =
+          registrationTime;
+
+        const reservedItem =
+          introducer.flpInUse.find(
+            item =>
+              item &&
+              String(item.flp || "") ===
+                String(flp)
+          );
+
+        if (reservedItem) {
+
+          reservedItem.usedAt =
+            registrationTime;
+
+        }
+
+
+        //--------------------------------
+        // 新規登録者を確認中で保存
+        //--------------------------------
+
+      
         data.members.push({
 
           userId:
@@ -4929,8 +5009,8 @@ app.post(
           vshDay72Token:
             token,
 
-          created:
-            new Date().toISOString()
+                   created:
+            registrationTime
 
         });
 
