@@ -1075,9 +1075,19 @@ async function cleanupExpiredPendingMembers() {
       }
 
 
+            //----------------------------------
+      // 7日間の基準日時
+      // 登録送信後は第2の7日間を使用
+      //----------------------------------
+
+      const assignmentBaseTime =
+        assignment.registrationSentAt ||
+        assignment.assignedAt ||
+        "";
+
       const assignedTime =
         new Date(
-          assignment.assignedAt || ""
+          assignmentBaseTime
         ).getTime();
 
 
