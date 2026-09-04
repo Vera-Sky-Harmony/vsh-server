@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>VSH 仮想スマートフォンテスト</title>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 520px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .box {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+        }
+
+        h1 {
+            font-size: 22px;
+            text-align: center;
+        }
+
+        select,
+        button {
+            width: 100%;
+            padding: 14px;
+            margin-top: 15px;
+            font-size: 16px;
+        }
+
+        .notice {
+            margin-top: 20px;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="box">
+
+    <h1>
+        VSH 仮想スマートフォン<br>
+        テストモード
+    </h1>
+
+    <label for="virtualDevice">
+        仮想スマートフォンを選択
+    </label>
+
+    <select id="virtualDevice">
+        <option value="TEST-001">仮想スマホ 001</option>
+        <option value="TEST-002">仮想スマホ 002</option>
+        <option value="TEST-003">仮想スマホ 003</option>
+        <option value="TEST-004">仮想スマホ 004</option>
+        <option value="TEST-005">仮想スマホ 005</option>
+    </select>
+
+    <button id="startButton">
+        テストを開始
+    </button>
+
+    <div class="notice">
+        この画面はVSH動作確認専用です。<br>
+        本番利用者の登録には使用しません。
+    </div>
+
+</div>
+
+<script>
+document
+    .getElementById("startButton")
+    .addEventListener("click", function () {
+
+        const device =
+            document
+                .getElementById("virtualDevice")
+                .value;
+
+        alert(
+            "選択された仮想スマートフォン："
+            + device
+        );
+
+    });
+</script>
+
+</body>
+</html>
