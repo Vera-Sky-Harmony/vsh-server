@@ -832,7 +832,54 @@ async function cleanupExpiredPendingMembers() {
 
       }
 
+      //----------------------------------
+      // 一般FBOからの紹介の場合
+      // 紹介者の仮確保FLPも解除する
+      //----------------------------------
 
+      if (member.vshIntroducerFLP) {
+
+        const introducer =
+          data.members.find(
+            item =>
+              item &&
+              String(item.flp || "") ===
+                String(member.vshIntroducerFLP || "")
+          );
+
+        if (
+          introducer &&
+          Array.isArray(introducer.flpInUse)
+        ) {
+
+          const beforeCount =
+            introducer.flpInUse.length;
+
+          introducer.flpInUse =
+            introducer.flpInUse.filter(
+              item =>
+                !item ||
+                String(item.flp || "") !==
+                  String(member.flp || "")
+            );
+
+          if (
+            introducer.flpInUse.length !==
+            beforeCount
+          ) {
+
+            console.log(
+              "確認期限切れ・一般FBO FLP解除:",
+              introducer.name,
+              introducer.flp,
+              member.flp
+            );
+
+          }
+
+        }
+
+      }
       //----------------------------------
       // remainingMembersへ入れない
       // ＝確認中登録者を削除
