@@ -12613,15 +12613,53 @@ Vera Sky Harmony を譲渡いたします。`
           );
 
 
-          //----------------------------------
-          // 既存処理
-          //----------------------------------
+         //----------------------------------
+// 紹介者へ新規登録申請をLINE通知
+//----------------------------------
 
-          await pushToIntroducer(
-            "",
-            "",
-            userId
-          );
+let introducerUserId = "";
+
+// ルートからの紹介
+if (
+  assignment.source === "root"
+) {
+
+  introducerUserId =
+    adminData.introducerUserId || "";
+
+}
+
+// 一般FBOからの紹介
+else if (
+  assignment.source === "member"
+) {
+
+  const introducer =
+    adminData.members.find(
+      item =>
+        item &&
+        String(item.flp || "") ===
+          String(
+            assignment.introducerFLP || ""
+          )
+    );
+
+  if (introducer) {
+    introducerUserId =
+      introducer.userId || "";
+  }
+
+}
+
+// 紹介者のLINE User IDがある場合だけ通知
+if (introducerUserId) {
+
+  await pushToIntroducer(
+    client,
+    introducerUserId
+  );
+
+}
 
           return res
             .status(200)
