@@ -291,9 +291,19 @@ async function startLINE() {
             );
 
 
-            if (button) {
-                button.disabled = false;
-            }
+           //----------------------------------
+// 登録済みならボタンを無効のままにする
+//----------------------------------
+
+if (button) {
+
+    if (registerResult.blocked === true) {
+        button.disabled = true;
+    } else {
+        button.disabled = false;
+    }
+
+}
 
 
             return;
