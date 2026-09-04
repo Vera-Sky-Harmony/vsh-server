@@ -5,12 +5,14 @@ export async function pushToIntroducer(client, introducerUserId) {
   await client.pushMessage(introducerUserId, {
     type: "text",
     text:
-`登録を受け付けました。
+`【Vera Sky Harmony】
 
-紹介者がFLP本体システムで登録を確認後、
-VSHを譲渡いたします。
+新しい登録申請が届きました。
 
-Day7-3`
+あなたの管理画面をご確認ください。
+
+FLP本体システムで登録を確認後、
+「登録確認」を押してください。`
   });
 
 }
