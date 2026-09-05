@@ -86,10 +86,21 @@ document
                 .getElementById("virtualDevice")
                 .value;
 
-        alert(
-            "選択された仮想スマートフォン："
-            + device
-        );
+   //----------------------------------
+// 選択した仮想スマホ番号を
+// テスト専用としてブラウザに保存
+//----------------------------------
+
+sessionStorage.setItem(
+    "vshVirtualDevice",
+    device
+);
+
+alert(
+    "仮想スマートフォン "
+    + device
+    + " を選択しました。"
+);     
 
     });
 </script>
