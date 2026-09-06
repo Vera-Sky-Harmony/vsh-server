@@ -12522,21 +12522,67 @@ app.post(
           }
 
 
-          const assignment =
-            adminData.day72LineAssignments.find(
-              item =>
-                item &&
-                String(item.myFLP || "") ===
-                  String(memberFLP) &&
-                String(item.userId || "") ===
-                  String(userId) &&
-                (
-                  !member.vshDay72Token ||
-                  String(item.token || "") ===
-                    String(member.vshDay72Token)
-                )
-            );
+          //----------------------------------
+// Day7-2割当本人確認
+// 本番LINE ＋ 管理者仮想スマホ対応
+//----------------------------------
 
+const assignment =
+  adminData.day72LineAssignments.find(
+    item => {
+
+      if (
+        !item ||
+        String(item.myFLP || "") !==
+          String(memberFLP)
+      ) {
+        return false;
+      }
+
+      //--------------------------------
+      // Day7-2 token確認
+      //--------------------------------
+
+      if (
+        member.vshDay72Token &&
+        String(item.token || "") !==
+          String(member.vshDay72Token)
+      ) {
+        return false;
+      }
+
+      //--------------------------------
+      // 通常の本番登録
+      //--------------------------------
+
+      if (
+        String(item.userId || "") ===
+          String(userId)
+      ) {
+        return true;
+      }
+
+      //--------------------------------
+      // 管理者専用・仮想スマホ登録
+      //--------------------------------
+
+      const virtualPrefix =
+        String(userId) +
+        "::VSH-TEST::TEST-";
+
+      if (
+        adminData.introducerUserId &&
+        String(adminData.introducerUserId) ===
+          String(userId) &&
+        String(item.userId || "")
+          .startsWith(virtualPrefix)
+      ) {
+        return true;
+      }
+
+      return false;
+    }
+  );
 
           if (!assignment) {
 
@@ -12667,7 +12713,182 @@ if (introducerUserId) {
 
         }
 
+/* =========================
+   Day7-2 仮想スマホテスト
+   管理者LINE専用
+========================= */
 
+if (
+  /^Day7-2へ進む TEST-\d{3}$/.test(text)
+) {
+
+  //----------------------------------
+  // 最新管理データ取得
+  //----------------------------------
+
+  const testData =
+    await cleanupExpiredPendingMembers();
+
+
+  //----------------------------------
+  // Root Admin本人だけ使用可能
+  //----------------------------------
+
+  if (
+    !testData.introducerUserId ||
+    String(testData.introducerUserId) !==
+      String(userId)
+  ) {
+
+    await client.replyMessage(
+      ev.replyToken,
+      {
+        type: "text",
+        text:
+`このテスト機能は
+VSH管理者専用です。`
+      }
+    );
+
+    continue;
+  }
+
+
+  //----------------------------------
+  // TEST-001等を取得
+  //----------------------------------
+
+  const virtualDevice =
+    text.match(/TEST-\d{3}/)?.[0] || "";
+
+
+  //----------------------------------
+  // 実LINE User ID ＋ 仮想スマホ番号
+  // をテスト専用の識別番号にする
+  //----------------------------------
+
+  const virtualUserId =
+    String(userId) +
+    "::VSH-TEST::" +
+    virtualDevice;
+
+
+  //----------------------------------
+  // 通常のVSH割当機能をそのまま使用
+  //----------------------------------
+
+  const testAssignment =
+    await createDay72LineAssignment(
+      testData,
+      virtualUserId
+    );
+
+
+  //----------------------------------
+  // 二重登録
+  //----------------------------------
+
+  if (
+    testAssignment &&
+    testAssignment.blocked === true
+  ) {
+
+    await client.replyMessage(
+      ev.replyToken,
+      {
+        type: "text",
+        text:
+`この仮想スマートフォンは、
+すでにVSH登録に使用されています。
+
+別の仮想スマートフォン番号を
+選択してください。`
+      }
+    );
+
+    continue;
+  }
+
+
+  //----------------------------------
+  // 割当可能なVSHがない
+  //----------------------------------
+
+  if (!testAssignment) {
+
+    await client.replyMessage(
+      ev.replyToken,
+      {
+        type: "text",
+        text:
+`現在、この仮想スマートフォンへ
+割り当て可能なVSHがありません。`
+      }
+    );
+
+    continue;
+  }
+
+
+  //----------------------------------
+  // テスト用Day7-2 URL
+  //----------------------------------
+
+  const testDay72URL =
+    "https://vsh-server.onrender.com/day7-2.html?t=" +
+    encodeURIComponent(
+      testAssignment.token
+    );
+
+
+  //----------------------------------
+  // LINEへDay7-2を送信
+  //----------------------------------
+
+  await client.replyMessage(
+    ev.replyToken,
+    {
+      type: "template",
+
+      altText:
+        "VSH 仮想スマホテスト Day7-2",
+
+      template: {
+
+        type:
+          "buttons",
+
+        text:
+          virtualDevice +
+          " でDay7-2を開きます。",
+
+        actions: [
+          {
+            type:
+              "uri",
+
+            label:
+              "Day7-2を開く",
+
+            uri:
+              testDay72URL
+          }
+        ]
+
+      }
+    }
+  );
+
+
+  console.log(
+    "VSH仮想スマホ割当:",
+    virtualDevice,
+    testAssignment.introducerFLP,
+    testAssignment.myFLP
+  );
+
+  continue;
+}
         /* =========================
            Day7-2
         ========================= */
