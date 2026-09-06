@@ -86,21 +86,29 @@ document
                 .getElementById("virtualDevice")
                 .value;
 
-   //----------------------------------
-// 選択した仮想スマホ番号を
-// テスト専用としてブラウザに保存
-//----------------------------------
+        //----------------------------------
+        // 選択した仮想スマホ番号を保存
+        //----------------------------------
 
-sessionStorage.setItem(
-    "vshVirtualDevice",
-    device
-);
+        sessionStorage.setItem(
+            "vshVirtualDevice",
+            device
+        );
 
-alert(
-    "仮想スマートフォン "
-    + device
-    + " を選択しました。"
-);     
+        //----------------------------------
+        // LINEへ
+        // Day7-2仮想スマホ開始メッセージを渡す
+        //----------------------------------
+
+        const message =
+            "Day7-2へ進む " + device;
+
+        const lineURL =
+            "https://line.me/R/oaMessage/@591tvejt/?" +
+            encodeURIComponent(message);
+
+        window.location.href =
+            lineURL;
 
     });
 </script>
