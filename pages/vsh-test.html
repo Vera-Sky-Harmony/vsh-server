@@ -58,11 +58,6 @@
     </label>
 
     <select id="virtualDevice">
-        <option value="TEST-001">仮想スマホ 001</option>
-        <option value="TEST-002">仮想スマホ 002</option>
-        <option value="TEST-003">仮想スマホ 003</option>
-        <option value="TEST-004">仮想スマホ 004</option>
-        <option value="TEST-005">仮想スマホ 005</option>
     </select>
 
     <button id="startButton">
@@ -77,40 +72,88 @@
 </div>
 
 <script>
-document
-    .getElementById("startButton")
-    .addEventListener("click", function () {
 
-        const device =
-            document
-                .getElementById("virtualDevice")
-                .value;
+//----------------------------------
+// TEST-001 ～ TEST-200を自動作成
+//----------------------------------
 
-        //----------------------------------
-        // 選択した仮想スマホ番号を保存
-        //----------------------------------
+const virtualDeviceSelect =
+    document.getElementById(
+        "virtualDevice"
+    );
 
-        sessionStorage.setItem(
-            "vshVirtualDevice",
-            device
+for (
+    let i = 1;
+    i <= 200;
+    i++
+) {
+
+    const number =
+        String(i).padStart(
+            3,
+            "0"
         );
 
-        //----------------------------------
-        // LINEへ
-        // Day7-2仮想スマホ開始メッセージを渡す
-        //----------------------------------
+    const option =
+        document.createElement(
+            "option"
+        );
 
-        const message =
-            "Day7-2へ進む " + device;
+    option.value =
+        "TEST-" + number;
 
-        const lineURL =
-            "https://line.me/R/oaMessage/@591tvejt/?" +
-            encodeURIComponent(message);
+    option.textContent =
+        "仮想スマホ " + number;
 
-        window.location.href =
-            lineURL;
+    virtualDeviceSelect.appendChild(
+        option
+    );
+}
 
-    });
+
+//----------------------------------
+// テスト開始
+//----------------------------------
+
+document
+    .getElementById("startButton")
+    .addEventListener(
+        "click",
+        function () {
+
+            const device =
+                virtualDeviceSelect.value;
+
+            //----------------------------------
+            // 選択した仮想スマホ番号を保存
+            //----------------------------------
+
+            sessionStorage.setItem(
+                "vshVirtualDevice",
+                device
+            );
+
+            //----------------------------------
+            // LINEへ
+            // Day7-2仮想スマホ開始メッセージを渡す
+            //----------------------------------
+
+            const message =
+                "Day7-2へ進む " +
+                device;
+
+            const lineURL =
+                "https://line.me/R/oaMessage/@591tvejt/?" +
+                encodeURIComponent(
+                    message
+                );
+
+            window.location.href =
+                lineURL;
+
+        }
+    );
+
 </script>
 
 </body>
