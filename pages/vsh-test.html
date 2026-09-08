@@ -36,6 +36,10 @@
             font-size: 16px;
         }
 
+        #adminButton {
+            margin-top: 25px;
+        }
+
         .notice {
             margin-top: 20px;
             font-size: 14px;
@@ -62,6 +66,10 @@
 
     <button id="startButton">
         テストを開始
+    </button>
+
+    <button id="adminButton">
+        このTESTの管理画面を開く
     </button>
 
     <div class="notice">
@@ -124,19 +132,10 @@ document
             const device =
                 virtualDeviceSelect.value;
 
-            //----------------------------------
-            // 選択した仮想スマホ番号を保存
-            //----------------------------------
-
             sessionStorage.setItem(
                 "vshVirtualDevice",
                 device
             );
-
-            //----------------------------------
-            // LINEへ
-            // Day7-2仮想スマホ開始メッセージを渡す
-            //----------------------------------
 
             const message =
                 "Day7-2へ進む " +
@@ -150,6 +149,34 @@ document
 
             window.location.href =
                 lineURL;
+
+        }
+    );
+
+
+//----------------------------------
+// 選択したTESTの管理画面を開く
+//----------------------------------
+
+document
+    .getElementById("adminButton")
+    .addEventListener(
+        "click",
+        function () {
+
+            const device =
+                virtualDeviceSelect.value;
+
+            sessionStorage.setItem(
+                "vshVirtualDevice",
+                device
+            );
+
+            window.location.href =
+                "/member-admin/test-device/" +
+                encodeURIComponent(
+                    device
+                );
 
         }
     );
