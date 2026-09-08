@@ -1329,6 +1329,129 @@ app.get("/admin", (_req, res) => {
   res.sendFile(path.join(__dirname, "admin.html"));
 });
 /* =========================
+   本人用Admin 仮想TEST入口
+   TEST番号 → 本人管理画面
+   ※テスト終了後に削除
+========================= */
+
+app.get(
+  "/member-admin/test-device/:device",
+  async (req, res) => {
+
+    try {
+
+      const device =
+        String(
+          req.params.device || ""
+        ).trim();
+
+      //----------------------------------
+      // TEST番号形式確認
+      //----------------------------------
+
+      if (
+        !/^TEST-\d{3}$/.test(device)
+      ) {
+
+        return res.status(400).send(
+          "仮想スマホ番号が正しくありません。"
+        );
+
+      }
+
+      //----------------------------------
+      // 管理データ取得
+      //----------------------------------
+
+      const data =
+        await loadAdmin();
+
+      if (!Array.isArray(data.members)) {
+        data.members = [];
+      }
+
+      //----------------------------------
+      // TEST氏名から本人検索
+      //----------------------------------
+
+      const member =
+        data.members.find(
+          item =>
+            item &&
+            String(item.name || "").trim() ===
+              device
+        );
+
+      if (
+        !member ||
+        member.status !== "登録済" ||
+        !member.adminToken
+      ) {
+
+        return res.status(404).send(
+          "このTEST番号の登録済メンバーが見つかりません。"
+        );
+
+      }
+
+      //----------------------------------
+      // 本人Adminセッション作成
+      //----------------------------------
+
+      const sessionId =
+        await createMemberAdminSession(
+          member.adminToken
+        );
+
+      //----------------------------------
+      // Cookie発行
+      //----------------------------------
+
+      res.cookie(
+        "vsh_member_session",
+        sessionId,
+        {
+          httpOnly: true,
+          secure: true,
+          sameSite: "lax",
+
+          maxAge:
+            7 * 24 * 60 * 60 * 1000
+        }
+      );
+
+      console.log(
+        "仮想TEST本人Admin入室:",
+        device,
+        member.flp
+      );
+
+      //----------------------------------
+      // 本人管理画面へ
+      //----------------------------------
+
+      return res.redirect(
+        "/member-admin"
+      );
+
+    }
+
+    catch (err) {
+
+      console.error(
+        "仮想TEST本人Admin入室エラー:",
+        err
+      );
+
+      return res.status(500).send(
+        "仮想TEST管理画面入室エラー"
+      );
+
+    }
+
+  }
+);
+/* =========================
    本人用Admin テスト入口
    ※テスト終了後に削除
 ========================= */
