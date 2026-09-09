@@ -449,12 +449,18 @@ async function loadMembers() {
         // FBO登録者だけ表示
         //--------------------------------
 
-       const members =
+      const members =
     sourceMembers.filter(
         member =>
             member.name &&
             member.flp &&
-            member.directDay8 !== true
+            member.directDay8 !== true &&
+            String(
+                member.vshIntroducerFLP || ""
+            ) ===
+            String(
+                adminData.introducerFLP || ""
+            )
     );
 
         document
