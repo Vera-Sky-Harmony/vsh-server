@@ -698,8 +698,10 @@ async function confirmMember(flp) {
 // 初期表示
 //----------------------------------------
 
-loadAdmin();
-loadMembers();
+(async () => {
+    await loadAdmin();
+    await loadMembers();
+})();
 
 
 //----------------------------------------
