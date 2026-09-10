@@ -5087,9 +5087,17 @@ app.post(
               String(flp)
         );
 
-      if (existingMember) {
+     if (existingMember) {
 
-        const sameAssignment =
+  console.log(
+    "Day7-2 FLP重複確認:",
+    "割当FLP=", flp,
+    "既存氏名=", existingMember.name,
+    "既存FLP=", existingMember.flp,
+    "既存状態=", existingMember.status
+  );
+
+  const sameAssignment =
           String(
             existingMember.vshDay72Token || ""
           ) ===
