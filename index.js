@@ -1453,12 +1453,12 @@ app.get(
   }
 );
 /* =========================
-   TEST-024 緊急解除
+   TEST-030 緊急解除
    ※TEST終了後に必ず削除
 ========================= */
 
 app.get(
-  "/vsh-test/release-test024",
+  "/vsh-test/release-test030",
   async (req, res) => {
 
     try {
@@ -1475,20 +1475,20 @@ app.get(
       }
 
       //----------------------------------
-      // TEST-024を特定
+      // TEST-030を特定
       //----------------------------------
 
       const target =
         data.members.find(
           member =>
             member &&
-            member.name === "TEST-024" &&
+            member.name === "TEST-030" &&
             member.status === "確認中"
         );
 
       if (!target) {
         return res.status(404).send(
-          "TEST-024の確認中データが見つかりません。"
+          "TEST-030の確認中データが見つかりません。"
         );
       }
 
@@ -1527,7 +1527,7 @@ app.get(
       }
 
       //----------------------------------
-      // TEST-024をmembersから削除
+      // TEST-030をmembersから削除
       //----------------------------------
 
       data.members =
@@ -1537,7 +1537,7 @@ app.get(
         );
 
       //----------------------------------
-      // TEST-024のDay7-2割当も削除
+      // TEST-030のDay7-2割当も削除
       //----------------------------------
 
       data.day72LineAssignments =
@@ -1555,12 +1555,12 @@ app.get(
       await saveAdmin(data);
 
       console.log(
-        "TEST-024緊急解除完了:",
+        "TEST-030緊急解除完了:",
         targetFLP
       );
 
       return res.send(
-        "TEST-024解除完了"
+        "TEST-030解除完了"
       );
 
     }
@@ -1568,12 +1568,12 @@ app.get(
     catch (err) {
 
       console.error(
-        "TEST-024緊急解除エラー:",
+        "TEST-030緊急解除エラー:",
         err
       );
 
       return res.status(500).send(
-        "TEST-024解除エラー"
+        "TEST-030解除エラー"
       );
 
     }
