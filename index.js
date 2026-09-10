@@ -1,3 +1,4 @@
+
 import { registerRoutes } from "./register.js";
 import express from "express";
 import crypto from "crypto";
@@ -5026,23 +5027,6 @@ app.post(
         });
 
       }
-//----------------------------------
-// 登録送信済みのDay7-2から
-// 二重登録させない
-//----------------------------------
-
-if (
-  assignment.registrationSentAt
-) {
-
-  return res.status(409).json({
-    success: false,
-    blocked: true,
-    message:
-      "このスマートフォンでは、すでにVSH登録が行われています。"
-  });
-
-}
 
       //----------------------------------
       // 7日以内か確認
