@@ -1240,7 +1240,7 @@ if (friendAddButton) {
 
   friendAddButton.addEventListener(
     "click",
-    () => {
+    async () => {
 
       //----------------------------------
       // 本人情報確認
@@ -1278,13 +1278,47 @@ if (friendAddButton) {
 
 
       //----------------------------------
-      // 本人専用VSH紹介入口へ進む
+      // 本人専用VSH紹介URL
       //----------------------------------
 
-      window.location.href =
-        `/vsh/invite/${encodeURIComponent(
+      const url =
+        `${window.location.origin}/vsh/invite/${encodeURIComponent(
           currentMember.flp
         )}`;
+
+
+      //----------------------------------
+      // 紹介URLをコピー
+      //----------------------------------
+
+      try {
+
+        await navigator
+          .clipboard
+          .writeText(url);
+
+
+        alert(
+`VSH紹介URLをコピーしました。
+
+① LINEを開く
+② 友だち又はグループ
+③ 紹介する方を選ぶ
+④ 貼り付けて送信
+
+${url}`
+        );
+
+      }
+
+      catch {
+
+        prompt(
+          "下記VSH紹介URLをコピーしてください。",
+          url
+        );
+
+      }
 
     }
   );
