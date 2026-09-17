@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Day7-1｜ここから先は、あなたの領域です</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <style>
     body{
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -13,10 +14,12 @@
       background:#ffffff;
       color:#000;
     }
+
     .container{
       max-width:720px;
       margin:auto;
     }
+
     img{
       width:100%;
       max-width:800px;
@@ -24,18 +27,22 @@
       margin:0 auto 30px;
       border-radius:12px;
     }
+
     h1{
       font-size:22px;
       margin-bottom:24px;
       text-align:center;
     }
+
     p{
       margin-bottom:18px;
       font-size:16px;
     }
+
     hr{
       margin:30px 0;
     }
+
     .btn{
       display:block;
       margin:32px auto;
@@ -49,76 +56,166 @@
       color:#000;
       transition:0.2s;
     }
+
     .btn:hover{
       opacity:0.9;
     }
+
     .btn-back{
       background:#06c755;
       color:#fff;
     }
   </style>
 </head>
+
 <body>
 
 <div class="container">
 
-<img src="https://res.cloudinary.com/dxegzwukb/image/upload/v1770272430/X66_wbuybf.png" alt="Day7-1">
+  <img
+    src="https://res.cloudinary.com/dxegzwukb/image/upload/v1770272430/X66_wbuybf.png"
+    alt="Day7-1"
+  >
 
-<h1>ここから先は、あなたの領域です</h1>
+  <h1>ここから先は、あなたの領域です</h1>
 
-<p>ここまで、本当にお疲れさまでした。</p>
-<p>ここから先は説明はありません。</p>
+  <p>ここまで、本当にお疲れさまでした。</p>
+  <p>ここから先は説明はありません。</p>
 
-<p>
-Vera Sky Harmony は<br>
-あなたに「やれ」とは言いません。<br>
-「急げ」とも言いません。
-</p>
+  <p>
+    Vera Sky Harmony は<br>
+    あなたに「やれ」とは言いません。<br>
+    「急げ」とも言いません。
+  </p>
 
-<p>ただ、ひとつだけ事実をお伝えします。</p>
+  <p>ただ、ひとつだけ事実をお伝えします。</p>
 
-<hr>
+  <hr>
 
-<p>
-あなたがこの先に進むと<br>
-あなたの元に
-</p>
+  <p>
+    あなたがこの先に進むと<br>
+    あなたの元に
+  </p>
 
-<p>
-・紹介<br>
-・登録<br>
-・教育<br>
-・拡散
-</p>
+  <p>
+    ・紹介<br>
+    ・登録<br>
+    ・教育<br>
+    ・拡散
+  </p>
 
-<p>
-これらすべてをAIが代行する仕組みが<br>
-そのまま渡されます。
-</p>
+  <p>
+    これらすべてをAIが代行する仕組みが<br>
+    そのまま渡されます。
+  </p>
 
-<p>
-努力を増やす必要はありません。<br>
-学び続ける義務もありません。
-</p>
+  <p>
+    努力を増やす必要はありません。<br>
+    学び続ける義務もありません。
+  </p>
 
-<p>
-あるのは<br>
-<strong>受け取るかどうか</strong><br>
-それだけです。
-</p>
+  <p>
+    あるのは<br>
+    <strong>受け取るかどうか</strong><br>
+    それだけです。
+  </p>
 
-<!-- ▼ LINEへ進み、Day7-2を開始 -->
-<a class="btn btn-next"
-   href="https://line.me/R/oaMessage/@591tvejt/?Day7-2%E3%81%B8%E9%80%B2%E3%82%80">
-   VSHを受け取る
-</a>
 
-<a class="btn btn-back"
-   href="/pages/day0.html">
-   もう一度Day0から見る
-</a>
+  <!-- ▼ LINEへ進み、Day7-2を開始 -->
+  <a
+    id="day72Button"
+    class="btn btn-next"
+    href="https://line.me/R/oaMessage/@591tvejt/?Day7-2%E3%81%B8%E9%80%B2%E3%82%80"
+  >
+    VSHを受け取る
+  </a>
+
+
+  <a
+    class="btn btn-back"
+    href="/pages/day0.html"
+  >
+    もう一度Day0から見る
+  </a>
 
 </div>
+
+
+<script>
+(async function () {
+
+  const button =
+    document.getElementById("day72Button");
+
+  if (!button) {
+    return;
+  }
+
+  try {
+
+    //----------------------------------
+    // この端末に保存されている
+    // VSH紹介者を取得
+    //----------------------------------
+
+    const response =
+      await fetch(
+        "/api/current-vsh-introducer",
+        {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store"
+        }
+      );
+
+    if (!response.ok) {
+      return;
+    }
+
+    const result =
+      await response.json();
+
+    //----------------------------------
+    // 一般FBOからの
+    // Face to Face紹介の場合
+    //----------------------------------
+
+    if (
+      result &&
+      result.success === true &&
+      result.source === "member" &&
+      result.introducer &&
+      result.introducer.flp
+    ) {
+
+      const introducerFLP =
+        String(
+          result.introducer.flp
+        ).trim();
+
+      const message =
+        "Day7-2へ進む FBO:" +
+        introducerFLP;
+
+      button.href =
+        "https://line.me/R/oaMessage/@591tvejt/?" +
+        encodeURIComponent(message);
+    }
+
+  } catch (error) {
+
+    //----------------------------------
+    // 取得できなかった場合は
+    // 現在の通常導線をそのまま使用
+    //----------------------------------
+
+    console.log(
+      "Day7-1 紹介者取得なし"
+    );
+  }
+
+})();
+</script>
 
 </body>
 </html>
