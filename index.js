@@ -13257,29 +13257,48 @@ VSH管理者専用です。`
            Day7-2
         ========================= */
 
-              if (
-          text ===
-          "Day7-2へ進む"
-        ) {
+            if (
+  text === "Day7-2へ進む" ||
+  /^Day7-2へ進む FBO:\d+$/.test(text)
+) {
 
-          //----------------------------------
-          // 最新管理データ取得
-          //----------------------------------
+  //----------------------------------
+  // 最新管理データ取得
+  //----------------------------------
 
-          const data =
-            await cleanupExpiredPendingMembers();
+  const data =
+    await cleanupExpiredPendingMembers();
 
 
-          //----------------------------------
-          // LINE User IDを基準に
-          // 紹介者＋FLP番号を決定
-          //----------------------------------
+  //----------------------------------
+  // Face to Face紹介の場合
+  // LINEメッセージから紹介者FLPを取得
+  //----------------------------------
 
-          const assignment =
-            await createDay72LineAssignment(
-              data,
-              userId
-            );
+  let requestedIntroducerFLP = "";
+
+  const fboMatch =
+    text.match(
+      /^Day7-2へ進む FBO:(\d+)$/
+    );
+
+  if (fboMatch) {
+    requestedIntroducerFLP =
+      String(fboMatch[1]);
+  }
+
+
+  //----------------------------------
+  // LINE User ID ＋ 紹介者FLPを基準に
+  // 紹介者＋FLP番号を決定
+  //----------------------------------
+
+  const assignment =
+    await createDay72LineAssignment(
+      data,
+      userId,
+      requestedIntroducerFLP
+    );
           //----------------------------------
           // 同じLINEで2人目の登録を禁止
           //----------------------------------
