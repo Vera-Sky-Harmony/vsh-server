@@ -349,7 +349,8 @@ function getRegisteredCount(
 
 async function createDay72LineAssignment(
   data,
-  userId
+  userId,
+  requestedIntroducerFLP = ""
 ) {
 
   //----------------------------------
@@ -389,6 +390,216 @@ async function createDay72LineAssignment(
   }
 
 
+  // ==================================
+  // Face to Face
+  // 紹介者が指定されている場合
+  // ==================================
+
+  const requestedFLP =
+    String(
+      requestedIntroducerFLP || ""
+    ).trim();
+
+  if (requestedFLP) {
+
+    //----------------------------------
+    // 指定された一般FBOを取得
+    //----------------------------------
+
+    const selectedMember =
+      data.members.find(
+        member =>
+          member &&
+          String(member.flp || "") ===
+          requestedFLP
+      );
+
+
+    //----------------------------------
+    // Face to Face紹介を利用できるか確認
+    //----------------------------------
+
+    if (
+      !selectedMember ||
+      selectedMember.status !== "登録済" ||
+      selectedMember.vshActive !== true ||
+      selectedMember.faceToFaceActive !== true ||
+      !Array.isArray(
+        selectedMember.flpNumbers
+      ) ||
+      selectedMember.flpNumbers.length !== 5
+    ) {
+
+      console.log(
+        "Day7-2 Face to Face紹介者無効:",
+        requestedFLP
+      );
+
+      return null;
+    }
+
+
+    //----------------------------------
+    // このFBOですでに登録済みのFLP
+    //----------------------------------
+
+    const registeredFLPs =
+      new Set(
+        data.members
+          .filter(
+            member =>
+              member &&
+              String(
+                member.vshIntroducerFLP || ""
+              ) ===
+              String(
+                selectedMember.flp || ""
+              )
+          )
+          .map(
+            member =>
+              String(member.flp || "")
+          )
+          .filter(Boolean)
+      );
+
+
+    //----------------------------------
+    // 仮確保中FLP
+    //----------------------------------
+
+    if (
+      !Array.isArray(
+        selectedMember.flpInUse
+      )
+    ) {
+      selectedMember.flpInUse = [];
+    }
+
+    const inUseFLPs =
+      new Set(
+        selectedMember.flpInUse
+          .filter(
+            item =>
+              item &&
+              item.flp
+          )
+          .map(
+            item =>
+              String(item.flp)
+          )
+      );
+
+
+    //----------------------------------
+    // このFBOの5件から
+    // 次の利用可能FLPを取得
+    //----------------------------------
+
+    const nextFLP =
+      selectedMember.flpNumbers.find(
+        flp =>
+          flp &&
+          !registeredFLPs.has(
+            String(flp)
+          ) &&
+          !inUseFLPs.has(
+            String(flp)
+          )
+      );
+
+
+    //----------------------------------
+    // 5件すべて登録済または仮確保中
+    //----------------------------------
+
+    if (!nextFLP) {
+
+      console.log(
+        "Day7-2 Face to Face割当なし:",
+        selectedMember.name,
+        selectedMember.flp
+      );
+
+      return null;
+    }
+
+
+    //----------------------------------
+    // FLP番号を仮確保
+    //----------------------------------
+
+    const assignedAt =
+      new Date().toISOString();
+
+    selectedMember.flpInUse.push({
+
+      flp:
+        String(nextFLP),
+
+      usedAt:
+        assignedAt
+
+    });
+
+
+    //----------------------------------
+    // LINE利用者と割当を保存
+    //----------------------------------
+
+    const assignment = {
+
+      userId:
+        String(userId),
+
+      token:
+        crypto
+          .randomBytes(24)
+          .toString("hex"),
+
+      source:
+        "member-face-to-face",
+
+      introducerName:
+        String(
+          selectedMember.name || ""
+        ),
+
+      introducerFLP:
+        String(
+          selectedMember.flp || ""
+        ),
+
+      myFLP:
+        String(nextFLP),
+
+      assignedAt:
+        assignedAt
+
+    };
+
+    data.day72LineAssignments.push(
+      assignment
+    );
+
+    await saveAdmin(data);
+
+    console.log(
+      "Day7-2 LINE割当・Face to Face:",
+      assignment.introducerName,
+      assignment.introducerFLP,
+      assignment.myFLP
+    );
+
+    return assignment;
+  }
+
+
+  // ==================================
+  // ここから従来のSNS自動割当
+  // ==================================
+
+
   //----------------------------------
   // ルートID最優先
   //----------------------------------
@@ -406,9 +617,9 @@ async function createDay72LineAssignment(
     rootUnusedFLP
   ) {
 
-    //--------------------------------
+    //----------------------------------
     // Day7-2表示時点で仮確保
-    //--------------------------------
+    //----------------------------------
 
     rootUnusedFLP.status =
       "使用中";
@@ -450,10 +661,10 @@ async function createDay72LineAssignment(
       assignment
     );
 
-    //--------------------------------
+    //----------------------------------
     // ルート優先中は
     // 一般FBO集中状態を解除
-    //--------------------------------
+    //----------------------------------
 
     delete data.vshAutoCurrentFLP;
     delete data.vshAutoSelectedAt;
@@ -500,11 +711,11 @@ async function createDay72LineAssignment(
           return false;
         }
 
-      const registeredCount =
-  getRegisteredCount(
-    data,
-    member
-  );
+        const registeredCount =
+          getRegisteredCount(
+            data,
+            member
+          );
 
         return registeredCount < 5;
       }
