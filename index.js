@@ -1401,9 +1401,9 @@ async function cleanupExpiredPendingMembers() {
         ------------------------------- */
 
         if (
-          assignment.source ===
-          "member"
-        ) {
+  assignment.source === "member" ||
+  assignment.source === "member-face-to-face"
+) {
 
           const introducer =
             data.members.find(
