@@ -8983,7 +8983,32 @@ app.post(
 
       }
 
+      //----------------------------------
+      // Supabaseへ保存
+      //----------------------------------
 
+      await saveAdmin(data);
+
+      //----------------------------------
+      // Day8を本人のLINEへ送信
+      //----------------------------------
+
+      await client.pushMessage(
+        member.userId,
+        [
+
+          {
+            type: "image",
+
+            originalContentUrl:
+              "https://res.cloudinary.com/dxegzwukb/image/upload/v1787477831/vsh-day8-congratulations",
+
+            previewImageUrl:
+              "https://res.cloudinary.com/dxegzwukb/image/upload/v1787477831/vsh-day8-congratulations"
+          },
+
+          {
+            type: "text",
                  text:`━━━━━━━━━━━━━━━━━━
 Day8
 Vera Sky Harmony
