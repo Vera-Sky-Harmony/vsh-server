@@ -13441,16 +13441,16 @@ const assignment =
             userId,
             [
 
-              {
-                type:
-                  "image",
+             {
+  type:
+    "image",
 
-                originalContentUrl:
-                  "https://res.cloudinary.com/dxegzwukb/image/upload/v1786601163/Day7-3%E9%81%A9%E7%94%A8_sjydub.png",
+  originalContentUrl:
+    "https://res.cloudinary.com/dxegzwukb/image/upload/v1790248298/ChatGPT_Image_2026%E5%B9%B49%E6%9C%8824%E6%97%A5_20_10_48_ook1dm.png",
 
-                previewImageUrl:
-                  "https://res.cloudinary.com/dxegzwukb/image/upload/v1786601163/Day7-3%E9%81%A9%E7%94%A8_sjydub.png"
-              },
+  previewImageUrl:
+    "https://res.cloudinary.com/dxegzwukb/image/upload/v1790248298/ChatGPT_Image_2026%E5%B9%B49%E6%9C%8824%E6%97%A5_20_10_48_ook1dm.png"
+},
 
               {
                 type:
