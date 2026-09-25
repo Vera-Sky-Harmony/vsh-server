@@ -201,7 +201,10 @@
     if (
       result &&
       result.success === true &&
-      result.source === "member" &&
+      (
+  result.source === "member" ||
+  result.source === "root"
+) &&
       result.introducer &&
       result.introducer.flp
     ) {
