@@ -617,7 +617,7 @@ async function loadMembers() {
 // 登録確認
 //----------------------------------------
 
-async function confirmMember(flp) {
+async function cFonfirmMember(flp) {
 
     const ok =
         confirm(
@@ -714,8 +714,24 @@ document
     "click",
     async () => {
 
+        const introducerFLP =
+            String(
+                adminData.introducerFLP || ""
+            ).trim();
+
+        if (!introducerFLP) {
+
+            alert(
+                "ルートIDのFLP番号がありません。"
+            );
+
+            return;
+        }
+
         const url =
-            "https://line.me/R/ti/p/@591tvejt";
+            `${location.origin}/vsh/invite/${encodeURIComponent(
+                introducerFLP
+            )}`;
 
         try {
 
@@ -724,7 +740,7 @@ document
             .writeText(url);
 
             alert(
-`VSH公式LINEをコピーしました。
+`VSH紹介URLをコピーしました。
 
 ① LINEを開く
 ② 友だち又はグループ
@@ -746,7 +762,6 @@ ${url}`
 
     }
 );
-
 // ========================================
 // 既存FBOへDay8直接譲渡
 // ルートID専用
