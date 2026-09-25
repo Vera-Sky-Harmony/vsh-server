@@ -4246,12 +4246,12 @@ app.get("/vsh/invite/:flp", async (req, res) => {
 
 
       //----------------------------------
-      // Day0へ
-      //----------------------------------
+// VSH公式LINE友だち追加画面へ
+//----------------------------------
 
-      return res.redirect(
-        "/pages/day0.html"
-      );
+return res.redirect(
+  "/pages/invite.html"
+);
 
     }
 
