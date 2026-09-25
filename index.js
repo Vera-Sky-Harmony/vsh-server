@@ -380,14 +380,22 @@ async function createDay72LineAssignment(
   //----------------------------------
 
   const existingAssignment =
-    getDay72LineAssignment(
-      data,
-      userId
-    );
+  getDay72LineAssignment(
+    data,
+    userId
+  );
 
-  if (existingAssignment) {
-    return existingAssignment;
-  }
+const requestedFLP =
+  String(
+    requestedIntroducerFLP || ""
+  ).trim();
+
+if (
+  existingAssignment &&
+  !requestedFLP
+) {
+  return existingAssignment;
+}
 
 
   // ==================================
@@ -395,10 +403,7 @@ async function createDay72LineAssignment(
   // 紹介者が指定されている場合
   // ==================================
 
-  const requestedFLP =
-    String(
-      requestedIntroducerFLP || ""
-    ).trim();
+ 
 
   if (requestedFLP) {
 
