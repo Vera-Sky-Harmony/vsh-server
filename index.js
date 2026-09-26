@@ -405,7 +405,11 @@ if (
 
  
 
-  if (requestedFLP) {
+ if (
+  requestedFLP &&
+  requestedFLP !==
+    String(data.introducerFLP || "")
+) {
 
     //----------------------------------
     // 指定された一般FBOを取得
