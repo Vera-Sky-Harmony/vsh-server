@@ -4194,18 +4194,7 @@ app.get("/vsh/invite/:flp", async (req, res) => {
       String(introducerFLP)
     ) {
 
-      //----------------------------------
-      // ルートSNS連携状態確認
-      //----------------------------------
-
-      if (data.rootSnsActive !== true) {
-
-        return res.status(403).send(
-          "このVSHのSNS連携は現在停止しています。"
-        );
-
-      }
-
+      
       //----------------------------------
       // ルート紹介用FLP番号確認
       // 未使用番号があることを確認
