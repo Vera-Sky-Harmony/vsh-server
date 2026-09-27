@@ -622,9 +622,12 @@ if (
     );
 
   if (
-    data.rootSnsActive === true &&
-    rootUnusedFLP
-  ) {
+  (
+    data.rootSnsActive === true ||
+    requestedFLP === String(data.introducerFLP || "")
+  ) &&
+  rootUnusedFLP
+) {
 
     //----------------------------------
     // Day7-2表示時点で仮確保
