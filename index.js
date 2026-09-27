@@ -4841,21 +4841,7 @@ app.get("/api/current-vsh-introducer", async (req, res) => {
       String(introducerFLP)
     ) {
 
-      //----------------------------------
-      // ルートSNS利用状態確認
-      //----------------------------------
-
-      if (data.rootSnsActive !== true) {
-
-        return res.status(403).json({
-          success: false,
-          message:
-            "このVSHは現在利用できません。"
-        });
-
-      }
-
-
+      
       //----------------------------------
       // 未使用FLP番号取得
       //----------------------------------
