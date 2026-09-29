@@ -568,8 +568,8 @@ if (
           .randomBytes(24)
           .toString("hex"),
 
-      source:
-        "member-face-to-face",
+     source:
+  "member",
 
       introducerName:
         String(
