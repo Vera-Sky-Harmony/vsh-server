@@ -4596,7 +4596,7 @@ app.get("/api/vsh-introducer/:flp", async (req, res) => {
       return res.status(400).json({
         success: false,
         message:
-        message:
+       
   "紹介用FLP番号が登録されていません。" 
       });
 
