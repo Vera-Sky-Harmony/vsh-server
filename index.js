@@ -2737,10 +2737,15 @@ app.post(
       // 今回の1セット完了
       //----------------------------------
 
-      if (
-        currentFLPNumbers.length === 5 &&
+     if (
+  (
+    introducer.faceToFaceActive === true
+      ? currentFLPNumbers.length >= 1 &&
+        registeredCurrentMembers.length >= currentFLPNumbers.length
+      : currentFLPNumbers.length === 5 &&
         registeredCurrentMembers.length >= 5
-      ) {
+  )
+) {
 
         //----------------------------------
         // 第1段階だけ
@@ -4579,17 +4584,20 @@ app.get("/api/vsh-introducer/:flp", async (req, res) => {
     // FLP番号5件確認
     //----------------------------------
 
-    if (
-      !Array.isArray(
-        introducer.flpNumbers
-      ) ||
-      introducer.flpNumbers.length !== 5
-    ) {
+   if (
+  !Array.isArray(
+    introducer.flpNumbers
+  ) ||
+  introducer.flpNumbers.filter(
+    flp => String(flp || "").trim()
+  ).length < 1
+) {
 
       return res.status(400).json({
         success: false,
         message:
-          "紹介用FLP番号5件が登録されていません。"
+        message:
+  "紹介用FLP番号が登録されていません。" 
       });
 
     }
@@ -4983,17 +4991,19 @@ app.get("/api/current-vsh-introducer", async (req, res) => {
     // FLP番号5件確認
     //----------------------------------
 
-    if (
-      !Array.isArray(
-        introducer.flpNumbers
-      ) ||
-      introducer.flpNumbers.length !== 5
-    ) {
+   if (
+  !Array.isArray(
+    introducer.flpNumbers
+  ) ||
+  introducer.flpNumbers.filter(
+    flp => String(flp || "").trim()
+  ).length < 1
+) {
 
       return res.status(400).json({
         success: false,
         message:
-          "紹介用FLP番号5件がありません。"
+ "紹介用FLP番号がありません。"       
       });
 
     }
@@ -5880,17 +5890,20 @@ app.get("/api/next-flp", async (req, res) => {
       // 紹介者本人の5件確認
       //----------------------------------
 
-      if (
-        !Array.isArray(
-          introducer.flpNumbers
-        ) ||
-        introducer.flpNumbers.length !== 5
-      ) {
+     if (
+  !Array.isArray(
+    introducer.flpNumbers
+  ) ||
+  introducer.flpNumbers.filter(
+    flp => String(flp || "").trim()
+  ).length < 1
+) {
 
         return res.status(400).json({
           success: false,
           message:
-            "紹介用FLP番号5件がありません。"
+           message:
+  "紹介用FLP番号がありません。"
         });
 
       }
@@ -8547,15 +8560,18 @@ app.get(
       // 本人の紹介用FLP番号1件以上確認
       //----------------------------------
 
-      if (
-        !Array.isArray(
-          introducer.flpNumbers
-        ) ||
-        introducer.flpNumbers.length !== 5
-      ) {
+     if (
+  !Array.isArray(
+    introducer.flpNumbers
+  ) ||
+  introducer.flpNumbers.filter(
+    flp => String(flp || "").trim()
+  ).length < 1
+) {
 
-        return res.status(400).send(
-          "紹介用FLP番号5件がありません。"
+       return res.status(400).send(
+  "紹介用FLP番号がありません。"
+); 
         );
 
       }
@@ -8918,11 +8934,15 @@ app.post(
       // 現在の5件すべてが登録済なら
       // 今回の1セット完了
       //----------------------------------
-
-      if (
-        currentFLPNumbers.length === 5 &&
+if (
+  (
+    introducer.faceToFaceActive === true
+      ? currentFLPNumbers.length >= 1 &&
+        registeredCurrentMembers.length >= currentFLPNumbers.length
+      : currentFLPNumbers.length === 5 &&
         registeredCurrentMembers.length >= 5
-      ) {
+  )
+) {
 
         //----------------------------------
         // 第1段階 → 第2段階
@@ -9818,23 +9838,41 @@ app.post(
 
 
       //----------------------------------
-      // 5件確認
-      //----------------------------------
+// FLP番号件数確認
+// 第1段階：必ず5件
+// 第2段階：1件～5件
+//----------------------------------
 
-      if (numbers.length !== 5) {
+if (
+  member.faceToFaceActive === true
+) {
 
-        return res.status(400).json({
+  if (
+    numbers.length < 1 ||
+    numbers.length > 5
+  ) {
 
-          success: false,
+    return res.status(400).json({
+      success: false,
+      message:
+        "FLP番号は1件から5件まで入力してください。"
+    });
 
-          message:
-            "FLP番号を5件入力してください。"
+  }
 
-        });
+} else {
 
-      }
+  if (numbers.length !== 5) {
 
+    return res.status(400).json({
+      success: false,
+      message:
+        "FLP番号を5件入力してください。"
+    });
 
+  }
+
+}
       //----------------------------------
       // 9桁数字確認
       //----------------------------------
@@ -9862,9 +9900,9 @@ app.post(
       // 5件内の重複確認
       //----------------------------------
 
-      if (
-        new Set(numbers).size !== 5
-      ) {
+     if (
+  new Set(numbers).size !== numbers.length
+) {
 
         return res.status(400).json({
 
@@ -9883,19 +9921,20 @@ app.post(
       // 次のセットはまだ登録させない
       //----------------------------------
 
-      if (
-        Array.isArray(
-          member.flpNumbers
-        ) &&
-        member.flpNumbers.length === 5
-      ) {
+     if (
+  Array.isArray(
+    member.flpNumbers
+  ) &&
+  member.flpNumbers.length > 0
+) {
 
         return res.status(409).json({
 
           success: false,
 
-          message:
-            "FLP番号5件はすでに登録済みです。"
+        
+           message:
+  "FLP番号はすでに登録済みです。"
 
         });
 
@@ -10837,17 +10876,19 @@ app.get("/api/vsh-introducer/:flp", async (req, res) => {
     // FLP番号5件確認
     //----------------------------------
 
-    if (
-      !Array.isArray(
-        introducer.flpNumbers
-      ) ||
-      introducer.flpNumbers.length !== 5
-    ) {
+   if (
+  !Array.isArray(
+    introducer.flpNumbers
+  ) ||
+  introducer.flpNumbers.filter(
+    flp => String(flp || "").trim()
+  ).length < 1
+) {
 
       return res.status(400).json({
         success: false,
-        message:
-          "紹介用FLP番号5件が登録されていません。"
+      message:
+  "紹介用FLP番号が登録されていません。"
       });
 
     }
@@ -11242,17 +11283,19 @@ app.get("/api/current-vsh-introducer", async (req, res) => {
     // FLP番号5件確認
     //----------------------------------
 
-    if (
-      !Array.isArray(
-        introducer.flpNumbers
-      ) ||
-      introducer.flpNumbers.length !== 5
-    ) {
+   if (
+  !Array.isArray(
+    introducer.flpNumbers
+  ) ||
+  introducer.flpNumbers.filter(
+    flp => String(flp || "").trim()
+  ).length < 1
+) {
 
       return res.status(400).json({
         success: false,
-        message:
-          "紹介用FLP番号5件がありません。"
+      message:
+  "紹介用FLP番号がありません。" 
       });
 
     }
