@@ -569,7 +569,7 @@ if (
           .toString("hex"),
 
      source:
-  "member",
+  "member-face-to-face",
 
       introducerName:
         String(
@@ -5411,10 +5411,10 @@ app.post(
          一般FBOのVSH
       ================================== */
 
-      if (
-        assignment.source ===
-        "member"
-      ) {
+     if (
+  assignment.source === "member" ||
+  assignment.source === "member-face-to-face"
+) {
 
         //--------------------------------
         // 紹介者本人を確認
