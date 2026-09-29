@@ -436,7 +436,9 @@ if (
       !Array.isArray(
         selectedMember.flpNumbers
       ) ||
-      selectedMember.flpNumbers.length !== 5
+     selectedMember.flpNumbers.filter(
+  flp => String(flp || "").trim()
+).length < 1
     ) {
 
       console.log(
@@ -3221,20 +3223,7 @@ app.post("/api/member-admin/flp", async (req, res) => {
           )
         : [];
 
-    //----------------------------------
-    // 必ず5件
-    //----------------------------------
-
-    if (numbers.length !== 5) {
-
-      return res.status(400).json({
-        success: false,
-        message:
-          "FLP番号を5件入力してください。"
-      });
-
-    }
-
+    
     //----------------------------------
     // すべて9桁の数字か確認
     //----------------------------------
@@ -3255,13 +3244,13 @@ app.post("/api/member-admin/flp", async (req, res) => {
     }
 
     //----------------------------------
-    // 5件内の重複確認
+    // 入力されたFLP番号内の重複確認
     //----------------------------------
 
     const uniqueNumbers =
       new Set(numbers);
 
-    if (uniqueNumbers.size !== 5) {
+if (uniqueNumbers.size !== numbers.length) {
 
       return res.status(400).json({
         success: false,
@@ -3303,7 +3292,42 @@ app.post("/api/member-admin/flp", async (req, res) => {
       });
 
     }
+//----------------------------------
+// FLP番号件数確認
+// 第1段階：必ず5件
+// 第2段階：1件～5件
+//----------------------------------
 
+if (
+  member.faceToFaceActive === true
+) {
+
+  if (
+    numbers.length < 1 ||
+    numbers.length > 5
+  ) {
+
+    return res.status(400).json({
+      success: false,
+      message:
+        "FLP番号は1件から5件まで入力してください。"
+    });
+
+  }
+
+} else {
+
+  if (numbers.length !== 5) {
+
+    return res.status(400).json({
+      success: false,
+      message:
+        "FLP番号を5件入力してください。"
+    });
+
+  }
+
+}
     //----------------------------------
     // 登録済FBOのみ
     //----------------------------------
@@ -3319,28 +3343,28 @@ app.post("/api/member-admin/flp", async (req, res) => {
     }
 
     //----------------------------------
-    // 現在5件登録済みなら変更させない
-    //
+    // 現在FLP番号が登録済みなら変更させない
     // 第1段階でも第2段階以降でも、
-    // 現在の5件が完了して空になるまで
-    // 次の5件は登録できない
+    // 現在のFLP番号が完了して空になるまで
+    // 次のFLP番号は登録できない
     //----------------------------------
 
-    if (
-      Array.isArray(member.flpNumbers) &&
-      member.flpNumbers.length === 5
-    ) {
+  if (
+  Array.isArray(member.flpNumbers) &&
+  member.flpNumbers.length > 0
+) {
 
-      return res.status(409).json({
-        success: false,
-        message:
-          "FLP番号5件はすでに登録済みです。"
-      });
+  return res.status(409).json({
+    success: false,
+    message:
+      "FLP番号はすでに登録済みです。"
+  });
 
-    }
-
+}
     //----------------------------------
-    // 本人のFLP番号5件を保存
+    // 本人のFLP番号を保存
+    // 第1段階：5件
+    // 第2段階：1件～5件
     //----------------------------------
 
     member.flpNumbers =
@@ -3446,10 +3470,10 @@ app.post("/api/member-admin/flp", async (req, res) => {
 
   catch (err) {
 
-    console.error(
-      "本人FLP番号5件登録エラー:",
-      err
-    );
+   console.error(
+  "本人FLP番号登録エラー:",
+  err
+);
 
     return res.status(500).json({
       success: false,
@@ -9930,11 +9954,11 @@ app.post(
         member.snsActive =
           false;
 
-        console.log(
-          "第2段階・新しいFLP番号5件登録:",
-          member.name,
-          member.flp
-        );
+       console.log(
+  `第2段階・新しいFLP番号${numbers.length}件登録:`,
+  member.name,
+  member.flp
+);
 
       }
 
@@ -9982,16 +10006,14 @@ app.post(
       //----------------------------------
 
       return res.json({
-
-        success: true,
-
-        message:
-          "5件のFLP番号を登録しました。",
-
-        numbers:
-          member.flpNumbers
-
-      });
+  success: true,
+  message:
+    member.faceToFaceActive === true
+      ? `${numbers.length}件のFLP番号を登録しました。`
+      : "5件のFLP番号を登録しました。",
+  numbers:
+    member.flpNumbers
+});
 
     }
 
@@ -9999,7 +10021,7 @@ app.post(
     catch (err) {
 
       console.error(
-        "本人FLP番号5件登録エラー:",
+        ":",
         err
       );
 
