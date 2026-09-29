@@ -462,11 +462,15 @@ if (
   //----------------------------------
 
   const confirmed =
-    confirm(
-      "5件のFLP番号を登録します。\n\n" +
-      "登録完了後は通常変更できません。\n" +
-      "よろしいですか？"
-    );
+  confirm(
+    isFaceToFace
+      ? `${numbers.length}件のFLP番号を登録します。\n\n` +
+        "登録完了後は通常変更できません。\n" +
+        "よろしいですか？"
+      : "5件のFLP番号を登録します。\n\n" +
+        "登録完了後は通常変更できません。\n" +
+        "よろしいですか？"
+  );
 
   if (!confirmed) {
 
@@ -540,8 +544,9 @@ if (
         false;
 
       saveButton.textContent =
-        "5件を登録する";
-
+  isFaceToFace
+    ? "入力したFLP番号を登録する"
+    : "5件を登録する";
       return;
 
     }
@@ -567,10 +572,12 @@ if (
 
     }
 
-    document.getElementById(
-      "statusCount"
-    ).textContent =
-      "5 / 5 件";
+   document.getElementById(
+  "statusCount"
+).textContent =
+  isFaceToFace
+    ? `${numbers.length} / 5 件`
+    : "5 / 5 件";
 
     document.getElementById(
       "completeBox"
@@ -583,9 +590,11 @@ if (
     saveButton.disabled =
       true;
 
-    alert(
-      "5件のFLP番号を登録しました。"
-    );
+   alert(
+  isFaceToFace
+    ? `${numbers.length}件のFLP番号を登録しました。`
+    : "5件のFLP番号を登録しました。"
+);
 
   }
 
@@ -609,7 +618,9 @@ if (
       false;
 
     saveButton.textContent =
-      "5件を登録する";
+  isFaceToFace
+    ? "入力したFLP番号を登録する"
+    : "5件を登録する";
 
   }
 
