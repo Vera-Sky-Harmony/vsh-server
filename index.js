@@ -3406,11 +3406,11 @@ if (
       member.snsActive =
         false;
 
-      console.log(
-        "第2段階・新しいFLP番号5件登録:",
-        member.name,
-        member.flp
-      );
+    console.log(
+  `第2段階・新しいFLP番号${numbers.length}件登録:`,
+  member.name,
+  member.flp
+);
 
     } else {
 
@@ -3458,13 +3458,15 @@ if (
     // 正常終了
     //----------------------------------
 
-    return res.json({
-      success: true,
-      message:
-        "5件のFLP番号を登録しました。",
-      numbers:
-        member.flpNumbers
-    });
+   return res.json({
+  success: true,
+  message:
+    member.faceToFaceActive === true
+      ? `${numbers.length}件のFLP番号を登録しました。`
+      : "5件のFLP番号を登録しました。",
+  numbers:
+    member.flpNumbers
+});
 
   }
 
@@ -10020,10 +10022,10 @@ app.post(
 
     catch (err) {
 
-      console.error(
-        ":",
-        err
-      );
+     console.error(
+  "本人FLP番号登録エラー:",
+  err
+);
 
       return res.status(500).json({
 
