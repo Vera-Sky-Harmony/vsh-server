@@ -105,7 +105,12 @@ if (flpInputGuide) {
     "次の5人の登録に使用する「あなたのFLP番号」を5件入力してください。";
 
 }
+if (flpSaveGuide) {
 
+  flpSaveGuide.innerHTML =
+    "※5件すべてを確認してから登録してください。<br>";
+
+}
 if (saveButton) {
 
   saveButton.textContent =
@@ -211,7 +216,7 @@ window.addEventListener(
 
 
       //----------------------------------
-      // 保存済みFLP番号5件を再表示
+      // // 保存済みFLP番号を再表示
       //----------------------------------
 
     if (
