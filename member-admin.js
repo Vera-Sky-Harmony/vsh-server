@@ -258,8 +258,11 @@ window.addEventListener(
         ).style.display =
           "block";
 
-        saveButton.textContent =
-          "登録完了";
+       saveButton.textContent =
+  currentMember &&
+  currentMember.faceToFaceActive === true
+    ? "FLP番号登録済み"
+    : "登録完了";
 
         saveButton.disabled =
           true;
@@ -612,7 +615,9 @@ if (
       "block";
 
     saveButton.textContent =
-      "登録完了";
+  isFaceToFace
+    ? "FLP番号登録済み"
+    : "登録完了";
 
     saveButton.disabled =
       true;
