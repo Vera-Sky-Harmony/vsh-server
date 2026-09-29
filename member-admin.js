@@ -73,27 +73,39 @@ if (saveButton) {
   }
 
 
-  //----------------------------------
-  // 第1段階
-  //----------------------------------
+//----------------------------------
+// 第1段階
+//----------------------------------
 
-  if (friendAddCard) {
+if (friendAddCard) {
 
-    friendAddCard.style.display =
-      "none";
-
-  }
-
-  if (stage1Keyword) {
-
-    stage1Keyword.style.display =
-      "";
-
-  }
+  friendAddCard.style.display =
+    "none";
 
 }
 
+if (stage1Keyword) {
 
+  stage1Keyword.style.display =
+    "";
+
+}
+
+if (flpInputGuide) {
+
+  flpInputGuide.textContent =
+    "次の5人の登録に使用する「あなたのFLP番号」を5件入力してください。";
+
+}
+
+if (saveButton) {
+
+  saveButton.textContent =
+    "5件を登録する";
+
+}
+
+}
 // ========================================
 // 初期表示・本人確認
 // ========================================
@@ -194,12 +206,12 @@ window.addEventListener(
       // 保存済みFLP番号5件を再表示
       //----------------------------------
 
-      if (
-        Array.isArray(
-          currentMember.flpNumbers
-        ) &&
-        currentMember.flpNumbers.length === 5
-      ) {
+    if (
+  Array.isArray(
+    currentMember.flpNumbers
+  ) &&
+  currentMember.flpNumbers.length > 0
+) {
 
         for (
           let i = 1;
@@ -212,19 +224,21 @@ window.addEventListener(
               `flp${i}`
             );
 
-          input.value =
-            currentMember
-              .flpNumbers[i - 1];
+        input.value =
+  currentMember
+    .flpNumbers[i - 1] || "";
 
           input.disabled =
             true;
 
         }
 
-        document.getElementById(
-          "statusCount"
-        ).textContent =
-          "5 / 5 件";
+      document.getElementById(
+  "statusCount"
+).textContent =
+  currentMember.faceToFaceActive === true
+    ? `${currentMember.flpNumbers.length} / 5 件`
+    : "5 / 5 件";
 
         document.getElementById(
           "completeBox"
@@ -1041,8 +1055,11 @@ async function loadIntroducedMembers() {
 
                       if (saveButton) {
 
-                        saveButton.textContent =
-                          "5件を登録する";
+                      saveButton.textContent =
+  currentMember &&
+  currentMember.faceToFaceActive === true
+    ? "入力したFLP番号を登録する"
+    : "5件を登録する";
 
                         saveButton.disabled =
                           false;
