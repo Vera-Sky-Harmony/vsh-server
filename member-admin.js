@@ -23,7 +23,15 @@ function updateVSHStageDisplay() {
     document.getElementById(
       "stage1Keyword"
     );
+  const flpInputGuide =
+    document.getElementById(
+      "flpInputGuide"
+    );
 
+  const saveButton =
+    document.getElementById(
+      "saveButton"
+    );
 
   //----------------------------------
   // 第2段階
@@ -40,7 +48,19 @@ function updateVSHStageDisplay() {
         "block";
 
     }
+if (flpInputGuide) {
 
+  flpInputGuide.textContent =
+    "次の紹介に使用する「あなたのFLP番号」を入力してください。1件から5件まで登録できます。";
+
+}
+
+if (saveButton) {
+
+  saveButton.textContent =
+    "入力したFLP番号を登録する";
+
+}
     if (stage1Keyword) {
 
       stage1Keyword.style.display =
@@ -344,8 +364,19 @@ for (let i = 1; i <= 5; i++) {
 
 async function saveFLPNumbers() {
 
-  const numbers =
-    getFLPNumbers();
+ const allNumbers =
+  getFLPNumbers();
+
+const isFaceToFace =
+  currentMember &&
+  currentMember.faceToFaceActive === true;
+
+const numbers =
+  isFaceToFace
+    ? allNumbers.filter(
+        x => x !== ""
+      )
+    : allNumbers;
 
 
   //----------------------------------
@@ -353,19 +384,23 @@ async function saveFLPNumbers() {
   //----------------------------------
 
   if (
+  (!isFaceToFace &&
     numbers.some(
       x => x === ""
-    )
-  ) {
+    )) ||
+  (isFaceToFace &&
+    numbers.length < 1)
+) {
 
-    alert(
-      "5人分のFLP番号をすべて入力してください。"
-    );
+  alert(
+    isFaceToFace
+      ? "FLP番号を1件以上入力してください。"
+      : "5人分のFLP番号をすべて入力してください。"
+  );
 
-    return;
+  return;
 
-  }
-
+}
 
   //----------------------------------
   // FLP番号 9桁確認
@@ -391,21 +426,21 @@ async function saveFLPNumbers() {
   // 同一番号の重複確認
   //----------------------------------
 
-  const uniqueNumbers =
-    new Set(numbers);
+ const uniqueNumbers =
+  new Set(numbers);
 
-  if (
-    uniqueNumbers.size !== 5
-  ) {
+if (
+  uniqueNumbers.size !==
+  numbers.length
+) {
 
-    alert(
-      "同じFLP番号が重複しています。確認してください。"
-    );
+  alert(
+    "同じFLP番号が重複しています。確認してください。"
+  );
 
-    return;
+  return;
 
-  }
-
+}
 
   //----------------------------------
   // 本人確認
