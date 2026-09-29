@@ -4303,18 +4303,22 @@ return res.redirect(
     // 本人の紹介用FLP番号5件確認
     //----------------------------------
 
-    if (
-      !Array.isArray(
-        introducer.flpNumbers
-      ) ||
-      introducer.flpNumbers.length !== 5
-    ) {
+   if (
+  !Array.isArray(
+    introducer.flpNumbers
+  ) ||
+  introducer.flpNumbers.filter(
+    flp => String(flp || "").trim()
+  ).length < 1
+) {
 
-      return res.status(403).send(
-        "紹介用FLP番号が準備されていません。"
-      );
+  return res.status(403).send(
+    "紹介用FLP番号が準備されていません。"
+  );
 
-    }
+}
+
+   
 
 
     //----------------------------------
