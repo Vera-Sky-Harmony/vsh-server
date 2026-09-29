@@ -27,7 +27,10 @@ function updateVSHStageDisplay() {
     document.getElementById(
       "flpInputGuide"
     );
-
+const flpSaveGuide =
+  document.getElementById(
+    "flpSaveGuide"
+  );
   const saveButton =
     document.getElementById(
       "saveButton"
@@ -54,7 +57,12 @@ if (flpInputGuide) {
     "次の紹介に使用する「あなたのFLP番号」を入力してください。1件から5件まで登録できます。";
 
 }
+if (flpSaveGuide) {
 
+  flpSaveGuide.innerHTML =
+    "※1件以上入力すると登録できます。<br>";
+
+}
 if (saveButton) {
 
   saveButton.textContent =
