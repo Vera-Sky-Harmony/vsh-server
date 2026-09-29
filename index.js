@@ -5887,7 +5887,7 @@ app.get("/api/next-flp", async (req, res) => {
 
 
       //----------------------------------
-      // 紹介者本人の5件確認
+      // // 紹介者本人のFLP番号確認
       //----------------------------------
 
      if (
@@ -5901,7 +5901,7 @@ app.get("/api/next-flp", async (req, res) => {
 
         return res.status(400).json({
           success: false,
-          message:
+         
            message:
   "紹介用FLP番号がありません。"
         });
