@@ -2556,6 +2556,289 @@ app.get(
 
   }
 );
+/* =====================================================
+   実地テスト開始前 最終初期化
+   【1回限り】
+===================================================== */
+
+app.get(
+  "/vsh-test/reset-before-live-20260930",
+  async (req, res) => {
+
+    try {
+
+      //----------------------------------
+      // 現在のRootデータ取得
+      //----------------------------------
+
+      const data =
+        await loadAdmin();
+
+
+      //----------------------------------
+      // 安全確認① Root本人
+      //----------------------------------
+
+      if (
+        String(data.introducerName || "").trim()
+          !== "細井 信孝" ||
+        String(data.introducerFLP || "").trim()
+          !== "203145165"
+      ) {
+
+        return res.status(409).json({
+          success: false,
+          message:
+            "Root情報が想定と異なるため、初期化を中止しました。"
+        });
+
+      }
+
+
+      //----------------------------------
+      // 安全確認② 登録者44名
+      //----------------------------------
+
+      if (
+        !Array.isArray(data.members) ||
+        data.members.length !== 44
+      ) {
+
+        return res.status(409).json({
+          success: false,
+          message:
+            "登録者数が44名ではないため、初期化を中止しました。",
+          currentMemberCount:
+            Array.isArray(data.members)
+              ? data.members.length
+              : -1
+        });
+
+      }
+
+
+      //----------------------------------
+      // 安全確認③ 現在のFLP枠30件
+      //----------------------------------
+
+      if (
+        !Array.isArray(data.flpList) ||
+        data.flpList.length !== 30
+      ) {
+
+        return res.status(409).json({
+          success: false,
+          message:
+            "RootのFLP枠が30件ではないため、初期化を中止しました。"
+        });
+
+      }
+
+
+      //----------------------------------
+      // 安全確認④ バックアップ存在確認
+      //----------------------------------
+
+      const {
+        data: backupRow,
+        error: backupError
+      } =
+        await supabase
+          .from("admin_data")
+          .select("id,data")
+          .eq(
+            "id",
+            "backup-before-live-20260930"
+          )
+          .single();
+
+
+      if (
+        backupError ||
+        !backupRow ||
+        !backupRow.data
+      ) {
+
+        return res.status(409).json({
+          success: false,
+          message:
+            "実地テスト前バックアップを確認できないため、初期化を中止しました。"
+        });
+
+      }
+
+
+      //----------------------------------
+      // 安全確認⑤
+      // バックアップRoot情報確認
+      //----------------------------------
+
+      if (
+        String(
+          backupRow.data.introducerName || ""
+        ).trim() !== "細井 信孝" ||
+        String(
+          backupRow.data.introducerFLP || ""
+        ).trim() !== "203145165" ||
+        !Array.isArray(
+          backupRow.data.members
+        ) ||
+        backupRow.data.members.length !== 44
+      ) {
+
+        return res.status(409).json({
+          success: false,
+          message:
+            "バックアップ内容が想定と異なるため、初期化を中止しました。"
+        });
+
+      }
+
+
+      //----------------------------------
+      // Root重要情報を退避
+      //----------------------------------
+
+      const keepIntroducerName =
+        data.introducerName;
+
+      const keepIntroducerFLP =
+        data.introducerFLP;
+
+      const keepIntroducerUserId =
+        data.introducerUserId;
+
+
+      //----------------------------------
+      // 登録者だけ初期化
+      //----------------------------------
+
+      data.members = [];
+
+
+      //----------------------------------
+      // 実地テスト用FLP 5件
+      // 全件「未使用」
+      //----------------------------------
+
+      data.flpList = [
+
+        {
+          flp: "361799161",
+          status: "未使用"
+        },
+
+        {
+          flp: "361799173",
+          status: "未使用"
+        },
+
+        {
+          flp: "361799185",
+          status: "未使用"
+        },
+
+        {
+          flp: "361799197",
+          status: "未使用"
+        },
+
+        {
+          flp: "361799201",
+          status: "未使用"
+        }
+
+      ];
+
+
+      //----------------------------------
+      // Root情報を明示的に保持
+      //----------------------------------
+
+      data.introducerName =
+        keepIntroducerName;
+
+      data.introducerFLP =
+        keepIntroducerFLP;
+
+      data.introducerUserId =
+        keepIntroducerUserId;
+
+
+      //----------------------------------
+      // 保存は最後に1回だけ
+      //----------------------------------
+
+      await saveAdmin(data);
+
+
+      //----------------------------------
+      // 保存後に再読込み
+      //----------------------------------
+
+      const verify =
+        await loadAdmin();
+
+
+      //----------------------------------
+      // 結果表示
+      //----------------------------------
+
+      return res.json({
+
+        success: true,
+
+        mode:
+          "RESET_BEFORE_LIVE_COMPLETED",
+
+        message:
+          "実地テスト開始前の初期化が完了しました。",
+
+        rootName:
+          verify.introducerName,
+
+        rootFLP:
+          verify.introducerFLP,
+
+        rootUserIdPreserved:
+          String(
+            verify.introducerUserId || ""
+          ) ===
+          String(
+            keepIntroducerUserId || ""
+          ),
+
+        memberCount:
+          Array.isArray(verify.members)
+            ? verify.members.length
+            : -1,
+
+        flpList:
+          Array.isArray(verify.flpList)
+            ? verify.flpList
+            : []
+
+      });
+
+    }
+
+    catch (err) {
+
+      console.error(
+        "実地テスト前最終初期化エラー:",
+        err
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "初期化処理中にエラーが発生しました。"
+      });
+
+    }
+
+  }
+);
 /* =========================
    TEST-030 緊急解除
    ※TEST終了後に必ず削除
