@@ -2167,6 +2167,113 @@ app.get(
 
   }
 );
+/* =====================================================
+   実地テスト開始前 非TEST登録者確認
+   【確認専用】
+   ※データの変更・削除・保存は一切しない
+===================================================== */
+
+app.get(
+  "/vsh-test/precheck-nontest",
+  async (req, res) => {
+
+    try {
+
+      const data =
+        await loadAdmin();
+
+      const members =
+        Array.isArray(data.members)
+          ? data.members
+          : [];
+
+
+      //----------------------------------
+      // TEST-001 / TEST/045 などを除外
+      //----------------------------------
+
+      const nonTestMembers =
+        members.filter(
+          member => {
+
+            if (!member) {
+              return false;
+            }
+
+            const name =
+              String(
+                member.name || ""
+              ).trim();
+
+            return !/^TEST[-/]\d{3}$/.test(name);
+          }
+        );
+
+
+      //----------------------------------
+      // 確認結果
+      //
+      // ★ saveAdmin() は呼ばない
+      // ★ members は変更しない
+      //----------------------------------
+
+      return res.json({
+
+        mode:
+          "PRECHECK_NONTEST_ONLY",
+
+        message:
+          "確認専用です。データは変更していません。",
+
+        totalMemberCount:
+          members.length,
+
+        nonTestMemberCount:
+          nonTestMembers.length,
+
+        nonTestMembers:
+          nonTestMembers.map(
+            member => ({
+
+              name:
+                member.name || "",
+
+              flp:
+                member.flp || "",
+
+              status:
+                member.status || "",
+
+              introducerFLP:
+                member.vshIntroducerFLP || "",
+
+              created:
+                member.created || ""
+
+            })
+          )
+
+      });
+
+    }
+
+    catch (err) {
+
+      console.error(
+        "非TEST登録者確認エラー:",
+        err
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "非TEST登録者の確認データを取得できませんでした。"
+      });
+
+    }
+
+  }
+);
 /* =========================
    TEST-030 緊急解除
    ※TEST終了後に必ず削除
