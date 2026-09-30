@@ -249,8 +249,10 @@ function getDay72LineAssignment(data, userId) {
   // 同じLINE User IDの割当を取得
   //----------------------------------
 
-  const assignment =
-    data.day72LineAssignments.find(
+ const assignment =
+  [...data.day72LineAssignments]
+    .reverse()
+    .find(
       item =>
         item &&
         String(item.userId || "") ===
