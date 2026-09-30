@@ -2414,6 +2414,148 @@ app.get(
 
   }
 );
+/* =====================================================
+   実地テスト開始前 Rootデータ構造確認
+   【確認専用】
+   ※保存・変更・削除は一切しない
+===================================================== */
+
+app.get(
+  "/vsh-test/precheck-root-keys",
+  async (req, res) => {
+
+    try {
+
+      //----------------------------------
+      // 現在のRoot管理データを取得
+      //----------------------------------
+
+      const data =
+        await loadAdmin();
+
+
+      //----------------------------------
+      // Root安全確認
+      //----------------------------------
+
+      if (
+        String(data.introducerName || "").trim()
+          !== "細井 信孝" ||
+        String(data.introducerFLP || "").trim()
+          !== "203145165"
+      ) {
+
+        return res.status(409).json({
+          success: false,
+          message:
+            "Root情報が想定と異なります。確認を中止しました。"
+        });
+
+      }
+
+
+      //----------------------------------
+      // トップレベルの項目名だけ取得
+      //
+      // ★データ変更なし
+      // ★saveAdmin()なし
+      //----------------------------------
+
+      const keys =
+        Object.keys(data).sort();
+
+
+      //----------------------------------
+      // 各項目の種類だけ確認
+      //----------------------------------
+
+      const structure = {};
+
+      for (const key of keys) {
+
+        const value =
+          data[key];
+
+        if (Array.isArray(value)) {
+
+          structure[key] = {
+            type: "array",
+            count: value.length
+          };
+
+        } else if (
+          value !== null &&
+          typeof value === "object"
+        ) {
+
+          structure[key] = {
+            type: "object",
+            count: Object.keys(value).length
+          };
+
+        } else {
+
+          structure[key] = {
+            type: typeof value
+          };
+
+        }
+
+      }
+
+
+      //----------------------------------
+      // 表示だけ
+      //----------------------------------
+
+      return res.json({
+
+        success: true,
+
+        mode:
+          "PRECHECK_ROOT_KEYS_ONLY",
+
+        message:
+          "確認専用です。Rootデータは変更していません。",
+
+        rootName:
+          data.introducerName,
+
+        rootFLP:
+          data.introducerFLP,
+
+        memberCount:
+          Array.isArray(data.members)
+            ? data.members.length
+            : 0,
+
+        keys:
+          keys,
+
+        structure:
+          structure
+
+      });
+
+    }
+
+    catch (err) {
+
+      console.error(
+        "Rootデータ構造確認エラー:",
+        err
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Rootデータ構造を確認できませんでした。"
+      });
+
+    }
+
+  }
+);
 /* =========================
    TEST-030 緊急解除
    ※TEST終了後に必ず削除
