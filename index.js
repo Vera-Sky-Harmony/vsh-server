@@ -1679,6 +1679,170 @@ app.get(
 
   }
 );
+/* =====================================================
+   実地テスト開始前 TESTデータ確認
+   【確認専用】
+   ※データの変更・削除・保存は一切しない
+===================================================== */
+
+app.get(
+  "/vsh-test/precheck",
+  async (req, res) => {
+
+    try {
+
+      const data =
+        await loadAdmin();
+
+      const members =
+        Array.isArray(data.members)
+          ? data.members
+          : [];
+
+      const assignments =
+        Array.isArray(data.day72LineAssignments)
+          ? data.day72LineAssignments
+          : [];
+
+      const flpList =
+        Array.isArray(data.flpList)
+          ? data.flpList
+          : [];
+
+
+      //----------------------------------
+      // TEST登録者
+      //----------------------------------
+
+      const testMembers =
+        members.filter(
+          member =>
+            member &&
+            /^TEST-\d{3}$/.test(
+              String(member.name || "").trim()
+            )
+        );
+
+
+      //----------------------------------
+      // 仮想スマホTEST割当
+      //----------------------------------
+
+      const testAssignments =
+        assignments.filter(
+          assignment =>
+            assignment &&
+            String(assignment.userId || "")
+              .includes("::VSH-TEST::TEST-")
+        );
+
+
+      //----------------------------------
+      // Root FLP 使用済・使用中
+      //----------------------------------
+
+      const rootUsedFLPs =
+        flpList.filter(
+          item =>
+            item &&
+            (
+              item.status === "使用済" ||
+              item.status === "使用中"
+            )
+        );
+
+
+      //----------------------------------
+      // 確認結果
+      // ※ここでは絶対に保存しない
+      //----------------------------------
+
+      return res.json({
+
+        mode:
+          "PRECHECK_ONLY",
+
+        message:
+          "確認専用です。データは変更していません。",
+
+        testMemberCount:
+          testMembers.length,
+
+        testMembers:
+          testMembers.map(
+            member => ({
+              name:
+                member.name || "",
+
+              flp:
+                member.flp || "",
+
+              status:
+                member.status || "",
+
+              introducerFLP:
+                member.vshIntroducerFLP || ""
+            })
+          ),
+
+        testAssignmentCount:
+          testAssignments.length,
+
+        testAssignments:
+          testAssignments.map(
+            assignment => ({
+              userId:
+                assignment.userId || "",
+
+              source:
+                assignment.source || "",
+
+              introducerFLP:
+                assignment.introducerFLP || "",
+
+              myFLP:
+                assignment.myFLP || "",
+
+              registrationSentAt:
+                assignment.registrationSentAt || ""
+            })
+          ),
+
+        rootUsedFLPCount:
+          rootUsedFLPs.length,
+
+        rootUsedFLPs:
+          rootUsedFLPs.map(
+            item => ({
+              flp:
+                item.flp || "",
+
+              status:
+                item.status || ""
+            })
+          )
+
+      });
+
+    }
+
+    catch (err) {
+
+      console.error(
+        "実地テスト前確認エラー:",
+        err
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "確認データを取得できませんでした。"
+      });
+
+    }
+
+  }
+);
 /* =========================
    TEST-030 緊急解除
    ※TEST終了後に必ず削除
