@@ -1843,6 +1843,330 @@ app.get(
 
   }
 );
+/* =====================================================
+   実地テスト開始前 TESTデータ 第2確認
+   【確認専用】
+   ※データの変更・削除・保存は一切しない
+===================================================== */
+
+app.get(
+  "/vsh-test/precheck2",
+  async (req, res) => {
+
+    try {
+
+      const data =
+        await loadAdmin();
+
+      const members =
+        Array.isArray(data.members)
+          ? data.members
+          : [];
+
+      const assignments =
+        Array.isArray(data.day72LineAssignments)
+          ? data.day72LineAssignments
+          : [];
+
+      const flpList =
+        Array.isArray(data.flpList)
+          ? data.flpList
+          : [];
+
+
+      //----------------------------------
+      // TEST登録者
+      // TEST-001 と TEST/045 の両方を検出
+      //----------------------------------
+
+      const testMembers =
+        members.filter(
+          member =>
+            member &&
+            /^TEST[-/]\d{3}$/.test(
+              String(member.name || "").trim()
+            )
+        );
+
+
+      //----------------------------------
+      // TEST登録者のFLP一覧
+      //----------------------------------
+
+      const testMemberFLPs =
+        new Set(
+          testMembers
+            .map(
+              member =>
+                String(member.flp || "").trim()
+            )
+            .filter(Boolean)
+        );
+
+
+      //----------------------------------
+      // TEST関連 Day7-2割当
+      //
+      // ① 仮想スマホTEST
+      // ② TEST登録者のFLPと一致
+      //
+      // 確認するだけ。削除しない。
+      //----------------------------------
+
+      const testAssignments =
+        assignments.filter(
+          assignment => {
+
+            if (!assignment) {
+              return false;
+            }
+
+            const userId =
+              String(
+                assignment.userId || ""
+              );
+
+            const myFLP =
+              String(
+                assignment.myFLP || ""
+              ).trim();
+
+            if (
+              userId.includes(
+                "::VSH-TEST::TEST-"
+              )
+            ) {
+              return true;
+            }
+
+            if (
+              myFLP &&
+              testMemberFLPs.has(myFLP)
+            ) {
+              return true;
+            }
+
+            return false;
+          }
+        );
+
+
+      //----------------------------------
+      // Root FLP 30枠
+      // 空欄も含めて全件表示
+      //----------------------------------
+
+      const rootFLP30 =
+        Array.from(
+          { length: 30 },
+          (_, index) => {
+
+            const item =
+              flpList[index] || {};
+
+            return {
+              slot:
+                index + 1,
+
+              flp:
+                item.flp || "",
+
+              status:
+                item.status || ""
+            };
+          }
+        );
+
+
+      //----------------------------------
+      // TEST世代確認
+      //
+      // Root FLP = data.introducerFLP
+      // 親FLPをたどって世代を算出
+      //----------------------------------
+
+      const memberByFLP =
+        new Map();
+
+      testMembers.forEach(
+        member => {
+
+          const flp =
+            String(
+              member.flp || ""
+            ).trim();
+
+          if (flp) {
+            memberByFLP.set(
+              flp,
+              member
+            );
+          }
+        }
+      );
+
+
+      const getGeneration =
+        member => {
+
+          const rootFLP =
+            String(
+              data.introducerFLP || ""
+            ).trim();
+
+          let parentFLP =
+            String(
+              member.vshIntroducerFLP || ""
+            ).trim();
+
+          if (
+            parentFLP &&
+            parentFLP === rootFLP
+          ) {
+            return 1;
+          }
+
+          let generation = 1;
+
+          const visited =
+            new Set();
+
+          while (parentFLP) {
+
+            if (
+              visited.has(parentFLP)
+            ) {
+              return "循環";
+            }
+
+            visited.add(parentFLP);
+
+            const parent =
+              memberByFLP.get(
+                parentFLP
+              );
+
+            if (!parent) {
+              return "不明";
+            }
+
+            generation += 1;
+
+            parentFLP =
+              String(
+                parent.vshIntroducerFLP || ""
+              ).trim();
+
+            if (
+              parentFLP === rootFLP
+            ) {
+              return generation;
+            }
+
+          }
+
+          return "不明";
+        };
+
+
+      const testMembersWithGeneration =
+        testMembers.map(
+          member => ({
+            name:
+              member.name || "",
+
+            flp:
+              member.flp || "",
+
+            status:
+              member.status || "",
+
+            introducerFLP:
+              member.vshIntroducerFLP || "",
+
+            generation:
+              getGeneration(member)
+          })
+        );
+
+
+      //----------------------------------
+      // 結果
+      // ★ saveAdmin() は絶対に呼ばない
+      //----------------------------------
+
+      return res.json({
+
+        mode:
+          "PRECHECK2_ONLY",
+
+        message:
+          "第2確認専用です。データは変更していません。",
+
+        root: {
+          introducerName:
+            data.introducerName || "",
+
+          introducerFLP:
+            data.introducerFLP || ""
+        },
+
+        totalMemberCount:
+          members.length,
+
+        testMemberCount:
+          testMembers.length,
+
+        testMembers:
+          testMembersWithGeneration,
+
+        testAssignmentCount:
+          testAssignments.length,
+
+        testAssignments:
+          testAssignments.map(
+            assignment => ({
+              userId:
+                assignment.userId || "",
+
+              source:
+                assignment.source || "",
+
+              introducerFLP:
+                assignment.introducerFLP || "",
+
+              myFLP:
+                assignment.myFLP || "",
+
+              registrationSentAt:
+                assignment.registrationSentAt || ""
+            })
+          ),
+
+        rootFLP30:
+          rootFLP30
+
+      });
+
+    }
+
+    catch (err) {
+
+      console.error(
+        "実地テスト前 第2確認エラー:",
+        err
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "第2確認データを取得できませんでした。"
+      });
+
+    }
+
+  }
+);
 /* =========================
    TEST-030 緊急解除
    ※TEST終了後に必ず削除
