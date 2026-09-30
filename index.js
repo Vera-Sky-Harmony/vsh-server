@@ -13795,7 +13795,14 @@ VSH管理者専用です。`
       String(fboMatch[1]);
   }
 
-
+console.log(
+  "Day7-2受信確認:",
+  text,
+  "requestedFLP:",
+  requestedIntroducerFLP,
+  "userId:",
+  userId
+);
   //----------------------------------
   // LINE User ID ＋ 紹介者FLPを基準に
   // 紹介者＋FLP番号を決定
