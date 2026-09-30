@@ -2274,6 +2274,146 @@ app.get(
 
   }
 );
+/* =====================================================
+   実地テスト開始前 管理データ完全バックアップ
+   【バックアップ専用】
+   ※現在のadmin_dataは変更しない
+===================================================== */
+
+app.get(
+  "/vsh-test/backup-before-live",
+  async (req, res) => {
+
+    try {
+
+      //----------------------------------
+      // 現在の管理データを取得
+      //----------------------------------
+
+      const data =
+        await loadAdmin();
+
+
+      //----------------------------------
+      // 安全確認
+      // Rootが想定と違えば中止
+      //----------------------------------
+
+      if (
+        String(data.introducerName || "").trim()
+          !== "細井 信孝" ||
+        String(data.introducerFLP || "").trim()
+          !== "203145165"
+      ) {
+
+        return res.status(409).json({
+          success: false,
+          message:
+            "Root情報が想定と異なるため、バックアップを中止しました。"
+        });
+
+      }
+
+
+      //----------------------------------
+      // Supabaseへバックアップ
+      //
+      // admin_data/root は一切変更しない
+      // 別IDへ完全コピーする
+      //----------------------------------
+
+      const backupId =
+        "backup-before-live-20260930";
+
+      const backupData =
+        JSON.parse(
+          JSON.stringify(data)
+        );
+
+      const {
+        error
+      } =
+        await supabase
+          .from("admin_data")
+          .upsert({
+
+            id: backupId,
+
+            data: backupData
+
+          });
+
+
+      if (error) {
+
+        console.error(
+          "実地テスト前バックアップエラー:",
+          error
+        );
+
+        return res.status(500).json({
+          success: false,
+          message:
+            "バックアップの保存に失敗しました。Rootデータは変更していません。"
+        });
+
+      }
+
+
+      //----------------------------------
+      // 完了
+      //----------------------------------
+
+      return res.json({
+
+        success: true,
+
+        mode:
+          "BACKUP_ONLY",
+
+        message:
+          "実地テスト開始前バックアップを保存しました。Rootデータは変更していません。",
+
+        backupId:
+          backupId,
+
+        rootName:
+          data.introducerName,
+
+        rootFLP:
+          data.introducerFLP,
+
+        memberCount:
+          Array.isArray(data.members)
+            ? data.members.length
+            : 0,
+
+        flpCount:
+          Array.isArray(data.flpList)
+            ? data.flpList.length
+            : 0
+
+      });
+
+    }
+
+    catch (err) {
+
+      console.error(
+        "実地テスト前バックアップ処理エラー:",
+        err
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "バックアップ処理中にエラーが発生しました。Rootデータは変更していません。"
+      });
+
+    }
+
+  }
+);
 /* =========================
    TEST-030 緊急解除
    ※TEST終了後に必ず削除
