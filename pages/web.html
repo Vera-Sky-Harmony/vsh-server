@@ -3,347 +3,98 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title>AIで変わるネットワークビジネス(FLP)｜自動紹介システム で「健康」と「繁栄」をあなたに</title>
-
+  <title>AIで変わるネットワークビジネス(FLP)｜自動紹介システム で「健康」と「繁栄」をあなたに</title>
+  <meta name="description" content="Vera Sky Harmony（VSH）は、FLP（フォーエバー）の紹介活動をWEB・YouTube・AIで支援する仕組みです。ネットワークビジネスやMLMの自動紹介の考え方、学習から登録までの流れをご案内します。">
+  <link rel="canonical" href="https://vsh-server.onrender.com/pages/web.html">
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      padding: 0;
-      background: #ffffff;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                   "Noto Sans JP", sans-serif;
-    }
-
-    .web-page {
-      width: 100%;
-      max-width: 900px;
-      margin: 0 auto;
-      background: #ffffff;
-    }
-
-    .image-area {
-      position: relative;
-      width: 100%;
-      overflow: hidden;
-    }
-
-    .web-image {
-      display: block;
-      width: 100%;
-      height: auto;
-      margin: 0;
-      padding: 0;
-      border: 0;
-      border-radius: 0;
-    }
-
-
-    /* =========================================
-       PC用 QR案内
-       ========================================= */
-
-    .pc-qr {
-      display: none;
-      position: absolute;
-      z-index: 20;
-
-      width: 180px;
-      padding: 8px;
-
-      background: rgba(255, 255, 255, 0.97);
-      border: 2px solid #c99a28;
-
-      text-align: center;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    }
-
-    .pc-qr-title {
-      margin: 0 0 4px;
-      color: #946600;
-      font-size: 13px;
-      font-weight: 700;
-      line-height: 1.4;
-    }
-
-    .pc-qr-text {
-      margin: 5px 0 0;
-      color: #333333;
-      font-size: 10px;
-      line-height: 1.4;
-    }
-
-    .qr-image {
-      display: block;
-      width: 105px;
-      height: 105px;
-      margin: 0 auto;
-      border-radius: 0;
-    }
-
-
-    /* 画像1 QR */
-
-    .qr-first {
-      right: 2%;
-      bottom: 2%;
-    }
-
-
-    /* 画像4 QR */
-
-    .qr-fourth {
-      left: 2%;
-      bottom: 2%;
-    }
-
-
-    /* =========================================
-       VSHともだち追加 クリック領域
-       ========================================= */
-
-    .day0-link {
-      position: absolute;
-      display: block;
-      z-index: 15;
-      text-decoration: none;
-    }
-
-
-    /* 画像1のVSHともだち追加 */
-
-    .day0-link-first {
-      left: 53%;
-      width: 39%;
-      bottom: 0.7%;
-      height: 5.8%;
-    }
-
-
-    /* 画像4のVSHともだち追加 */
-
-    .day0-link-fourth {
-      left: 15%;
-      right: 15%;
-      bottom: 5%;
-      height: 18%;
-    }
-
-
-    /* =========================================
-       PC
-       ========================================= */
-
-    @media (min-width: 769px) {
-
-      .pc-qr {
-        display: block;
-      }
-
-      .day0-link {
-        cursor: default;
-      }
-    }
-
-
-    /* =========================================
-       スマートフォン
-       ========================================= */
-
-    @media (max-width: 768px) {
-
-      .pc-qr {
-        display: none;
-      }
-    }
-
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; background: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", sans-serif; }
+    .web-page { width: 100%; max-width: 900px; margin: 0 auto; background: #ffffff; }
+    .image-area { position: relative; width: 100%; overflow: hidden; }
+    .web-image { display: block; width: 100%; height: auto; margin: 0; padding: 0; border: 0; border-radius: 0; }
+    /* PC用 QR案内（既存仕様） */
+    .pc-qr { display: none; position: absolute; z-index: 20; width: 180px; padding: 8px; background: rgba(255, 255, 255, 0.97); border: 2px solid #c99a28; text-align: center; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
+    .pc-qr-title { margin: 0 0 4px; color: #946600; font-size: 13px; font-weight: 700; line-height: 1.4; }
+    .pc-qr-text { margin: 5px 0 0; color: #333333; font-size: 10px; line-height: 1.4; }
+    .qr-image { display: block; width: 105px; height: 105px; margin: 0 auto; border-radius: 0; }
+    .qr-first { right: 2%; bottom: 2%; }
+    .qr-fourth { left: 2%; bottom: 2%; }
+    /* VSHともだち追加クリック領域（既存仕様） */
+    .day0-link { position: absolute; display: block; z-index: 15; text-decoration: none; }
+    .day0-link-first { left: 53%; width: 39%; bottom: 0.7%; height: 5.8%; }
+    .day0-link-fourth { left: 15%; right: 15%; bottom: 5%; height: 18%; }
+    @media (min-width: 769px) { .pc-qr { display: block; } .day0-link { cursor: default; } }
+    @media (max-width: 768px) { .pc-qr { display: none; } }
+    /* ここから追加：4枚の画像の下に置く検索対策用の本文 */
+    .seo-content { padding: 38px 32px 44px; color: #252525; line-height: 1.9; border-top: 1px solid #eadfcb; }
+    .seo-content h1 { margin: 0 0 20px; font-size: clamp(21px, 3vw, 28px); line-height: 1.5; color: #926a12; }
+    .seo-content h2 { margin: 30px 0 10px; font-size: clamp(18px, 2.4vw, 22px); color: #926a12; }
+    .seo-content p { margin: 10px 0; font-size: 15px; }
+    .seo-content a { color: #805a09; text-decoration: underline; }
+    .seo-note { margin-top: 28px; padding: 15px 18px; background: #faf7f0; border-left: 3px solid #c99a28; font-size: 13px; }
+    @media (max-width: 768px) { .seo-content { padding: 28px 20px 34px; } }
   </style>
 </head>
-
-
 <body>
-
   <main class="web-page">
-
-
-    <!-- =====================================
-         画像1・完成版
-         ===================================== -->
-
+    <!-- 画像1：既存の完成版画像・QR・スマホ入口を維持 -->
     <div class="image-area">
-
-      <img
-        class="web-image"
-        src="/pages/WEB最初の画面_完成版.png"
-        alt="Vera Sky Harmony"
-      >
-
-
-      <!-- PC用 QR -->
-
+      <img class="web-image" src="/pages/WEB最初の画面_完成版.png" alt="Vera Sky Harmony">
       <div class="pc-qr qr-first">
-
-        <p class="pc-qr-title">
-          スマートフォンで<br>
-          続けてください
-        </p>
-
-        <img
-          class="qr-image"
-          src="/pages/VSH_Day0_QR (3).png"
-          alt="VSH Day0 QRコード"
-        >
-
-        <p class="pc-qr-text">
-          QRコードを読み取ると<br>
-          Day0が開きます
-        </p>
-
+        <p class="pc-qr-title">スマートフォンで<br>続けてください</p>
+        <img class="qr-image" src="/pages/VSH_Day0_QR (3).png" alt="VSH Day0 QRコード">
+        <p class="pc-qr-text">QRコードを読み取ると<br>Day0が開きます</p>
       </div>
-
-
-      <!-- スマートフォン用 自動紹介入口 -->
-
-      <a
-        class="day0-link day0-link-first"
-        href="/vsh/auto"
-        aria-label="VSHともだち追加"
-      ></a>
-
+      <a class="day0-link day0-link-first" href="/vsh/auto" aria-label="VSHともだち追加"></a>
     </div>
-
-
-
-    <!-- =====================================
-         画像2・変更なし
-         ===================================== -->
-
-    <img
-      class="web-image"
-      src="/pages/WEB2番目画像.png"
-      alt="Vera Sky Harmony 紹介"
-    >
-
-
-
-    <!-- =====================================
-         画像3・完成版
-         ===================================== -->
-
-    <img
-      class="web-image"
-      src="/pages/WEB3番目画像_完成版.png"
-      alt="Vera Sky Harmony 仕組み"
-    >
-
-
-
-    <!-- =====================================
-         画像4・完成版
-         ===================================== -->
-
+    <!-- 画像2：変更なし -->
+    <img class="web-image" src="/pages/WEB2番目画像.png" alt="Vera Sky Harmony 紹介">
+    <!-- 画像3：変更なし -->
+    <img class="web-image" src="/pages/WEB3番目画像_完成版.png" alt="Vera Sky Harmony 仕組み">
+    <!-- 画像4：既存の完成版画像・QR・スマホ入口を維持 -->
     <div class="image-area">
-
-      <img
-        class="web-image"
-        src="/pages/WEB4完成版.png"
-        alt="Vera Sky Harmony"
-      >
-
-
-      <!-- PC用 QR -->
-
+      <img class="web-image" src="/pages/WEB4完成版.png" alt="Vera Sky Harmony">
       <div class="pc-qr qr-fourth">
-
-        <p class="pc-qr-title">
-          スマートフォンで<br>
-          始めてください
-        </p>
-
-        <img
-          class="qr-image"
-          src="/pages/VSH_Day0_QR (3).png"
-          alt="VSH Day0 QRコード"
-        >
-
-        <p class="pc-qr-text">
-          QRコードを読み取ると<br>
-          Day0が開きます
-        </p>
-
+        <p class="pc-qr-title">スマートフォンで<br>始めてください</p>
+        <img class="qr-image" src="/pages/VSH_Day0_QR (3).png" alt="VSH Day0 QRコード">
+        <p class="pc-qr-text">QRコードを読み取ると<br>Day0が開きます</p>
       </div>
-
-
-      <!-- スマートフォン用 自動紹介入口 -->
-
-      <a
-        class="day0-link day0-link-fourth"
-        href="/vsh/auto"
-        aria-label="VSHともだち追加"
-      ></a>
-
+      <a class="day0-link day0-link-fourth" href="/vsh/auto" aria-label="VSHともだち追加"></a>
     </div>
-
+    <!-- 追加部分：検索エンジンが読み取れる説明文。既存画像と導線には影響しません。 -->
+    <section class="seo-content" aria-label="Vera Sky Harmonyのご案内">
+      <h1>FLP自動紹介システムとAIによる紹介活動支援｜Vera Sky Harmony</h1>
+      <p>Vera Sky Harmony（VSH）は、FLP（Forever Living Products／フォーエバー）の紹介活動を、WEB・YouTube・AIの活用によって支援する独自の仕組みです。健康に関する情報や活動の流れを、ご自身のペースで確認できるように設計されています。</p>
+      <h2>MLM・ネットワークビジネスの紹介活動を、わかりやすく</h2>
+      <p>ネットワークビジネス（MLM）の紹介では、商品や仕組みについて相手が十分に理解し、自分で判断できることが大切です。VSHは、情報提供や学習の入口をオンラインに用意し、紹介する側と紹介を受ける側の負担を減らすことを目指しています。</p>
+      <h2>VSHの自動紹介システムはどのように進みますか？</h2>
+      <p>WEBやYouTubeでVSHを知り、Day0から段階的な説明を確認します。内容に納得した方は、ご自身の意思で登録手続きへ進むことができます。登録後は、VSHの案内に沿って紹介活動を始める流れです。AIは情報提供と活動支援を担いますが、登録や購入を強制するものではありません。</p>
+      <h2>Vera Sky Harmonyの特徴</h2>
+      <p>VSHは、対面での説明に頼らず、スマートフォンから情報を確認できる仕組みを重視しています。人と人との信頼関係を大切にしながら、オンラインでの学習・情報提供・紹介活動を支援します。</p>
+      <h2>VSHについて詳しく知るには</h2>
+      <p>スマートフォンの方は、ページ上部の「VSHともだち追加」から正式な案内に進めます。パソコンの方は、ページ内に表示されているQRコードをスマートフォンで読み取ってください。</p>
+      <div class="seo-note">VSHはFLPの活動を支援する独自システムです。収益や成果を保証するものではありません。商品・登録条件・ビジネスに関する正確な情報は、FLPの公式案内をご確認ください。</div>
+    </section>
   </main>
-
-
   <script>
-
-    const VSH_AUTO_URL =
-      "https://vsh-server.onrender.com/vsh/auto";
-
-    const isMobile =
-      /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-
-    const day0Links =
-      document.querySelectorAll(".day0-link");
-
-
+    const VSH_AUTO_URL = "https://vsh-server.onrender.com/vsh/auto";
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    const day0Links = document.querySelectorAll(".day0-link");
     day0Links.forEach(function(link) {
-
       if (isMobile) {
-
-        /*
-          スマートフォン
-          画像1・画像4のどちらからでも
-          VSH自動紹介入口へ進む
-        */
-
+        /* スマートフォン：画像1・画像4から既存の正式入口へ */
         link.href = VSH_AUTO_URL;
-
       } else {
-
-        /*
-          PC
-          Day0へ直接進ませない
-          QRコードからスマートフォンへ
-        */
-
+        /* PC：既存どおりQRコードからスマートフォンへ */
         link.removeAttribute("href");
-
-        link.addEventListener(
-          "click",
-          function(event) {
-
-            event.preventDefault();
-
-            alert(
-              "VSHはスマートフォンからご利用ください。\n\n" +
-              "画面に表示されているQRコードをスマートフォンで読み取り、" +
-              "Day0からお進みください。"
-            );
-
-          }
-        );
-
+        link.addEventListener("click", function(event) {
+          event.preventDefault();
+          alert("VSHはスマートフォンからご利用ください。\n\n" +
+                "画面に表示されているQRコードをスマートフォンで読み取り、" +
+                "Day0からお進みください。");
+        });
       }
-
     });
-
   </script>
-
 </body>
 </html>
